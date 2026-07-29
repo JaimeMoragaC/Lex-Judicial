@@ -99,21 +99,95 @@ def archivar_pdf_fisicamente(tmp_path, filename, rol, cliente, caratula):
                     target_path = pth
 
     if target_path and os.path.exists(target_path):
-        final_filename = filename
-        final_dest = os.path.join(target_path, final_filename)
-        if os.path.exists(final_dest):
-            base, ext = os.path.splitext(filename)
-            final_filename = f"{base}_{int(time.time())}{ext}"
-            final_dest = os.path.join(target_path, final_filename)
-        
+        # El filename llega desde un query param del cliente. Con os.path.join,
+        # un nombre absoluto DESCARTA la carpeta destino
+        # (join('/casos/Adrian', '/home/jaime/.bashrc') == '/home/jaime/.bashrc'),
+        # así que sin sanear esto movía el PDF a cualquier ruta escribible.
+        final_filename = _nombre_seguro(filename, "documento.pdf")
+        carpeta = Path(target_path).resolve()
+        final_dest = carpeta / final_filename
+        if carpeta not in final_dest.resolve().parents:
+            print(f"🚫 [ARCHIVADO RECHAZADO] '{filename}' queda fuera de {carpeta}")
+            return None
+
+        if final_dest.exists():
+            tallo, ext = os.path.splitext(final_filename)
+            final_filename = f"{tallo}_{int(time.time())}{ext}"
+            final_dest = carpeta / final_filename
+
         try:
-            shutil.move(tmp_path, final_dest)
-            return final_dest
+            shutil.move(tmp_path, str(final_dest))
+            indexar_en_fts(final_dest)
+            return str(final_dest)
         except Exception as e:
             print(f"Error moviendo archivo: {e}")
             return None
-    
-    return None
+
+    # Sin carpeta de cliente que calce, antes se devolvía None y el PDF quedaba
+    # en el temporal: se analizaba el documento y el archivo desaparecía. Un
+    # documento que entró al sistema no puede perderse por no saber dónde va;
+    # cae a una bandeja, queda indexado y se avisa que necesita clasificación.
+    return archivar_en_bandeja(tmp_path, filename)
+
+
+BANDEJA_SIN_CLASIFICAR = "_Bandeja de entrada (sin clasificar)"
+
+
+def archivar_en_bandeja(tmp_path, filename):
+    """Último recurso: guarda el documento en una bandeja y lo deja buscable."""
+    raiz = Path("/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023")
+    if not raiz.exists():
+        raiz = BASE_DIR / "data" / "documentos_sin_disco"
+    destino_dir = raiz / BANDEJA_SIN_CLASIFICAR
+    try:
+        destino_dir.mkdir(parents=True, exist_ok=True)
+        nombre = _nombre_seguro(filename, "documento.pdf")
+        destino = destino_dir / nombre
+        if destino.exists():
+            tallo, ext = os.path.splitext(nombre)
+            destino = destino_dir / f"{tallo}_{int(time.time())}{ext}"
+        shutil.move(tmp_path, str(destino))
+        indexar_en_fts(destino)
+        print(f"📥 [BANDEJA] {destino.name}: no se identificó la carpeta del cliente, queda por clasificar")
+        return str(destino)
+    except Exception as e:
+        print(f"⚠️ No se pudo dejar el documento en la bandeja: {e}")
+        return None
+
+
+def indexar_en_fts(ruta):
+    """Incorpora un documento recién archivado al índice de búsqueda por contenido.
+
+    Unifica las dos rutas que existían por separado: el análisis archivaba el PDF
+    pero no lo indexaba, y /subir_documento lo indexaba pero no lo analizaba. Un
+    documento que entra al expediente y no queda buscable es un documento perdido.
+    """
+    ruta = Path(ruta)
+    indice = DATOS_DIR / "indice_texto.sqlite"
+    if not indice.is_file():
+        return False
+    try:
+        import indexar_pdfs
+        texto, paginas = indexar_pdfs.extraer_texto(str(ruta))
+        if not texto:
+            return False
+        st = ruta.stat()
+        with sqlite3.connect(indice) as con:
+            con.execute("DELETE FROM textos WHERE ruta = ?", (str(ruta),))
+            con.execute(
+                "INSERT INTO textos (ruta, nombre, carpeta, contenido) VALUES (?, ?, ?, ?)",
+                (str(ruta), ruta.name, ruta.parent.name, texto),
+            )
+            con.execute(
+                "INSERT OR REPLACE INTO archivos (ruta, nombre, carpeta, tamano, modificado, paginas, indexado)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (str(ruta), ruta.name, ruta.parent.name, st.st_size, st.st_mtime, paginas, time.time()),
+            )
+        print(f"🔎 [INDEXADO] {ruta.name} incorporado a la búsqueda por contenido")
+        return True
+    except Exception as e:
+        print(f"⚠️ No se pudo indexar {ruta.name}: {e}")
+        return False
 
 
 PUERTO = int(os.environ.get("LEXCONTROL_PORT", "8888"))
@@ -1714,29 +1788,9 @@ ES JUSTICIA."""
                 filename = dest_path.name  # puede haberse versionado o saneado
                 carpeta_cliente = dest_path.parent.name
 
-                # Indexar inmediatamente en la base de datos de texto completo SQLite FTS5
-                indexado = False
-                try:
-                    import indexar_pdfs
-                    texto, paginas = indexar_pdfs.extraer_texto(str(dest_path))
-                    if texto:
-                        db_path = BASE_DIR / "data" / "indice_texto.sqlite"
-                        # with cierra la conexión aunque el INSERT reviente: sin esto
-                        # un fallo dejaba la conexión y el lock del WAL colgando.
-                        with sqlite3.connect(db_path) as con_fts:
-                            con_fts.execute("DELETE FROM textos WHERE ruta = ?", (str(dest_path),))
-                            con_fts.execute(
-                                "INSERT INTO textos (ruta, nombre, carpeta, contenido) VALUES (?, ?, ?, ?)",
-                                (str(dest_path), filename, carpeta_cliente, texto)
-                            )
-                            con_fts.execute(
-                                "INSERT OR REPLACE INTO archivos (ruta, nombre, carpeta, tamano, modificado, paginas, indexado)"
-                                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                (str(dest_path), filename, carpeta_cliente, len(file_bytes), time.time(), paginas, time.time())
-                            )
-                        indexado = True
-                except Exception as e_idx:
-                    print(f"⚠️ Aviso indexación al subir: {e_idx}")
+                # Misma función que usa el archivado tras el análisis: un solo
+                # camino para que un documento nunca quede archivado sin indexar.
+                indexado = indexar_en_fts(dest_path)
 
                 self.send_response(200)
                 self._send_cors_headers()
