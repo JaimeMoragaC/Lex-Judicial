@@ -11,6 +11,7 @@ import SmartDriveSorter from './components/SmartDriveSorter';
 import CasoDetailModal from './components/CasoDetailModal';
 import OmniSearch from './components/OmniSearch';
 import RadarPlazos from './components/RadarPlazos';
+import BuscadorTexto from './components/BuscadorTexto';
 import { MOCK_CASOS } from './mockData';
 import { CATALOGOS_CAIDOS } from './dataLoader';
 import { LEXCONTROL_API } from './apiBase';
@@ -85,6 +86,8 @@ export default function App() {
             onSelectCaso={(caso) => setSelectedCasoForModal(caso)}
           />
         )}
+
+        {activeTab === 'buscador' && <BuscadorTexto />}
 
         {activeTab === 'proactivo' && (
           <AsistenteProactivo 

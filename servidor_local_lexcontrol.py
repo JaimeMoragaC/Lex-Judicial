@@ -27,6 +27,7 @@ import pandas as pd
 import urllib.request
 import shutil
 import gzip
+import sqlite3
 
 import catalogos
 
@@ -552,6 +553,57 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(datos)
 
+    def _buscar_texto(self, consulta):
+        """Búsqueda de texto completo dentro de los expedientes ya indexados."""
+        consulta = (consulta or "").strip()
+        if len(consulta) < 3:
+            self._responder_json({"error": "Escribe al menos 3 caracteres", "resultados": []}, 400)
+            return
+
+        indice = DATOS_DIR / "indice_texto.sqlite"
+        if not indice.is_file():
+            self._responder_json({
+                "error": "El índice de texto todavía no existe.",
+                "pista": "Créalo con: python3 indexar_pdfs.py",
+                "resultados": []
+            }, 503)
+            return
+
+        # FTS5 interpreta comillas, asteriscos y AND/OR. Se cita la consulta como
+        # frase literal para que el usuario pueda escribir lo que quiera sin que
+        # un apóstrofo le reviente la búsqueda.
+        frase = '"' + consulta.replace('"', ' ') + '"'
+
+        try:
+            con = sqlite3.connect(f"file:{indice}?mode=ro", uri=True)
+            filas = con.execute(
+                """
+                SELECT ruta, nombre, carpeta,
+                       snippet(textos, 3, '«', '»', '…', 18) AS extracto
+                FROM textos
+                WHERE textos MATCH ?
+                ORDER BY rank
+                LIMIT 60
+                """,
+                (frase,),
+            ).fetchall()
+            total = con.execute("SELECT COUNT(*) FROM archivos").fetchone()[0]
+            con.close()
+        except Exception as e:
+            self._responder_json({"error": f"Error consultando el índice: {e}", "resultados": []}, 500)
+            return
+
+        resultados = [
+            {"ruta": r[0], "nombre": r[1], "carpeta": r[2], "extracto": r[3]}
+            for r in filas
+        ]
+        print(f"🔍 [TEXTO] '{consulta}': {len(resultados)} coincidencias sobre {total} documentos")
+        self._responder_json({
+            "consulta": consulta,
+            "totalIndexado": total,
+            "resultados": resultados
+        })
+
     def _servir_dataset(self, nombre):
         """Entrega los catálogos pesados de data/ que antes iban compilados en el bundle.
 
@@ -934,6 +986,10 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         # ENDPOINT 11: /plazos (Registro de plazos vigilados por el Radar)
         elif parsed_url.path == "/plazos":
             self._responder_json({"plazos": catalogos.cargar_plazos()})
+
+        # ENDPOINT 12: /buscar_texto?q=... (Busca DENTRO del contenido de los PDF)
+        elif parsed_url.path == "/buscar_texto":
+            self._buscar_texto(query_params.get("q", [""])[0])
 
         # ENDPOINT 6: /status (Verificación de salud del puente)
         elif parsed_url.path == "/status" or parsed_url.path == "/":

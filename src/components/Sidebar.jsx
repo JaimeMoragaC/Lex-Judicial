@@ -10,7 +10,8 @@ import {
   Calculator,
   Sparkles,
   HardDrive,
-  Search
+  Search,
+  FileSearch
 } from 'lucide-react';
 
 import { MOCK_STATS } from '../mockData';
@@ -30,6 +31,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const menuItems = [
     { id: 'dashboard', label: 'Centro de mando', icon: LayoutDashboard },
     { id: 'radar', label: 'Radar de plazos', icon: Radar, badge: alerta?.accionables || null, tono: 'badge-red' },
+    { id: 'buscador', label: 'Búsqueda en contenido', icon: FileSearch },
     { id: 'proactivo', label: 'Asistente documental', icon: Sparkles },
     { id: 'smartdrive', label: 'Explorador de disco', icon: HardDrive },
     { id: 'calculadora', label: 'Cómputo de términos', icon: Calculator },

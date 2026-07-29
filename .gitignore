@@ -44,6 +44,15 @@ prueba_*.png
 *_resultado.png
 
 # ==========================================================
+# Índice de texto de los expedientes
+# Se regenera con `python3 indexar_pdfs.py`. Son cientos de MB y crece con
+# cada corrida: versionarlo inflaría el repo sin aportar nada.
+# ==========================================================
+data/indice_texto.sqlite
+data/indice_texto.sqlite-wal
+data/indice_texto.sqlite-shm
+
+# ==========================================================
 # Salida de herramientas auxiliares
 # ==========================================================
 graphify-out/

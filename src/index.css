@@ -735,6 +735,30 @@ button:disabled,
 .empty-state p { font-size: var(--text-sm); max-width: 46ch; margin: 0 auto; }
 
 /* ==========================================================================
+   Resultados de búsqueda
+   ========================================================================== */
+
+.resultado {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+.resultado:last-child { border-bottom: none; }
+.resultado:hover { background: var(--bg-surface-2); }
+
+.extracto {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+}
+
+/* El servidor envuelve el término encontrado entre « » para poder resaltarlo
+   sin inyectar HTML desde el contenido del PDF. */
+.extracto { white-space: pre-wrap; }
+
+/* ==========================================================================
    Semáforo de plazos
    ========================================================================== */
 
