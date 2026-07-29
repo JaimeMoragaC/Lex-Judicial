@@ -268,11 +268,11 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, theme,
       <div className="top-header">
         <div className="header-title">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-            <span className="badge badge-cyan">⚡ Centro de Mando Litigante</span>
-            <span className="badge badge-green">Worker OJV Asíncrono Activo</span>
+            <span className="badge badge-gold">📋 Mi Día & Plazos</span>
+            <span className="badge sem-AL_DIA">Sincronizado con PJUD</span>
           </div>
-          <h1>Centro de Mando & Control Probatorio</h1>
-          <p>Bienvenido, Jaime. Situación en vivo de tus expedientes, auditoría automática de la OJV y control de plazos fatales.</p>
+          <h1>Agenda Diaria y Estado de Causas</h1>
+          <p>Bienvenido, Jaime. Revisa tus audiencias de hoy, vencimientos fatales y las resoluciones publicadas por el tribunal.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {toggleTheme && (

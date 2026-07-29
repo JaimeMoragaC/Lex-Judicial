@@ -35,7 +35,7 @@ function AvisoCatalogosCaidos() {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('smartdrive'); // Por defecto iniciar en SmartDrive para que vea la simulación de sus archivos
+  const [activeTab, setActiveTab] = useState('dashboard'); // Inicio directo en Mi Día & Plazos
   const [selectedCasoForModal, setSelectedCasoForModal] = useState(null);
   const [selectedCasoForMatriz, setSelectedCasoForMatriz] = useState(null);
 

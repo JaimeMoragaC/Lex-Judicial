@@ -33,17 +33,9 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
   }, []);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Centro de mando', icon: LayoutDashboard },
-    { id: 'bitacora', label: 'Bitácora omnicanal', icon: MessageSquare },
-    { id: 'radar', label: 'Radar de plazos', icon: Radar, badge: alerta?.accionables || null, tono: 'badge-red' },
-    { id: 'buscador', label: 'Búsqueda en contenido', icon: FileSearch },
-    { id: 'proactivo', label: 'Asistente documental', icon: Sparkles },
-    { id: 'smartdrive', label: 'Explorador de disco', icon: HardDrive },
-    { id: 'calculadora', label: 'Cómputo de términos', icon: Calculator },
-    { id: 'casos', label: 'Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
-    { id: 'matriz', label: 'Matriz probatoria', icon: Scale },
-    { id: 'agenda', label: 'Agenda y audiencias', icon: CalendarClock },
-    { id: 'clientes', label: 'Directorio de clientes', icon: Users }
+    { id: 'dashboard', label: 'Mi Día & Plazos', icon: LayoutDashboard, badge: alerta?.accionables || null, tono: 'badge-red' },
+    { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
+    { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare }
   ];
 
   return (
