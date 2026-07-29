@@ -1,0 +1,342 @@
+/* ==========================================================================
+   LEXCONTROL - SISTEMA DE DISEÑO LEGALTECH PREMIUM (Vanilla CSS)
+   ========================================================================== */
+
+:root {
+  /* Paleta Cromática - Dark Mode Jurídico Premium */
+  --bg-primary: #0a0f1d;
+  --bg-secondary: #101728;
+  --bg-card: rgba(22, 32, 54, 0.7);
+  --bg-card-hover: rgba(30, 43, 72, 0.85);
+  --bg-glass: rgba(18, 26, 45, 0.75);
+  --bg-modal: #111a2e;
+  
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --border-accent: rgba(0, 240, 255, 0.4);
+  --border-gold: rgba(245, 158, 11, 0.5);
+
+  /* Colores de Acento - Sobrios / Corporativos */
+  --accent-cyan: #8ca3b8; /* Slate / Steel Blue (Reemplaza el Cyan) */
+  --accent-cyan-glow: rgba(140, 163, 184, 0.10);
+  --accent-gold: #c5a973; /* Bronce Clásico Institucional */
+  --accent-gold-glow: rgba(197, 169, 115, 0.10);
+  --accent-purple: #6b7280; /* Gris Neutro (Reemplaza el Morado) */
+  
+  /* Colores Funcionales (Semáforo de Plazos y Licitud) - Tonos Apagados */
+  --alert-red: #c94f4f; /* Granate / Brick Red */
+  --alert-red-bg: rgba(201, 79, 79, 0.10);
+  --alert-yellow: #d19a3b; /* Mostaza / Oro Viejo */
+  --alert-yellow-bg: rgba(209, 154, 59, 0.10);
+  --alert-green: #4b8a5b; /* Verde Bosque / Abeto */
+  --alert-green-bg: rgba(75, 138, 91, 0.10);
+  --alert-blue: #4a74a5; /* Azul Pizarra */
+  --alert-blue-bg: rgba(74, 116, 165, 0.10);
+
+  /* Texto */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-accent: #38bdf8;
+
+  /* Tipografías */
+  --font-heading: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Sombra y Cristal (Glassmorphism) */
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 25px -3px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 40px -5px rgba(0, 0, 0, 0.7);
+  --shadow-glow-cyan: none; /* Eliminado brillo neón */
+  --shadow-glow-gold: none; /* Eliminado brillo neón */
+  
+  --backdrop-blur: blur(12px);
+  --radius-sm: 4px; /* Bordes más rectos / corporativos */
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* Reset y Estilos Globales */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-body);
+  border: none;
+  outline: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ==========================================================================
+   UTILITIES & GLASSMORPHISM
+   ========================================================================== */
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.glass-panel {
+  background: var(--bg-glass);
+  backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+/* Botones Premium - Estilo Institucional */
+.btn-primary {
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: #e2e8f0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+  font-size: 0.9rem;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-gold {
+  background: rgba(197, 169, 115, 0.10);
+  color: var(--accent-gold);
+  border: 1px solid rgba(197, 169, 115, 0.3);
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.btn-gold:hover {
+  transform: translateY(-1px);
+  background: rgba(197, 169, 115, 0.18);
+}
+
+/* Badges y Semáforos - Estilo Discreto */
+.badge {
+  padding: 4px 10px;
+  border-radius: 4px; /* Bordes más rectos, corporativos */
+  font-size: 0.70rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.badge-red {
+  color: var(--alert-red);
+  border-color: var(--alert-red-bg);
+}
+
+.badge-yellow {
+  color: var(--alert-yellow);
+  border-color: var(--alert-yellow-bg);
+}
+
+.badge-green {
+  color: var(--alert-green);
+  border-color: var(--alert-green-bg);
+}
+
+.badge-blue {
+  color: var(--alert-blue);
+  border-color: var(--alert-blue-bg);
+}
+
+.badge-purple {
+  color: var(--text-secondary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.badge-cyan {
+  color: var(--accent-cyan);
+  border-color: rgba(140, 163, 184, 0.2);
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pulse-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulseGlow 2s infinite;
+}
+
+/* Layout Principal de la App */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 28px 36px;
+  transition: all 0.3s ease;
+}
+
+/* Top Header */
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-title h1 {
+  font-size: 1.8rem;
+  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-title p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* Grids */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.grid-7-5 {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1400px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-7-5 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .main-content { margin-left: 0; padding: 20px; }
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+}

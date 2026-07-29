@@ -1,0 +1,4 @@
+[graphify] chunk 1/1 failed: the 'openai' package is required for this backend but is not installed. Install it with:  uv tool install "graphifyy[gemini]" --force  (uv tool), or  pip install openai  (pip/venv install).
+[graphify] WARNING: 1/1 semantic chunk(s) failed — see errors above. Partial results returned.
+[graphify] WARNING: 11/11 dispatched file(s) produced no nodes and are absent from the graph: graphify.md, graphify.md, README.md, index.html, ojv_estado_diario_abierto.png (+6 more). The model returned a response but omitted them; a re-run will retry them.
+Semantic extraction successful.
