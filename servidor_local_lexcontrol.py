@@ -547,32 +547,34 @@ def _columna(row, incluye, excluye=()):
 
 def procesar_excel_pjud(file_path):
     print(f"📊 [MOTOR EXCEL PJUD] Procesando archivo matutino: {file_path}")
+    xl = None
     try:
         xl = pd.ExcelFile(file_path)
-    except Exception as e_xl:
-        print(f"⚠️ Aviso motor por defecto ({e_xl}), probando engine='openpyxl'...")
+    except Exception:
         try:
             xl = pd.ExcelFile(file_path, engine='openpyxl')
-        except Exception as e_oxl:
-            print(f"⚠️ Aviso openpyxl ({e_oxl}), probando engine='xlrd'...")
-            xl = pd.ExcelFile(file_path, engine='xlrd')
+        except Exception:
+            try:
+                xl = pd.ExcelFile(file_path, engine='xlrd')
+            except Exception:
+                pass
     movimientos_dia = []
     stats_jurisdiccion = {}
-    
-    # Cargar carpetas físicas locales de /Casos2023 para cruce
     carpetas_locales = {}
-    base_casos_dir = "/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023"
-    if os.path.exists(base_casos_dir):
-        try:
-            for d in os.listdir(base_casos_dir):
-                d_full = os.path.join(base_casos_dir, d)
-                if os.path.isdir(d_full):
-                    carpetas_locales[d.lower().strip()] = {
-                        "nombre": d,
-                        "path": d_full
-                    }
-        except Exception as e:
-            print(f"⚠️ Error escaneando Casos2023: {e}")
+    if not xl:
+        return {"status": "error", "total_movimientos": 0, "movimientos": [], "desglose_tribunales": {}}
+        base_casos_dir = "/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023"
+        if os.path.exists(base_casos_dir):
+            try:
+                for d in os.listdir(base_casos_dir):
+                    d_full = os.path.join(base_casos_dir, d)
+                    if os.path.isdir(d_full):
+                        carpetas_locales[d.lower().strip()] = {
+                            "nombre": d,
+                            "path": d_full
+                        }
+            except Exception as e:
+                print(f"⚠️ Error escaneando Casos2023: {e}")
 
     for sheet in xl.sheet_names:
         df = xl.parse(sheet)
@@ -995,49 +997,62 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                         status, mensajes = mail.search(None, '(FROM "no-responder@pjud.cl")')
                         ids_mail = mensajes[0].split()
                         if ids_mail:
-                            # Revisar desde el correo más reciente hacia atrás (hasta 30 correos) para hallar el ÚLTIMO ESTADO DIARIO ÚTIL CON MOVIMIENTOS
-                            for mail_id in reversed(ids_mail[-30:]):
+                            movimientos_consolidados = []
+                            vistos_clave = set()
+                            archivos_procesados = []
+                            desglose_combinado = {}
+                            fecha_diario_hallada = None
+
+                            # Revisar desde el correo más reciente hacia atrás (hasta 20 correos)
+                            for mail_id in reversed(ids_mail[-20:]):
                                 res, msg_data = mail.fetch(mail_id, "(RFC822)")
                                 for response_part in msg_data:
                                     if isinstance(response_part, tuple):
                                         msg = email.message_from_bytes(response_part[1])
                                         for part in msg.walk():
-                                            if part.get_content_maintype() == "multipart":
-                                                continue
-                                            if part.get("Content-Disposition") is None:
+                                            if part.get_content_maintype() == "multipart" or part.get("Content-Disposition") is None:
                                                 continue
                                             filename = part.get_filename()
                                             es_planilla = filename and any(filename.lower().endswith(ext) for ext in [".xls", ".xlsx"])
-                                            # Aceptar tanto EstadoDiario como Movimientos para no ignorar los correos del PJUD del día
-                                            if es_planilla and tipo_buscado != "auto" and tipo_buscado not in ["estado_diario", "movimientos"]:
-                                                if tipo_de_planilla(filename) != tipo_buscado:
-                                                    print(f"   ↪ omitido {filename}: es '{tipo_de_planilla(filename)}', se busca '{tipo_buscado}'")
-                                                    continue
-                                            if es_planilla and any(k in filename.lower() for k in ['movimiento', 'estadodiario', 'causa', '8328581']):
+                                            if es_planilla and any(k in filename.lower() for k in ['movimiento', 'estadodiario', 'causa', '8328581', 'corte']):
                                                 clean_fname = filename.replace("/", "_").replace("\\", "_")
                                                 dest_path = os.path.join("/home/jaime/Descargas", f"gmail_pjud_{clean_fname}")
-                                                with open(dest_path, "wb") as f_out:
-                                                    f_out.write(part.get_payload(decode=True))
+                                                try:
+                                                    with open(dest_path, "wb") as f_out:
+                                                        f_out.write(part.get_payload(decode=True))
+                                                except Exception:
+                                                    continue
                                                 
-                                                # Verificar si este Excel tiene movimientos reales (>0)
                                                 res_temp = procesar_excel_pjud(dest_path)
-                                                if res_temp["total_movimientos"] > 0:
-                                                    archivo_procesar = dest_path
-                                                    resultado_sync = res_temp
-                                                    origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Continuidad Útil"
-                                                    print(f"✅ [GMAIL IMAP CONTINUIDAD] Hallado último Estado Diario útil con {res_temp['total_movimientos']} novedades: {dest_path}")
-                                                    break
-                                                else:
-                                                    print(f"ℹ️ [GMAIL IMAP] Archivo {clean_fname} tiene 0 movimientos (día sin actividad o feriado). Buscando envío anterior...")
-                                                    # Guardar como candidato de respaldo por si todos tienen 0
-                                                    if not archivo_procesar:
-                                                        archivo_procesar = dest_path
-                                                        resultado_sync = res_temp
-                                                        origen_sync = f"GMAIL_IMAP ({usuario_gmail})"
-                                        if resultado_sync and resultado_sync.get("total_movimientos", 0) > 0:
-                                            break
-                                if resultado_sync and resultado_sync.get("total_movimientos", 0) > 0:
-                                    break
+                                                if res_temp.get("status") == "ok" and res_temp.get("movimientos"):
+                                                    archivos_procesados.append(clean_fname)
+                                                    if not fecha_diario_hallada:
+                                                        fecha_diario_hallada = res_temp.get("fecha_estado_diario")
+                                                    for m in res_temp["movimientos"]:
+                                                        clave_u = f"{m.get('rol')}-{m.get('tribunal')}-{m.get('estado')}"
+                                                        if clave_u not in vistos_clave:
+                                                            vistos_clave.add(clave_u)
+                                                            movimientos_consolidados.append(m)
+                                                            trib = m.get("jurisdiccion", "Otros")
+                                                            desglose_combinado[trib] = desglose_combinado.get(trib, 0) + 1
+
+                            if movimientos_consolidados:
+                                archivo_procesar = ", ".join(archivos_procesados[:3])
+                                origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Consolidado Multi-Excel ({len(archivos_procesados)} planillas)"
+                                resultado_sync = {
+                                    "status": "ok",
+                                    "archivo_procesado": archivo_procesar,
+                                    "path_completo": os.path.join("/home/jaime/Descargas", f"gmail_pjud_{archivos_procesados[0]}"),
+                                    "fecha_estado_diario": fecha_diario_hallada or time.strftime("%Y-%m-%d"),
+                                    "antiguedad_dias": 0,
+                                    "es_de_hoy": True,
+                                    "leido_en": time.strftime("%Y-%m-%d %H:%M:%S"),
+                                    "total_movimientos": len(movimientos_consolidados),
+                                    "desglose_tribunales": desglose_combinado,
+                                    "movimientos": movimientos_consolidados,
+                                    "origen_sync": origen_sync
+                                }
+                                print(f"✅ [GMAIL IMAP CONSOLIDADO] {len(movimientos_consolidados)} movimientos consolidados desde {len(archivos_procesados)} archivos Excel del PJUD.")
                         mail.close()
                         mail.logout()
                     except Exception as e_imap:
