@@ -1406,6 +1406,26 @@ TEXTO:
                 rit = caso.get("rit") or caso.get("rol") or caso.get("id") or "C-2026"
                 materia = caso.get("materia", "Derecho Procesal Chileno")
 
+                # 🔍 RAG INJECTOR: Buscar automáticamente precedentes históricos en los 12.870 documentos del estudio
+                precedentes_contexto = ""
+                try:
+                    db_path = BASE_DIR / "data" / "indice_texto.sqlite"
+                    if db_path.exists():
+                        con_fts = sqlite3.connect(db_path)
+                        # Limpiar palabras clave para la consulta FTS5
+                        kw = re.sub(r'[^a-zA-Z0-9\s]', '', tipo_escrito + " " + materia).strip()
+                        kw_query = " OR ".join([w for w in kw.split() if len(w) > 3][:4])
+                        if kw_query:
+                            res_fts = con_fts.execute(
+                                "SELECT nombre, carpeta, snippet(textos, 3, '', '', '...', 25) FROM textos WHERE contenido MATCH ? LIMIT 3",
+                                (kw_query,)
+                            ).fetchall()
+                            if res_fts:
+                                precedentes_contexto = "\n".join([f"• [{r[0]} - Carpeta {r[1]}]: {r[2]}" for r in res_fts])
+                        con_fts.close()
+                except Exception as e_fts:
+                    print(f"⚠️ Aviso RAG FTS5: {e_fts}")
+
                 prompt = f"""
 Eres un distinguido abogado litigante chileno y redactor judicial forense senior.
 Redacta un ESCRITO JUDICIAL COMPLETO, FORMAL Y RIGUROSO conforme al Código de Procedimiento Civil (CPC) o Código Procesal Penal (CPP) chileno según corresponda.
@@ -1420,13 +1440,17 @@ TIPO DE ESCRITO: {tipo_escrito}
 INSTRUCCIÓN ESPECÍFICA DEL ABOGADO:
 {instruccion}
 
-REGLAS DE FORMATO DEL ESCRITO:
-1. Incluye las Sumas oficiales (EN LO PRINCIPAL: ..., EN EL PRIMER OTROSÍ: ...).
-2. Dirígete a la Autoridad Judicial formalmente (S. J. L. de Garantía / Civil / Letras / Trabajo / Ilma. Corte).
-3. Presentación formal del abogado (JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados...).
-4. Fundamentos de hecho y de derecho claros, rigurosos y citando artículos de leyes chilenas si aplica (ej: Art. 152 CPC, Art. 159 CPP, Art. 40 CPC, etc.).
-5. Petitorio formal en mayúsculas (POR TANTO, A S.S. RUEGO / PIDO...).
-6. Devuelve ÚNICAMENTE el texto limpio del escrito formateado en texto plano listo para copiar y pegar a Word u OJV.
+PRECEDENTES Y ESTILO HISTÓRICO RECOLECTADO DE LOS 12.870 DOCUMENTOS DEL ESTUDIO:
+{precedentes_contexto if precedentes_contexto else 'No hay precedentes idénticos, redactar según doctrina general chilena.'}
+
+REGLAS DE FORMATO Y CONTENIDO DEL ESCRITO:
+1. Usa la fundamentación jurídica, tono institucional y petitorios de los precedentes del estudio indicados arriba como guía.
+2. Incluye las Sumas oficiales (EN LO PRINCIPAL: ..., EN EL PRIMER OTROSÍ: ...).
+3. Dirígete a la Autoridad Judicial formalmente (S. J. L. de Garantía / Civil / Letras / Trabajo / Ilma. Corte).
+4. Presentación formal del abogado (JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados...).
+5. Fundamentos de hecho y de derecho claros, rigurosos y citando artículos de leyes chilenas aplicables (ej: Art. 152 CPC, Art. 159 CPP, Art. 40 CPC, etc.).
+6. Petitorio formal en mayúsculas (POR TANTO, A S.S. RUEGO / PIDO...).
+7. Devuelve ÚNICAMENTE el texto limpio del escrito formateado en texto plano listo para copiar y pegar a Word u OJV.
 """
 
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
