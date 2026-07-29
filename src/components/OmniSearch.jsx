@@ -148,7 +148,7 @@ export default function OmniSearch({ onSelectCaso }) {
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '1.2rem',
               width: '100%',
               fontFamily: 'var(--font-body)'
@@ -189,7 +189,7 @@ export default function OmniSearch({ onSelectCaso }) {
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.95rem' }}>{caso.rit}</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600', fontSize: '0.95rem' }}>{caso.rit}</span>
                       {!hasFolder && (
                         <span title="Carpeta física no encontrada" style={{ color: 'var(--alert-red)' }}>
                           <FolderOpen size={14} />

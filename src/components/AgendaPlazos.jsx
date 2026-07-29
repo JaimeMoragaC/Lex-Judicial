@@ -147,7 +147,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
             padding: '12px 20px',
             borderRadius: '10px',
             border: 'none',
-            background: activeTab === 'agenda' ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+            background: activeTab === 'agenda' ? 'rgba(192, 160, 113, 0.15)' : 'transparent',
             color: activeTab === 'agenda' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
             fontWeight: '700',
             fontSize: '0.95rem',
@@ -169,7 +169,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
             padding: '12px 20px',
             borderRadius: '10px',
             border: 'none',
-            background: activeTab === 'tareas' ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+            background: activeTab === 'tareas' ? 'rgba(125, 133, 144, 0.15)' : 'transparent',
             color: activeTab === 'tareas' ? 'var(--accent-purple)' : 'var(--text-secondary)',
             fontWeight: '700',
             fontSize: '0.95rem',
@@ -199,7 +199,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
           <div style={{ marginBottom: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
               <Flame size={22} color="var(--alert-red)" />
-              <h2 style={{ fontSize: '1.35rem', color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', margin: 0 }}>
                 Términos Fatales en Cuenta Regresiva
               </h2>
               <span className="badge badge-red">Monitoreo 24/7</span>
@@ -217,7 +217,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     style={{
                       padding: '24px',
                       borderTop: isCritical ? '4px solid var(--alert-red)' : isHigh ? '4px solid var(--accent-gold)' : '4px solid var(--alert-blue)',
-                      background: isCritical ? 'linear-gradient(180deg, rgba(239, 68, 68, 0.12) 0%, var(--bg-card) 100%)' : 'var(--bg-card)'
+                      background: isCritical ? 'linear-gradient(180deg, rgba(207, 95, 87, 0.12) 0%, var(--bg-card) 100%)' : 'var(--bg-card)'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -234,7 +234,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       </span>
                     </div>
 
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
                       {plazo.caratula}
                     </h3>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -253,7 +253,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                         <Clock size={16} color={isCritical ? 'var(--alert-red)' : 'var(--accent-gold)'} />
-                        <span>Vencimiento: <strong style={{ color: '#fff' }}>{plazo.fechaVencimiento}</strong></span>
+                        <span>Vencimiento: <strong style={{ color: 'var(--text-primary)' }}>{plazo.fechaVencimiento}</strong></span>
                       </div>
                       <div style={{ 
                         fontFamily: 'var(--font-mono)', 
@@ -281,7 +281,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
               <Calendar size={22} color="var(--accent-cyan)" />
-              <h2 style={{ fontSize: '1.35rem', color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', margin: 0 }}>
                 Audiencias Confirmadas en Tribunales
               </h2>
               <span className="badge badge-cyan">Próximos 7 días</span>
@@ -300,7 +300,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       gap: '16px',
                       padding: '18px 20px',
                       borderRadius: '12px',
-                      background: index === 0 ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                      background: index === 0 ? 'rgba(192, 160, 113, 0.05)' : 'rgba(255, 255, 255, 0.02)',
                       border: '1px solid var(--border-color)',
                       borderLeft: index === 0 ? '4px solid var(--accent-cyan)' : '4px solid #8b5cf6'
                     }}
@@ -309,14 +309,14 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       <div style={{ 
                         padding: '12px', 
                         borderRadius: '10px', 
-                        background: index === 0 ? 'rgba(0, 240, 255, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+                        background: index === 0 ? 'rgba(192, 160, 113, 0.15)' : 'rgba(125, 133, 144, 0.15)',
                         textAlign: 'center',
                         minWidth: '70px'
                       }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: index === 0 ? 'var(--accent-cyan)' : '#a78bfa', display: 'block', textTransform: 'uppercase' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: index === 0 ? 'var(--accent-cyan)' : 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>
                           {aud.fecha.split('-')[0].trim()}
                         </span>
-                        <span style={{ fontSize: '0.95rem', fontWeight: '800', color: '#fff' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)' }}>
                           {aud.fecha.split('-')[1] ? aud.fecha.split('-')[1].trim() : ''}
                         </span>
                       </div>
@@ -328,7 +328,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                           </span>
                           <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>{aud.estado}</span>
                         </div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {aud.caso}
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -369,11 +369,11 @@ export default function AgendaPlazos({ onSelectCaso }) {
               animation: 'fadeIn 0.2s ease'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '12px' }}>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Edit3 size={20} color="var(--accent-purple)" />
                   {editingTareaIdx !== null ? "Modificar Pendiente Procesal" : "Asignar Nueva Tarea o Pendiente a una Causa"}
                 </h3>
-                <button onClick={() => setShowTareaModal(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer' }}>
+                <button onClick={() => setShowTareaModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
               </div>
@@ -393,7 +393,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                           casoId: selected ? selected.id : "gen"
                         });
                       }}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                     >
                       <option value="ROL C-1869-2026">ROL C-1869-2026 - MEDINA con MORAGA (Temuco)</option>
                       {MOCK_CASOS.map((c, idx) => (
@@ -412,7 +412,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       value={tareaForm.fechaVencimiento} 
                       onChange={e => setTareaForm({ ...tareaForm, fechaVencimiento: e.target.value })}
                       placeholder="DD/MM/AAAA"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                     />
                   </div>
 
@@ -421,7 +421,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     <select 
                       value={tareaForm.prioridad} 
                       onChange={e => setTareaForm({ ...tareaForm, prioridad: e.target.value })}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                     >
                       <option value="CRITICA">🔥 CRÍTICA (Plazo fatal inmediato)</option>
                       <option value="ALTA">🟡 ALTA (Relevante para estrategia)</option>
@@ -437,7 +437,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       value={tareaForm.responsable} 
                       onChange={e => setTareaForm({ ...tareaForm, responsable: e.target.value })}
                       placeholder="Ej: Jaime Moraga C. / Procurador"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                     />
                   </div>
                 </div>
@@ -449,7 +449,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     value={tareaForm.titulo} 
                     onChange={e => setTareaForm({ ...tareaForm, titulo: e.target.value })}
                     placeholder="Ej: Redactar pliego de posiciones para absolución / Solicitar copia autorizada de audio"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.95rem', fontWeight: '600' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: '600' }}
                   />
                 </div>
 
@@ -460,7 +460,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     value={tareaForm.notas} 
                     onChange={e => setTareaForm({ ...tareaForm, notas: e.target.value })}
                     placeholder="Ej: Revisar jurisprudencia adjunta en carpeta. Acompañar con citación al tribunal..."
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem', fontFamily: 'inherit', resize: 'vertical' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'inherit', resize: 'vertical' }}
                   />
                 </div>
 
@@ -494,7 +494,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
               <select 
                 value={filtroCaso} 
                 onChange={e => setFiltroCaso(e.target.value)}
-                style={{ padding: '6px 12px', borderRadius: '6px', background: '#1e293b', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
               >
                 <option value="ALL">📂 Todas las causas y pendientes</option>
                 <option value="ROL C-1869-2026">ROL C-1869-2026 - MEDINA con MORAGA</option>
@@ -506,7 +506,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
               <select 
                 value={filtroEstado} 
                 onChange={e => setFiltroEstado(e.target.value)}
-                style={{ padding: '6px 12px', borderRadius: '6px', background: '#1e293b', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.85rem' }}
+                style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
               >
                 <option value="ALL">⚡ Todos los estados</option>
                 <option value="PENDING">⏳ Solo Pendientes / Activas</option>
@@ -542,7 +542,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       borderRadius: '12px',
                       border: '1px solid var(--border-color)',
                       borderLeft: isCritica ? '4px solid var(--alert-red)' : isAlta ? '4px solid var(--accent-gold)' : '4px solid var(--accent-cyan)',
-                      background: isCompletada ? 'rgba(255, 255, 255, 0.01)' : isCritica ? 'linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255,255,255,0.02) 100%)' : 'rgba(255, 255, 255, 0.02)',
+                      background: isCompletada ? 'rgba(255, 255, 255, 0.01)' : isCritica ? 'linear-gradient(90deg, rgba(207, 95, 87, 0.08) 0%, rgba(255,255,255,0.02) 100%)' : 'rgba(255, 255, 255, 0.02)',
                       display: 'flex',
                       alignItems: 'flex-start',
                       justifyContent: 'space-between',
@@ -570,7 +570,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                                 if (c) onSelectCaso(c);
                               }
                             }}
-                            style={{ fontSize: '0.75rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', background: 'rgba(0, 240, 255, 0.1)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ fontSize: '0.75rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', background: 'rgba(192, 160, 113, 0.1)', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                             title="Ver ficha completa de la causa"
                           >
                             📎 {tarea.casoRit} - {tarea.casoCaratula} <ExternalLink size={11} />
@@ -581,13 +581,13 @@ export default function AgendaPlazos({ onSelectCaso }) {
                           </span>
 
                           {isCompletada && (
-                            <span className="badge badge-green" style={{ fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--alert-green)' }}>
+                            <span className="badge badge-green" style={{ fontSize: '0.7rem', background: 'rgba(93, 145, 105, 0.2)', color: 'var(--alert-green)' }}>
                               ✓ COMPLETADA
                             </span>
                           )}
                         </div>
 
-                        <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: isCompletada ? '#94a3b8' : '#fff', margin: '0 0 6px 0', textDecoration: isCompletada ? 'line-through' : 'none' }}>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: isCompletada ? '#94a3b8' : 'var(--text-primary)', margin: '0 0 6px 0', textDecoration: isCompletada ? 'line-through' : 'none' }}>
                           {tarea.titulo}
                         </h4>
 
@@ -598,7 +598,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                         )}
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.78rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                          <span>📅 Plazo: <strong style={{ color: isCritica && !isCompletada ? 'var(--alert-red)' : '#e2e8f0' }}>{tarea.fechaVencimiento}</strong></span>
+                          <span>📅 Plazo: <strong style={{ color: isCritica && !isCompletada ? 'var(--alert-red)' : 'var(--text-primary)' }}>{tarea.fechaVencimiento}</strong></span>
                           <span>👤 Responsable: <strong>{tarea.responsable}</strong></span>
                         </div>
                       </div>
@@ -607,7 +607,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <button 
                         className="btn-secondary" 
-                        style={{ padding: '8px 12px', fontSize: '0.78rem', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.3)' }} 
+                        style={{ padding: '8px 12px', fontSize: '0.78rem', color: 'var(--info)', borderColor: 'rgba(96, 165, 250, 0.3)' }} 
                         onClick={() => handleOpenEditTarea(indexInList, tarea)}
                         title="Editar tarea"
                       >
@@ -615,7 +615,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       </button>
                       <button 
                         className="btn-secondary" 
-                        style={{ padding: '8px 12px', fontSize: '0.78rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }} 
+                        style={{ padding: '8px 12px', fontSize: '0.78rem', color: 'var(--danger)', borderColor: 'rgba(248, 113, 113, 0.3)' }} 
                         onClick={() => handleDeleteTarea(indexInList)}
                         title="Eliminar tarea"
                       >

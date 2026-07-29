@@ -155,8 +155,8 @@ export default function BitacoraOmnicanal() {
       padding: '24px', 
       marginBottom: '26px', 
       background: 'rgba(10, 15, 25, 0.75)', 
-      border: '1px solid rgba(0, 240, 255, 0.3)',
-      boxShadow: '0 8px 32px 0 rgba(0, 240, 255, 0.1)',
+      border: '1px solid rgba(192, 160, 113, 0.3)',
+      boxShadow: '0 8px 32px 0 rgba(192, 160, 113, 0.1)',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -167,7 +167,7 @@ export default function BitacoraOmnicanal() {
         left: 0,
         right: 0,
         height: '2px',
-        background: 'linear-gradient(90deg, transparent, #00f0ff, transparent)',
+        background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
         opacity: 0.8
       }} />
 
@@ -175,10 +175,10 @@ export default function BitacoraOmnicanal() {
         {/* Columna Izquierda: Ingreso Inteligente */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(0, 240, 255, 0.1)' }}>
-              <Mic size={20} color="#00f0ff" />
+            <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(192, 160, 113, 0.1)' }}>
+              <Mic size={20} color="var(--accent)" />
             </div>
-            <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora Omnicanal</h3>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora Omnicanal</h3>
           </div>
 
           <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
@@ -193,14 +193,14 @@ export default function BitacoraOmnicanal() {
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '8px',
                 padding: '16px',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '1rem',
                 resize: 'vertical',
                 outline: 'none',
                 transition: 'border-color 0.2s',
                 fontFamily: 'var(--font-sans)'
               }}
-              onFocus={(e) => e.target.style.borderColor = 'rgba(0, 240, 255, 0.5)'}
+              onFocus={(e) => e.target.style.borderColor = 'rgba(192, 160, 113, 0.5)'}
               onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
             />
             
@@ -229,11 +229,11 @@ export default function BitacoraOmnicanal() {
                 type="submit" 
                 disabled={loading || !texto.trim()}
                 style={{
-                  background: loading ? 'transparent' : 'linear-gradient(45deg, #00f0ff, #0088ff)',
-                  border: loading ? '1px solid #00f0ff' : 'none',
+                  background: loading ? 'transparent' : 'linear-gradient(45deg, var(--accent), var(--accent))',
+                  border: loading ? '1px solid var(--accent)' : 'none',
                   padding: '10px 24px',
                   borderRadius: '24px',
-                  color: loading ? '#00f0ff' : '#000',
+                  color: loading ? 'var(--accent)' : 'var(--text-inverse)',
                   fontWeight: '600',
                   cursor: (loading || !texto.trim()) ? 'not-allowed' : 'pointer',
                   display: 'flex',
@@ -288,7 +288,7 @@ export default function BitacoraOmnicanal() {
             <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(255, 170, 0, 0.1)' }}>
               <Clock size={20} color="var(--accent-gold)" />
             </div>
-            <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora del Día</h3>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora del Día</h3>
           </div>
           
           <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px', paddingRight: '8px' }}>
@@ -309,7 +309,7 @@ export default function BitacoraOmnicanal() {
                       position: 'relative'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                        <div style={{ color: '#00f0ff', fontSize: '0.75rem', fontWeight: '600', fontFamily: 'var(--font-mono)' }}>
+                        <div style={{ color: 'var(--accent)', fontSize: '0.75rem', fontWeight: '600', fontFamily: 'var(--font-mono)' }}>
                           [{hora}] {act.casoAsociado}
                         </div>
                         <span style={{

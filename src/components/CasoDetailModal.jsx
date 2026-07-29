@@ -817,7 +817,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             transition: 'all 0.2s',
             zIndex: 10
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
         >
           <X size={20} />
@@ -828,7 +828,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           {/* Fila 1: Metadatos y Badges */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '800', color: 'var(--accent-cyan)', background: 'rgba(0, 240, 255, 0.1)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.3)', letterSpacing: '0.5px' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '800', color: 'var(--accent-cyan)', background: 'rgba(192, 160, 113, 0.1)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(192, 160, 113, 0.3)', letterSpacing: '0.5px' }}>
                 {caso.rit}
               </div>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '6px 0' }}>
@@ -843,7 +843,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               <button 
                 onClick={handleGenerarReporteWhatsApp}
                 className="btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: '#4ade80' }}
+                style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: 'var(--ok)' }}
               >
                 <MessageCircle size={16} />
                 <span>Reporte Cliente</span>
@@ -864,9 +864,9 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   }
                 }}
                 style={{
-                  background: estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  color: estadoVigencia === 'VIGENTE' ? '#4ade80' : '#f87171',
-                  border: `1px solid ${estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  background: estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(207, 95, 87, 0.15)',
+                  color: estadoVigencia === 'VIGENTE' ? 'var(--ok)' : 'var(--danger)',
+                  border: `1px solid ${estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(207, 95, 87, 0.4)'}`,
                   padding: '6px 14px',
                   borderRadius: '12px',
                   fontSize: '0.8rem',
@@ -876,15 +876,15 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   fontFamily: 'inherit'
                 }}
               >
-                <option value="VIGENTE" style={{ background: '#0f172a', color: '#4ade80' }}>🟢 VIGENTE</option>
-                <option value="TERMINADO / CANCELADO" style={{ background: '#0f172a', color: '#f87171' }}>TERMINADA / CANCELADA</option>
+                <option value="VIGENTE" style={{ background: 'var(--bg-app)', color: 'var(--ok)' }}>🟢 VIGENTE</option>
+                <option value="TERMINADO / CANCELADO" style={{ background: 'var(--bg-app)', color: 'var(--danger)' }}>TERMINADA / CANCELADA</option>
               </select>
             </div>
           </div>
 
           </div>
           {/* Fila 2: Título Principal (Carátula) */}
-          <h2 style={{ fontSize: '1.8rem', color: '#fff', marginBottom: '12px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
             {caso.caratula}
           </h2>
 
@@ -892,7 +892,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.95rem', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '8px', display: 'inline-flex' }}>
             <span style={{ fontSize: '1.1rem' }}></span>
             <strong>Tribunal / Magistratura:</strong> 
-            <span style={{ color: '#e2e8f0' }}>{caso.tribunal}</span>
+            <span style={{ color: 'var(--text-primary)' }}>{caso.tribunal}</span>
           </div>
         </div>
 
@@ -904,7 +904,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'resumen' ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+              background: activeTab === 'resumen' ? 'rgba(192, 160, 113, 0.15)' : 'transparent',
               color: activeTab === 'resumen' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
@@ -925,7 +925,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'gestiones' ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+              background: activeTab === 'gestiones' ? 'rgba(125, 133, 144, 0.15)' : 'transparent',
               color: activeTab === 'gestiones' ? 'var(--accent-purple)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
@@ -946,7 +946,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'documentos' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+              background: activeTab === 'documentos' ? 'rgba(93, 145, 105, 0.15)' : 'transparent',
               color: activeTab === 'documentos' ? 'var(--alert-green)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
@@ -967,7 +967,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'vinculadas' ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+              background: activeTab === 'vinculadas' ? 'rgba(201, 148, 70, 0.15)' : 'transparent',
               color: activeTab === 'vinculadas' ? 'var(--accent-gold)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
@@ -988,7 +988,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'redaccion' ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+              background: activeTab === 'redaccion' ? 'rgba(192, 160, 113, 0.15)' : 'transparent',
               color: activeTab === 'redaccion' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
@@ -1011,8 +1011,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               padding: '10px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === 'alegatos' ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-              color: activeTab === 'alegatos' ? '#c4b5fd' : 'var(--text-secondary)',
+              background: activeTab === 'alegatos' ? 'rgba(125, 133, 144, 0.15)' : 'transparent',
+              color: activeTab === 'alegatos' ? 'var(--text-secondary)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -1021,7 +1021,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               gap: '8px',
               borderBottom: activeTab === 'alegatos' ? '2px solid #8b5cf6' : 'none',
               transition: 'all 0.2s',
-              boxShadow: activeTab === 'alegatos' ? '0 0 20px rgba(139, 92, 246, 0.3)' : 'none'
+              boxShadow: activeTab === 'alegatos' ? '0 0 20px rgba(125, 133, 144, 0.3)' : 'none'
             }}
           >
             <span>Estudio de Alegatos</span>
@@ -1034,7 +1034,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               borderRadius: '8px',
               border: 'none',
               background: activeTab === 'bitacora' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: activeTab === 'bitacora' ? '#60a5fa' : 'var(--text-secondary)',
+              color: activeTab === 'bitacora' ? 'var(--info)' : 'var(--text-secondary)',
               fontWeight: '700',
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -1059,8 +1059,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             <div style={{
               padding: '24px 28px',
               borderRadius: '16px',
-              backgroundColor: isUrgente ? 'rgba(239, 68, 68, 0.08)' : (ultimaGestionPendiente ? 'rgba(139, 92, 246, 0.08)' : 'rgba(245, 158, 11, 0.08)'),
-              border: isUrgente ? '1px solid rgba(239, 68, 68, 0.3)' : (ultimaGestionPendiente ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)'),
+              backgroundColor: isUrgente ? 'rgba(207, 95, 87, 0.08)' : (ultimaGestionPendiente ? 'rgba(125, 133, 144, 0.08)' : 'rgba(201, 148, 70, 0.08)'),
+              border: isUrgente ? '1px solid rgba(207, 95, 87, 0.3)' : (ultimaGestionPendiente ? '1px solid rgba(125, 133, 144, 0.3)' : '1px solid rgba(201, 148, 70, 0.3)'),
               marginBottom: '32px',
               display: 'flex',
               alignItems: 'center',
@@ -1078,19 +1078,19 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   
                   {ultimaGestionPendiente ? (
                     <>
-                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#fff', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
                         {ultimaGestionPendiente.tramite}
                       </p>
-                      <span style={{ fontSize: '0.9rem', color: '#cbd5e1', opacity: 0.9 }}>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', opacity: 0.9 }}>
                         Programado para: <strong>{ultimaGestionPendiente.fecha}</strong> • Estado: <strong>{ultimaGestionPendiente.estado}</strong>
                       </span>
                     </>
                   ) : (
                     <>
-                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: '#fff', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
                         {caso.proximaAudiencia || 'Consultar en Estado Diario / Tramitación'}
                       </p>
-                      <span style={{ fontSize: '0.9rem', color: isUrgente ? '#fca5a5' : '#fde68a', opacity: 0.9 }}>
+                      <span style={{ fontSize: '0.9rem', color: isUrgente ? 'var(--danger)' : '#fde68a', opacity: 0.9 }}>
                         {caso.plazoDescripcion || 'Monitorear plazos en OJV.'}
                       </span>
                     </>
@@ -1119,13 +1119,13 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 <span style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', letterSpacing: '0.5px' }}>
                   Defensa / Representación
                 </span>
-                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: '#fff', margin: '0 0 12px 0' }}>
+                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
                   {caso.cliente || 'Mandante en registro'}
                 </p>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '12px 0' }}></div>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>
                   Abogado Litigante a Cargo:<br/>
-                  <strong style={{ color: '#e2e8f0', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.abogadoAspirante || 'Jaime Moraga C.'}</strong>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.abogadoAspirante || 'Jaime Moraga C.'}</strong>
                 </span>
               </div>
 
@@ -1133,13 +1133,13 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 <span style={{ fontSize: '0.8rem', color: 'var(--accent-purple)', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', letterSpacing: '0.5px' }}>
                   Contraparte & Intervinientes
                 </span>
-                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: '#fff', margin: '0 0 12px 0' }}>
+                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
                   {caso.contraparte || 'Parte contraria según carátula'}
                 </p>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '12px 0' }}></div>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>
                   Fecha Ingreso Judicial:<br/>
-                  <strong style={{ color: '#e2e8f0', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.fechaIngreso || 'Ver en OJV'}</strong>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.fechaIngreso || 'Ver en OJV'}</strong>
                 </span>
               </div>
             </div>
@@ -1148,14 +1148,14 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             <div style={{ 
               padding: '28px', 
               borderRadius: '16px', 
-              background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%)', 
-              border: '1px solid rgba(139, 92, 246, 0.2)',
+              background: 'linear-gradient(135deg, rgba(192, 160, 113, 0.03) 0%, rgba(125, 133, 144, 0.03) 100%)', 
+              border: '1px solid rgba(125, 133, 144, 0.2)',
               marginBottom: '16px'
             }}>
-              <h3 style={{ fontSize: '1.1rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', letterSpacing: '0.5px' }}>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', letterSpacing: '0.5px' }}>
                 Teoría del Caso & Estrategia Litigante
               </h3>
-              <p style={{ fontSize: '1rem', color: '#cbd5e1', margin: 0, lineHeight: 1.7, fontWeight: '400' }}>
+              <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.7, fontWeight: '400' }}>
                 {caso.resumenTeoriaCaso || 'Expediente bajo monitoreo procesal activo por parte del estudio legal.'}
               </p>
             </div>
@@ -1170,22 +1170,22 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               <div style={{ 
               padding: '28px', 
               borderRadius: '16px', 
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(0, 240, 255, 0.08) 100%)', 
+              background: 'linear-gradient(135deg, rgba(125, 133, 144, 0.12) 0%, rgba(192, 160, 113, 0.08) 100%)', 
               border: '1px solid var(--accent-purple)', 
               marginBottom: '32px',
-              boxShadow: '0 10px 30px -5px rgba(139, 92, 246, 0.25)'
+              boxShadow: '0 10px 30px -5px rgba(125, 133, 144, 0.25)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
                   <span style={{ fontSize: '1.25rem' }}></span>
                   <span>Sugerencias de Estrategia Procesal (Motor Heurístico Local) ({sugerenciasIA.length})</span>
                 </h4>
-                <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(139, 92, 246, 0.25)', border: '1px solid var(--accent-purple)' }}>
+                <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(125, 133, 144, 0.25)', border: '1px solid var(--accent-purple)' }}>
                   Procedimiento: {caso.materia}
                 </span>
               </div>
 
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
                 Evaluando la competencia y el estado actual (<strong>{caso.etapa}</strong> en <strong>{caso.tribunal}</strong>), el motor jurídico forense recomienda impulsar las siguientes gestiones conforme al código procesal aplicable:
               </p>
 
@@ -1208,11 +1208,11 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         <span style={{ 
                           fontSize: '0.72rem', 
                           fontWeight: '800', 
-                          color: sug.prioridad === 'ALTA' ? '#ef4444' : '#f59e0b',
-                          background: sug.prioridad === 'ALTA' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                          color: sug.prioridad === 'ALTA' ? 'var(--danger)' : '#f59e0b',
+                          background: sug.prioridad === 'ALTA' ? 'rgba(207, 95, 87, 0.15)' : 'rgba(201, 148, 70, 0.15)',
                           padding: '3px 8px', 
                           borderRadius: '6px',
-                          border: sug.prioridad === 'ALTA' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)'
+                          border: sug.prioridad === 'ALTA' ? '1px solid rgba(207, 95, 87, 0.4)' : '1px solid rgba(201, 148, 70, 0.4)'
                         }}>
                           PRIORIDAD {sug.prioridad}
                         </span>
@@ -1221,15 +1221,15 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </span>
                       </div>
                       
-                      <strong style={{ fontSize: '1rem', color: '#fff', display: 'block', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
                         {sug.titulo}
                       </strong>
                       
-                      <p style={{ fontSize: '0.88rem', color: '#e2e8f0', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
                         <strong>Acción Litigante:</strong> {sug.accion}
                       </p>
                       
-                      <span style={{ fontSize: '0.8rem', color: '#fca5a5', fontWeight: '700', display: 'block', background: 'rgba(239, 68, 68, 0.08)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '700', display: 'block', background: 'rgba(207, 95, 87, 0.08)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content', marginTop: '4px' }}>
                         {sug.plazoFatal}
                       </span>
                     </div>
@@ -1250,7 +1250,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-              <h3 style={{ fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px', margin: 0, letterSpacing: '0.5px' }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', margin: 0, letterSpacing: '0.5px' }}>
                 Historial de Tramitación & Movimientos OJV
               </h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1280,11 +1280,11 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 animation: 'fadeIn 0.2s ease'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Edit3 size={18} color="var(--accent-purple)" />
                     {editingGestionIdx !== null ? "Modificar Actuación Procesal / Trámite" : "Registrar Nueva Actuación Procesal"}
                   </h4>
-                  <button onClick={() => setShowGestionModal(false)} style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer' }}>
+                  <button onClick={() => setShowGestionModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <X size={18} />
                   </button>
                 </div>
@@ -1297,7 +1297,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         type="date" 
                         value={gestionForm.fecha} 
                         onChange={e => setGestionForm({ ...gestionForm, fecha: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       />
                     </div>
                     <div>
@@ -1307,7 +1307,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         value={gestionForm.folio} 
                         onChange={e => setGestionForm({ ...gestionForm, folio: e.target.value })}
                         placeholder="Ej: Folio 55 / Escrito 4"
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       />
                     </div>
                     <div>
@@ -1315,7 +1315,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <select 
                         value={gestionForm.cuaderno} 
                         onChange={e => setGestionForm({ ...gestionForm, cuaderno: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       >
                         <option value="Principal">Principal</option>
                         <option value="Prueba">Prueba</option>
@@ -1329,7 +1329,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <select 
                         value={gestionForm.estado} 
                         onChange={e => setGestionForm({ ...gestionForm, estado: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       >
                         <option value="PENDIENTE (POR HACER)">PENDIENTE (POR HACER)</option>
                         <option value="URGENTE">URGENTE</option>
@@ -1352,7 +1352,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       value={gestionForm.origen} 
                       onChange={e => setGestionForm({ ...gestionForm, origen: e.target.value })}
                       placeholder="Ej: 3º Juzgado Civil de Temuco / Jaime Moraga C. / Receptor Judicial"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.85rem' }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                     />
                   </div>
 
@@ -1367,7 +1367,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       placeholder="Ej: Acompaña lista de testigos (Escribe para buscar sugerencias...)"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '0.9rem', fontFamily: 'inherit' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'inherit' }}
                     />
                     
                     {showSuggestions && (
@@ -1376,7 +1376,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         top: '100%',
                         left: 0,
                         right: 0,
-                        background: '#0f172a',
+                        background: 'var(--bg-app)',
                         border: '1px solid var(--accent-purple)',
                         borderRadius: '6px',
                         maxHeight: '200px',
@@ -1403,8 +1403,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                                 transition: 'all 0.2s'
                               }}
                               onMouseEnter={e => {
-                                e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
-                                e.currentTarget.style.color = '#fff';
+                                e.currentTarget.style.background = 'rgba(125, 133, 144, 0.2)';
+                                e.currentTarget.style.color = 'var(--text-primary)';
                               }}
                               onMouseLeave={e => {
                                 e.currentTarget.style.background = 'transparent';
@@ -1461,7 +1461,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   alignItems: 'center',
                   flexWrap: 'wrap',
                   gap: '16px',
-                  boxShadow: index === 0 ? '0 8px 24px rgba(0, 240, 255, 0.08)' : '0 4px 12px rgba(0,0,0,0.2)',
+                  boxShadow: index === 0 ? '0 8px 24px rgba(192, 160, 113, 0.08)' : '0 4px 12px rgba(0,0,0,0.2)',
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
@@ -1469,17 +1469,17 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 >
                   <div style={{ flex: '1', minWidth: '250px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', background: 'rgba(0, 240, 255, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', background: 'rgba(192, 160, 113, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
                         {g.fecha}
                       </span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#fff', background: 'rgba(255, 255, 255, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-primary)', background: 'rgba(255, 255, 255, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
                         {g.folio}
                       </span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         Cuaderno: {g.cuaderno}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.95rem', fontWeight: '600', color: '#e2e8f0', margin: 0 }}>
+                    <p style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
                       {g.tramite}
                     </p>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
@@ -1489,8 +1489,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <span className="badge" style={{ 
-                      background: g.estado === 'URGENTE' ? 'var(--alert-red)' : (g.estado.includes('PENDIENTE') ? 'var(--accent-gold)' : (index === 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)')), 
-                      color: g.estado === 'URGENTE' ? '#fff' : (g.estado.includes('PENDIENTE') ? '#000' : (index === 0 ? 'var(--alert-green)' : 'var(--text-secondary)')), 
+                      background: g.estado === 'URGENTE' ? 'var(--alert-red)' : (g.estado.includes('PENDIENTE') ? 'var(--accent-gold)' : (index === 0 ? 'rgba(93, 145, 105, 0.2)' : 'rgba(255,255,255,0.05)')), 
+                      color: g.estado === 'URGENTE' ? 'var(--text-primary)' : (g.estado.includes('PENDIENTE') ? 'var(--text-inverse)' : (index === 0 ? 'var(--alert-green)' : 'var(--text-secondary)')), 
                       fontWeight: '700' 
                     }}>
                       {g.estado}
@@ -1502,7 +1502,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </button>
                         <button 
                           className="btn-secondary" 
-                          style={{ padding: '6px 10px', fontSize: '0.75rem', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.3)' }} 
+                          style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--info)', borderColor: 'rgba(96, 165, 250, 0.3)' }} 
                           onClick={() => handleOpenEditGestion(realIndex, g)} 
                           title="Modificar actuación"
                         >
@@ -1510,7 +1510,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </button>
                         <button 
                           className="btn-secondary" 
-                          style={{ padding: '6px 10px', fontSize: '0.75rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }} 
+                          style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--danger)', borderColor: 'rgba(248, 113, 113, 0.3)' }} 
                           onClick={() => handleDeleteGestion(realIndex)} 
                           title="Eliminar actuación"
                         >
@@ -1536,9 +1536,9 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         {/* PESTAÑA 3: DOCUMENTOS VINCULADOS */}
         {activeTab === 'documentos' && (
           <div className="animate-fade-in" style={{ padding: '10px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', background: 'rgba(16, 185, 129, 0.05)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', background: 'rgba(93, 145, 105, 0.05)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(93, 145, 105, 0.2)' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
                   Repositorio Digital & Archivos en Disco Duro Local
                 </h3>
                 {discoFolder ? (
@@ -1570,7 +1570,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             {documentosList.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px dashed rgba(255,255,255,0.1)', marginBottom: '24px' }}>
                 <FolderOpen size={40} color="var(--text-muted)" style={{ marginBottom: '16px' }} />
-                <h4 style={{ color: '#fff', fontSize: '1.1rem', margin: '0 0 8px 0' }}>No hay archivos locales indexados</h4>
+                <h4 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', margin: '0 0 8px 0' }}>No hay archivos locales indexados</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
                   Esta causa no tiene una carpeta física vinculada en el disco duro (/Casos2023) o la carpeta está vacía. 
                   El sistema busca automáticamente coincidencias exactas o nombres de clientes/contrapartes.
@@ -1595,11 +1595,11 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                      <div style={{ padding: '10px', borderRadius: '10px', background: doc.nombre && doc.nombre.endsWith('.pdf') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>
-                        <FileText size={22} color={doc.nombre && doc.nombre.endsWith('.pdf') ? '#ef4444' : '#3b82f6'} />
+                      <div style={{ padding: '10px', borderRadius: '10px', background: doc.nombre && doc.nombre.endsWith('.pdf') ? 'rgba(207, 95, 87, 0.1)' : 'rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>
+                        <FileText size={22} color={doc.nombre && doc.nombre.endsWith('.pdf') ? 'var(--danger)' : '#3b82f6'} />
                       </div>
                       <div style={{ overflow: 'hidden' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#fff', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {doc.nombre}
                         </span>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
@@ -1634,9 +1634,9 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         {/* PESTAÑA 4: CAUSAS CONEXAS Y RECURSOS VINCULADOS */}
         {activeTab === 'vinculadas' && (
           <div className="animate-fade-in" style={{ padding: '10px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', background: 'rgba(245, 158, 11, 0.05)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', background: 'rgba(201, 148, 70, 0.05)', padding: '24px', borderRadius: '16px', border: '1px solid rgba(201, 148, 70, 0.2)' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
                   Causas Conexas, Acumulaciones y Recursos ({linkedCases.length})
                 </h3>
                 <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
@@ -1656,8 +1656,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
             {/* BUSCADOR MANUAL PARA VINCULAR NUEVA CAUSA */}
             {showLinkModal && (
-              <div className="animate-fade-in" style={{ padding: '18px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid var(--accent-gold)', marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="animate-fade-in" style={{ padding: '18px', borderRadius: '12px', background: 'rgba(201, 148, 70, 0.08)', border: '1px solid var(--accent-gold)', marginBottom: '20px' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>Agregar Vinculación Procesal Manual</span>
                 </h4>
 
@@ -1674,7 +1674,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       border: '1px solid var(--border-color)',
                       borderRadius: '8px',
                       padding: '10px 14px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '0.85rem',
                       fontFamily: 'var(--font-body)',
                       outline: 'none'
@@ -1721,7 +1721,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     }).slice(0, 6).map(res => (
                       <div key={res.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div>
-                          <strong style={{ color: '#fff', fontSize: '0.85rem', display: 'block' }}>{res.rit} • {res.caratula}</strong>
+                          <strong style={{ color: 'var(--text-primary)', fontSize: '0.85rem', display: 'block' }}>{res.rit} • {res.caratula}</strong>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{res.tribunal} ({res.materia})</span>
                         </div>
                         <button 
@@ -1795,7 +1795,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = 'var(--accent-gold)';
-                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.06)';
+                      e.currentTarget.style.background = 'rgba(201, 148, 70, 0.06)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -1804,16 +1804,16 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   >
                     <div style={{ flex: '1', minWidth: '280px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#fff', background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-primary)', background: 'linear-gradient(90deg, rgba(201, 148, 70, 0.25) 0%, rgba(125, 133, 144, 0.25) 100%)', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(201, 148, 70, 0.4)' }}>
                           {cVinc.motivoVinculacion || 'Conexitud Procesal'}
                         </span>
-                        <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', fontWeight: '800', color: 'var(--accent-gold)', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', fontWeight: '800', color: 'var(--accent-gold)', background: 'rgba(201, 148, 70, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
                           {cVinc.rit}
                         </span>
                         <span className="badge badge-purple" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>{cVinc.materia}</span>
                         <span className="badge badge-blue" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>Etapa: {cVinc.etapa}</span>
                       </div>
-                      <span style={{ fontSize: '1rem', fontWeight: '700', color: '#fff', display: 'block' }}>
+                      <span style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', display: 'block' }}>
                         {cVinc.caratula}
                       </span>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
@@ -1830,9 +1830,9 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         style={{ 
                           padding: '6px 12px', 
                           borderRadius: '8px', 
-                          background: 'rgba(239, 68, 68, 0.1)', 
-                          border: '1px solid rgba(239, 68, 68, 0.3)', 
-                          color: '#ef4444', 
+                          background: 'rgba(207, 95, 87, 0.1)', 
+                          border: '1px solid rgba(207, 95, 87, 0.3)', 
+                          color: 'var(--danger)', 
                           fontSize: '0.75rem', 
                           fontWeight: '700',
                           cursor: 'pointer',
@@ -1843,12 +1843,12 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         }}
                         title="Romper vinculación entre ambas causas"
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
-                          e.currentTarget.style.color = '#fff';
+                          e.currentTarget.style.background = 'rgba(207, 95, 87, 0.25)';
+                          e.currentTarget.style.color = 'var(--text-primary)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                          e.currentTarget.style.color = '#ef4444';
+                          e.currentTarget.style.background = 'rgba(207, 95, 87, 0.1)';
+                          e.currentTarget.style.color = 'var(--danger)';
                         }}
                       >
                         <Trash2 size={14} />
@@ -1870,10 +1870,10 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         {/* PESTAÑA 5: TALLER FORENSE DE REDACCIÓN DE ESCRITOS OJV */}
         {activeTab === 'redaccion' && (
           <div className="animate-fade-in" style={{ marginTop: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '18px 22px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '1px solid var(--accent-cyan)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '18px 22px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(192, 160, 113, 0.1) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '1px solid var(--accent-cyan)' }}>
               <div>
                 <span className="badge badge-cyan" style={{ marginBottom: '6px' }}>Automatización Procesal Litigante</span>
-                <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   Taller Forense de Redacción para Oficina Judicial Virtual (OJV)
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, marginTop: '4px' }}>
@@ -1899,7 +1899,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Selector de Tipo de Escrito y Configuración */}
                 <div className="glass-card" style={{ padding: '28px', borderTop: '4px solid var(--accent-gold)' }}>
-                <h4 style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   1. Plantilla Ritual Procesal
                 </h4>
 
@@ -1912,7 +1912,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   style={{
                     width: '100%',
                     background: 'var(--bg-modal)',
-                    color: '#fff',
+                    color: 'var(--text-primary)',
                     border: '1px solid var(--border-hover)',
                     padding: '12px 14px',
                     borderRadius: '10px',
@@ -1934,7 +1934,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                     <li><strong>Tribunal:</strong> {caso.tribunal || 'No registrado'}</li>
                     <li><strong>Carátula:</strong> {caso.caratula}</li>
-                    <li><strong>ROL / RIT:</strong> <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{caso.rit}</span></li>
+                    <li><strong>ROL / RIT:</strong> <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{caso.rit}</span></li>
                     <li><strong>Representado:</strong> {caso.cliente || 'Cliente Estudio'}</li>
                   </ul>
                 </div>
@@ -1960,8 +1960,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       setTimeout(() => setCopiadoEscrito(false), 3000);
                     }}
                   >
-                    <Copy size={16} color={copiadoEscrito ? 'var(--alert-green)' : '#fff'} />
-                    <span style={{ color: copiadoEscrito ? 'var(--alert-green)' : '#fff' }}>
+                    <Copy size={16} color={copiadoEscrito ? 'var(--alert-green)' : 'var(--text-primary)'} />
+                    <span style={{ color: copiadoEscrito ? 'var(--alert-green)' : 'var(--text-primary)' }}>
                       {copiadoEscrito ? '¡Texto Copiado al Portapapeles!' : 'Copiar Escrito Completo'}
                     </span>
                   </button>
@@ -1971,7 +1971,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               {/* Selector de Insumos Documentales de la Carpeta del Cliente */}
               <div className="glass-card" style={{ padding: '28px', borderTop: '4px solid var(--alert-green)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h4 style={{ fontSize: '1.1rem', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     2. Insumos de la Carpeta en Disco Real
                   </h4>
                   <span className="badge badge-yellow" style={{ fontSize: '0.7rem' }}>
@@ -1985,7 +1985,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                   <button 
                     onClick={() => setInsumosActivos(prev => prev.map(i => ({ ...i, incluido: true })))}
-                    style={{ padding: '6px 10px', fontSize: '0.75rem', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border-color)', color: '#fff', cursor: 'pointer', fontWeight: '600' }}
+                    style={{ padding: '6px 10px', fontSize: '0.75rem', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: '600' }}
                   >
                     Marcar Todos
                   </button>
@@ -2010,14 +2010,14 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         style={{
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          background: ins.incluido ? 'rgba(245, 158, 11, 0.1)' : 'rgba(0, 0, 0, 0.4)',
+                          background: ins.incluido ? 'rgba(201, 148, 70, 0.1)' : 'rgba(0, 0, 0, 0.4)',
                           border: ins.incluido ? '1px solid var(--accent-gold)' : '1px solid rgba(255,255,255,0.05)',
                           cursor: 'pointer',
                           transition: 'all 0.15s'
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.82rem', fontWeight: '700', color: ins.incluido ? '#fff' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: '700', color: ins.incluido ? 'var(--text-primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>{ins.incluido ? '' : ''}</span>
                             <span style={{ wordBreak: 'break-all' }}>{ins.nombre}</span>
                           </span>
@@ -2050,7 +2050,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.82rem',
-                  color: '#e2e8f0',
+                  color: 'var(--text-primary)',
                   lineHeight: 1.6,
                   maxHeight: '440px',
                   overflowY: 'auto',
@@ -2070,10 +2070,10 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         {/* PESTAÑA 6: ESTUDIO DE PREPARACIÓN DE ALEGATOS PARA CORTE Y SALA */}
         {activeTab === 'alegatos' && (
           <div className="animate-fade-in" style={{ marginTop: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '18px 22px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '1px solid #8b5cf6' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '18px 22px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(125, 133, 144, 0.15) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '1px solid #8b5cf6' }}>
               <div>
                 <span className="badge badge-purple" style={{ marginBottom: '6px' }}>Litigación en Estrados & Alzada</span>
-                <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   Estudio de Preparación de Alegatos para Corte de Apelaciones y Suprema
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, marginTop: '4px' }}>
@@ -2082,17 +2082,17 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               </div>
               
               {/* Cronómetro de Alegatos en Vivo */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(0,0,0,0.5)', padding: '10px 18px', borderRadius: '12px', border: '1px solid rgba(139, 92, 246, 0.4)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(0,0,0,0.5)', padding: '10px 18px', borderRadius: '12px', border: '1px solid rgba(125, 133, 144, 0.4)' }}>
                 <div style={{ textAlign: 'center' }}>
                   <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>Cronómetro Estrados</span>
-                  <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', fontWeight: '800', color: segundosCrono < 60 ? 'var(--alert-red)' : '#fff' }}>
+                  <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', fontWeight: '800', color: segundosCrono < 60 ? 'var(--alert-red)' : 'var(--text-primary)' }}>
                     {formatearTiempo(segundosCrono)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button 
                     className="btn-secondary" 
-                    style={{ padding: '8px', background: cronoActivo ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)' }}
+                    style={{ padding: '8px', background: cronoActivo ? 'rgba(207, 95, 87, 0.2)' : 'rgba(93, 145, 105, 0.2)' }}
                     onClick={() => setCronoActivo(!cronoActivo)}
                     title={cronoActivo ? "Pausar" : "Iniciar Ensayo"}
                   >
@@ -2124,14 +2124,14 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     flex: 1,
                     padding: '14px 16px',
                     borderRadius: '12px',
-                    background: tiempoAlegato === op.m ? 'rgba(139, 92, 246, 0.2)' : 'var(--bg-card)',
+                    background: tiempoAlegato === op.m ? 'rgba(125, 133, 144, 0.2)' : 'var(--bg-card)',
                     border: tiempoAlegato === op.m ? '2px solid #8b5cf6' : '1px solid var(--border-color)',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
                 >
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#fff', display: 'block', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
                     {op.label}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.3, display: 'block' }}>
@@ -2149,7 +2149,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,240,255,0.1)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(192, 160, 113, 0.1)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
@@ -2169,7 +2169,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(239,68,68,0.1)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(207, 95, 87,0.1)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
@@ -2189,7 +2189,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(245,158,11,0.1)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(201, 148, 70,0.1)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
@@ -2213,7 +2213,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#c4b5fd', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                     4. Puntos Débiles de la Contraparte ({caso.contraparte || 'Adversario'})
                   </span>
                   <span className="badge badge-purple">Minuto 8:00 - 10:00</span>
@@ -2235,7 +2235,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               </button>
               <button 
                 className="btn-primary"
-                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', borderColor: '#a78bfa' }}
+                style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', borderColor: 'var(--text-secondary)' }}
                 onClick={() => alert("¡Minuta de Alegato Exportada en PDF y enviada a la tablet/móvil del abogado litigante para la audiencia!")}
               >
                 <Printer size={16} />
@@ -2252,7 +2252,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               Control de Licitud Probatoria & Cadena de Custodia
             </span>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.85rem' }}>Total Evidencia: <strong style={{ color: '#fff', fontSize: '1.05rem' }}>{caso.estadisticasPrueba ? caso.estadisticasPrueba.total : 10}</strong></span>
+              <span style={{ fontSize: '0.85rem' }}>Total Evidencia: <strong style={{ color: 'var(--text-primary)', fontSize: '1.05rem' }}>{caso.estadisticasPrueba ? caso.estadisticasPrueba.total : 10}</strong></span>
               <span style={{ fontSize: '0.85rem' }}>Admitida Lícita: <strong style={{ color: 'var(--alert-green)', fontSize: '1.05rem' }}>{caso.estadisticasPrueba ? caso.estadisticasPrueba.admitidas : 10}</strong></span>
               <span style={{ fontSize: '0.85rem' }}>Impugnada/Cuestionada: <strong style={{ color: 'var(--alert-red)', fontSize: '1.05rem' }}>{caso.estadisticasPrueba ? caso.estadisticasPrueba.impugnadas : 0}</strong></span>
             </div>
@@ -2283,7 +2283,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               {/* Formulario Nueva Entrada */}
               <div style={{ flex: '1 1 300px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <PlusCircle size={18} color="var(--accent-cyan)" />
                     Nuevo Hito Extrajudicial
                   </h3>
@@ -2293,7 +2293,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <select 
                         value={nuevaBitacora.tipo}
                         onChange={e => setNuevaBitacora({...nuevaBitacora, tipo: e.target.value})}
-                        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px', borderRadius: '8px', outline: 'none' }}
+                        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', padding: '10px', borderRadius: '8px', outline: 'none' }}
                       >
                         <option value="Reunión Presencial">🤝 Reunión Presencial</option>
                         <option value="Llamada Telefónica">📞 Llamada Telefónica</option>
@@ -2310,7 +2310,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         onChange={e => setNuevaBitacora({...nuevaBitacora, descripcion: e.target.value})}
                         placeholder="Ej: El cliente aportó nuevos correos electrónicos impresos..."
                         rows={4}
-                        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px', borderRadius: '8px', outline: 'none', resize: 'vertical' }}
+                        style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', padding: '10px', borderRadius: '8px', outline: 'none', resize: 'vertical' }}
                       />
                     </div>
                     <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
@@ -2322,7 +2322,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
               {/* Línea de Tiempo */}
               <div style={{ flex: '2 1 400px' }}>
-                <h3 style={{ fontSize: '1.1rem', color: '#fff', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <History size={18} color="var(--accent-cyan)" />
                   Registro Histórico Interno
                 </h3>
@@ -2342,7 +2342,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </div>
                         <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>{b.tipo}</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)' }}>{b.tipo}</span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.fecha}</span>
                           </div>
                           <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -2374,7 +2374,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MessageCircle color="#4ade80" /> Reporte de Cliente
             </h3>
             <button onClick={() => setShowWhatsAppModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
@@ -2384,7 +2384,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             <textarea 
               value={whatsAppText}
               onChange={e => setWhatsAppText(e.target.value)}
-              style={{ width: '100%', height: '200px', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.9rem', lineHeight: 1.5, resize: 'none', outline: 'none' }}
+              style={{ width: '100%', height: '200px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: 1.5, resize: 'none', outline: 'none' }}
             ></textarea>
           </div>
 
@@ -2401,7 +2401,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             </button>
             <button 
               className="btn-primary" 
-              style={{ flex: 1, justifyContent: 'center', background: '#25D366', borderColor: '#25D366', color: '#fff' }}
+              style={{ flex: 1, justifyContent: 'center', background: 'var(--ok)', borderColor: 'var(--ok)', color: 'var(--text-primary)' }}
               onClick={() => {
                 window.open(`https://wa.me/?text=${encodeURIComponent(whatsAppText)}`, '_blank');
               }}

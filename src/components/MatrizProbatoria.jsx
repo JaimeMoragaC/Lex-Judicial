@@ -78,8 +78,8 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
       <div className="glass-card" style={{ 
         padding: '20px 24px', 
         marginBottom: '24px', 
-        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(22, 32, 54, 0.8) 100%)',
-        borderColor: 'rgba(245, 158, 11, 0.3)'
+        background: 'linear-gradient(135deg, rgba(201, 148, 70, 0.08) 0%, rgba(22, 32, 54, 0.8) 100%)',
+        borderColor: 'rgba(201, 148, 70, 0.3)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div style={{ flex: '1', minWidth: '300px' }}>
@@ -90,7 +90,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
               <strong>Teoría del Caso:</strong> {casoActual.resumenTeoriaCaso}
             </p>
             <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              <span>🏛️ Tribunal: <strong style={{ color: '#fff' }}>{casoActual.tribunal}</strong></span>
+              <span>🏛️ Tribunal: <strong style={{ color: 'var(--text-primary)' }}>{casoActual.tribunal}</strong></span>
               <span>⚖️ Etapa: <strong style={{ color: 'var(--accent-cyan)' }}>{casoActual.etapa}</strong></span>
             </div>
           </div>
@@ -108,7 +108,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
             <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
             <div style={{ textAlign: 'center' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>Total</span>
-              <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff' }}>{casoActual.estadisticasPrueba.total}</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>{casoActual.estadisticasPrueba.total}</span>
             </div>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
             placeholder="Buscar por código, perito, acta o descripción..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', width: '100%', fontSize: '0.85rem' }}
+            style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.85rem' }}
           />
         </div>
 
@@ -132,7 +132,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
           <select
             value={tipoFilter}
             onChange={(e) => setTipoFilter(e.target.value)}
-            style={{ background: 'var(--bg-modal)', color: '#fff', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+            style={{ background: 'var(--bg-modal)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
           >
             <option value="TODOS">Tipo de Prueba: Todos</option>
             <option value="Documental">Documental / Digital</option>
@@ -143,7 +143,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
           <select
             value={fuerzaFilter}
             onChange={(e) => setFuerzaFilter(e.target.value)}
-            style={{ background: 'var(--bg-modal)', color: '#fff', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+            style={{ background: 'var(--bg-modal)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
           >
             <option value="TODAS">Fuerza / Valoración: Todas</option>
             <option value="Alta">Fuerza Probatoria: Alta</option>
@@ -167,7 +167,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
               style={{ 
                 padding: '24px', 
                 borderLeft: isImpugnada ? '5px solid var(--alert-red)' : isAlta ? '5px solid var(--alert-green)' : '5px solid var(--alert-blue)',
-                backgroundColor: isImpugnada ? 'rgba(239, 68, 68, 0.05)' : 'var(--bg-card)'
+                backgroundColor: isImpugnada ? 'rgba(207, 95, 87, 0.05)' : 'var(--bg-card)'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
@@ -182,7 +182,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
                       background: 'rgba(255, 255, 255, 0.06)', 
                       padding: '4px 8px', 
                       borderRadius: '6px',
-                      color: isImpugnada ? 'var(--alert-red)' : '#fff'
+                      color: isImpugnada ? 'var(--alert-red)' : 'var(--text-primary)'
                     }}>
                       {ev.codigo}
                     </span>
@@ -193,7 +193,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
                     </span>
                   </div>
 
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#fff', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
                     {ev.descripcion}
                   </h3>
                 </div>
@@ -236,13 +236,13 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
                 <div style={{ 
                   padding: '14px 16px', 
                   borderRadius: '10px', 
-                  background: isImpugnada ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.08)', 
-                  border: isImpugnada ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(245, 158, 11, 0.25)' 
+                  background: isImpugnada ? 'rgba(207, 95, 87, 0.1)' : 'rgba(201, 148, 70, 0.08)', 
+                  border: isImpugnada ? '1px solid rgba(207, 95, 87, 0.3)' : '1px solid rgba(201, 148, 70, 0.25)' 
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', color: isImpugnada ? 'var(--alert-red)' : 'var(--accent-gold)', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase' }}>
                     <Gavel size={16} /> Estrategia de Contrainterrogatorio / Litigio
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: '#fff', margin: 0, lineHeight: 1.4, fontWeight: isImpugnada ? '600' : '400' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4, fontWeight: isImpugnada ? '600' : '400' }}>
                     {ev.estrategiaContra}
                   </p>
                 </div>
@@ -254,7 +254,7 @@ export default function MatrizProbatoria({ selectedCaso, onBack }) {
                 <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => alert(`Editando minutas y tachas de la evidencia ${ev.codigo}`)}>
                   📝 Editar Minuta de Debate
                 </button>
-                <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#fca5a5' }} onClick={() => alert(`Generando incidente de exclusión probatoria (Art. 276 CPP) para ${ev.codigo}`)}>
+                <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', borderColor: 'rgba(207, 95, 87, 0.4)', color: 'var(--danger)' }} onClick={() => alert(`Generando incidente de exclusión probatoria (Art. 276 CPP) para ${ev.codigo}`)}>
                   ⚠️ Redactar Incidente Exclusión
                 </button>
               </div>

@@ -99,7 +99,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
           </button>
           <button 
             className="btn-primary" 
-            style={{ background: 'var(--accent-cyan)', color: '#000', fontWeight: '800' }}
+            style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', fontWeight: '800' }}
             onClick={ejecutarOrdenamiento}
             disabled={isScanning}
           >
@@ -112,27 +112,27 @@ export default function SmartDriveSorter({ onSelectCaso }) {
       {/* KPI Stats del Disco Real */}
       <div className="grid-4" style={{ marginBottom: '24px' }}>
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--accent-cyan)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(0, 240, 255, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(192, 160, 113, 0.1)' }}>
             <HardDrive size={22} color="var(--accent-cyan)" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Archivos Físicos</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: '#fff' }}>{TOTAL_REAL_FILES.toLocaleString('es-CL')}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)' }}>{TOTAL_REAL_FILES.toLocaleString('es-CL')}</div>
           </div>
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--alert-green)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(93, 145, 105, 0.1)' }}>
             <FolderOpen size={22} color="var(--alert-green)" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Carpetas Mandantes</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: '#fff' }}>{REAL_DISK_DATA.length}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)' }}>{REAL_DISK_DATA.length}</div>
           </div>
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--accent-gold)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(201, 148, 70, 0.1)' }}>
             <Monitor size={22} color="var(--accent-gold)" />
           </div>
           <div>
@@ -142,12 +142,12 @@ export default function SmartDriveSorter({ onSelectCaso }) {
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #a78bfa' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(125, 133, 144, 0.1)' }}>
             <Database size={22} color="#a78bfa" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Deduplicación SHA-256</span>
-            <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#a78bfa' }}>2.979 Dupes Borrados</div>
+            <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--text-secondary)' }}>2.979 Dupes Borrados</div>
           </div>
         </div>
       </div>
@@ -163,7 +163,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
               placeholder="Buscar en tu disco por nombre de mandante, causa, ROL, tribunal o palabra clave del archivo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', width: '100%', fontSize: '0.95rem' }}
+              style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.95rem' }}
             />
             {searchTerm && (
               <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => setSearchTerm('')}>
@@ -175,7 +175,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
           <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 4px' }}>
               <div>
-                <h3 style={{ fontSize: '1.2rem', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <FolderGit2 size={24} color="var(--alert-green)" />
                   Carpetas Físicas en: /media/jaime/.../Casos2023 ({filteredRealData.length} Mandantes Encontrados)
                 </h3>
@@ -208,14 +208,14 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                         <FolderOpen size={24} color="var(--accent-gold)" />
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', background: 'rgba(201, 148, 70, 0.1)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
                               {clientFolder.rut}
                             </span>
                             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                               /.../{clientFolder.folderName.substring(0, 30)}...
                             </span>
                           </div>
-                          <h3 style={{ fontSize: '1.15rem', color: isSelected ? 'var(--accent-cyan)' : '#fff', margin: 0 }}>
+                          <h3 style={{ fontSize: '1.15rem', color: isSelected ? 'var(--accent-cyan)' : 'var(--text-primary)', margin: 0 }}>
                             📁 / {clientFolder.nombre}
                           </h3>
                         </div>
@@ -245,7 +245,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                         
                         {/* BANDEJA GENERAL DEL CLIENTE (NIVEL 3.C) CON BOTONES */}
                         {clientFolder.documentosGenerales.length > 0 && (
-                          <div style={{ background: 'rgba(245, 158, 11, 0.08)', borderRadius: '12px', padding: '16px', border: '1px dashed var(--accent-gold)' }}>
+                          <div style={{ background: 'rgba(201, 148, 70, 0.08)', borderRadius: '12px', padding: '16px', border: '1px dashed var(--accent-gold)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                               <Archive size={18} color="var(--accent-gold)" />
                               <strong style={{ fontSize: '0.95rem', color: 'var(--accent-gold)' }}>
@@ -258,7 +258,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                             <div className="grid-2" style={{ gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
                               {clientFolder.documentosGenerales.map((doc, dIdx) => (
                                 <div key={dIdx} style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', background: 'rgba(0,0,0,0.5)', padding: '10px 14px', borderRadius: '10px', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fef08a' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--warn)' }}>
                                     <FileCheck size={14} color="var(--accent-gold)" />
                                     <span title={doc.name} style={{ fontWeight: '600' }}>{doc.name}</span>
                                   </div>
@@ -267,7 +267,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                     <button
                                       onClick={(e) => abrirEnEscritorio(doc.path, e)}
                                       title="Abrir con tu visor Linux por defecto"
-                                      style={{ background: 'var(--accent-cyan)', color: '#000', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                     >
                                       <Monitor size={13} />
                                       <span>Abrir Linux</span>
@@ -276,7 +276,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                     <button
                                       onClick={(e) => verEnNavegador(doc.path, e)}
                                       title="Ver documento en una nueva pestaña"
-                                      style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--border-color)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                     >
                                       <Eye size={13} />
                                       <span>Ver Web</span>
@@ -290,7 +290,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
 
                         {/* CAUSAS Y EXPEDIENTES (NIVEL 3.B) CON BOTONES DE APERTURA */}
                         <div>
-                          <h4 style={{ fontSize: '1rem', color: '#fff', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FolderGit2 size={18} color="var(--accent-cyan)" />
                             Expedientes y Subcarpetas en Disco ({clientFolder.causas.length})
                           </h4>
@@ -308,7 +308,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                       <span className="badge badge-cyan" style={{ fontSize: '0.8rem', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
                                         {causa.rol}
                                       </span>
-                                      <strong style={{ fontSize: '1rem', color: '#fff' }}>
+                                      <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
                                         {causa.caratula}
                                       </strong>
                                     </div>
@@ -323,7 +323,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                       <div key={catIdx} style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
                                           <FolderOpen size={15} color="var(--accent-yellow)" />
-                                          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#fff' }}>
+                                          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                                             /{cat.nombre}/
                                           </span>
                                           <span className="badge badge-blue" style={{ fontSize: '0.65rem', marginLeft: 'auto' }}>{cat.archivos.length}</span>
@@ -332,7 +332,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
                                           {cat.archivos.map((itemFile, fIdx) => (
                                             <div key={fIdx} style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', fontSize: '0.78rem', fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.02)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#a7f3d0' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ok)' }}>
                                                 <FileCheck size={13} color="var(--alert-green)" />
                                                 <span title={itemFile.name}>{itemFile.name}</span>
                                               </div>
@@ -341,7 +341,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                                 <button
                                                   onClick={(e) => abrirEnEscritorio(itemFile.path, e)}
                                                   title="Abrir archivo nativamente en Linux (xdg-open)"
-                                                  style={{ background: 'var(--accent-cyan)', color: '#000', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                  style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                                 >
                                                   <Monitor size={12} />
                                                   <span>Abrir</span>
@@ -350,7 +350,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
                                                 <button
                                                   onClick={(e) => verEnNavegador(itemFile.path, e)}
                                                   title="Ver archivo en pestaña del navegador"
-                                                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                  style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                                 >
                                                   <Eye size={12} />
                                                   <span>Ver</span>
@@ -382,7 +382,7 @@ export default function SmartDriveSorter({ onSelectCaso }) {
         <div className="glass-card" style={{ padding: '28px', borderTop: '4px solid var(--accent-cyan)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
-              <h3 style={{ fontSize: '1.25rem', color: '#fff', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Terminal size={24} color="var(--accent-cyan)" />
                 Script Python de Ordenamiento & Puente de Datos Web
               </h3>

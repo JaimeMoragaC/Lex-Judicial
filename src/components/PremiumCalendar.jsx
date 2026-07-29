@@ -89,11 +89,11 @@ export default function PremiumCalendar({ onSelectCaso }) {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ padding: '10px', background: 'rgba(0, 240, 255, 0.1)', borderRadius: '12px' }}>
+            <div style={{ padding: '10px', background: 'rgba(192, 160, 113, 0.1)', borderRadius: '12px' }}>
               <Calendar color="var(--accent-cyan)" size={24} />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#fff', fontWeight: '800', letterSpacing: '0.02em' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)', fontWeight: '800', letterSpacing: '0.02em' }}>
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h2>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Agenda Judicial Dinámica</span>
@@ -136,13 +136,13 @@ export default function PremiumCalendar({ onSelectCaso }) {
                 onClick={() => setSelectedDayEvents({ day, events: dayEvents, date: new Date(currentDate.getFullYear(), currentDate.getMonth(), day) })}
                 style={{
                   minHeight: '100px',
-                  background: today ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                  border: today ? '1px solid var(--accent-cyan)' : hasCritical ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)',
+                  background: today ? 'rgba(192, 160, 113, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                  border: today ? '1px solid var(--accent-cyan)' : hasCritical ? '1px solid rgba(207, 95, 87, 0.3)' : '1px solid rgba(255, 255, 255, 0.05)',
                   borderRadius: '12px',
                   padding: '8px',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  boxShadow: today ? '0 0 15px rgba(0, 240, 255, 0.1)' : 'none',
+                  boxShadow: today ? '0 0 15px rgba(192, 160, 113, 0.1)' : 'none',
                   position: 'relative',
                   overflow: 'hidden'
                 }}
@@ -151,14 +151,14 @@ export default function PremiumCalendar({ onSelectCaso }) {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = today ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)';
+                  e.currentTarget.style.background = today ? 'rgba(192, 160, 113, 0.05)' : 'rgba(255, 255, 255, 0.02)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 <div style={{ 
                   fontSize: '1.1rem', 
                   fontWeight: today ? '800' : '600', 
-                  color: today ? 'var(--accent-cyan)' : hasCritical ? 'var(--alert-red)' : '#fff',
+                  color: today ? 'var(--accent-cyan)' : hasCritical ? 'var(--alert-red)' : 'var(--text-primary)',
                   marginBottom: '8px'
                 }}>
                   {day}
@@ -173,7 +173,7 @@ export default function PremiumCalendar({ onSelectCaso }) {
                         height: '6px',
                         borderRadius: '4px',
                         background: e.type === 'CRITICA' ? 'var(--alert-red)' : e.type === 'ALTA' ? 'var(--accent-gold)' : 'var(--accent-cyan)',
-                        boxShadow: `0 0 8px ${e.type === 'CRITICA' ? 'rgba(239, 68, 68, 0.5)' : e.type === 'ALTA' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(0, 240, 255, 0.5)'}`
+                        boxShadow: `0 0 8px ${e.type === 'CRITICA' ? 'rgba(207, 95, 87, 0.5)' : e.type === 'ALTA' ? 'rgba(201, 148, 70, 0.5)' : 'rgba(192, 160, 113, 0.5)'}`
                       }}
                       title={e.title}
                     />
@@ -194,7 +194,7 @@ export default function PremiumCalendar({ onSelectCaso }) {
       <div className="glass-card" style={{ flex: '1 1 300px', padding: '24px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
         {selectedDayEvents ? (
           <div className="animate-fade-in">
-            <h3 style={{ margin: '0 0 16px 0', color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Calendar size={20} color="var(--accent-cyan)" />
               {selectedDayEvents.date.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
@@ -209,7 +209,7 @@ export default function PremiumCalendar({ onSelectCaso }) {
                     onClick={() => { if(e.caso) onSelectCaso(e.caso); }}
                     style={{
                       background: 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${e.type === 'CRITICA' ? 'rgba(239, 68, 68, 0.3)' : e.type === 'ALTA' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(0, 240, 255, 0.2)'}`,
+                      border: `1px solid ${e.type === 'CRITICA' ? 'rgba(207, 95, 87, 0.3)' : e.type === 'ALTA' ? 'rgba(201, 148, 70, 0.3)' : 'rgba(192, 160, 113, 0.2)'}`,
                       borderLeft: `4px solid ${e.type === 'CRITICA' ? 'var(--alert-red)' : e.type === 'ALTA' ? 'var(--accent-gold)' : 'var(--accent-cyan)'}`,
                       padding: '16px',
                       borderRadius: '10px',
@@ -225,7 +225,7 @@ export default function PremiumCalendar({ onSelectCaso }) {
                       </span>
                       {e.caso && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{e.caso.rit}</span>}
                     </div>
-                    <h4 style={{ color: '#fff', fontSize: '0.95rem', margin: '0 0 4px 0' }}>{e.title}</h4>
+                    <h4 style={{ color: 'var(--text-primary)', fontSize: '0.95rem', margin: '0 0 4px 0' }}>{e.title}</h4>
                     {e.caso && <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.caso.caratula}</p>}
                   </div>
                 ))}

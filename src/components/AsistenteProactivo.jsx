@@ -260,9 +260,9 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
               textAlign: 'center', 
               border: isDragging ? '3px solid var(--accent-cyan)' : '2px dashed var(--accent-cyan)', 
               background: isDragging 
-                ? 'linear-gradient(180deg, rgba(0, 240, 255, 0.2) 0%, rgba(10, 15, 29, 0.9) 100%)' 
-                : 'linear-gradient(180deg, rgba(0, 240, 255, 0.05) 0%, rgba(10, 15, 29, 0.6) 100%)',
-              boxShadow: isDragging ? '0 0 30px rgba(0, 240, 255, 0.4)' : 'none',
+                ? 'linear-gradient(180deg, rgba(192, 160, 113, 0.2) 0%, rgba(10, 15, 29, 0.9) 100%)' 
+                : 'linear-gradient(180deg, rgba(192, 160, 113, 0.05) 0%, rgba(10, 15, 29, 0.6) 100%)',
+              boxShadow: isDragging ? '0 0 30px rgba(192, 160, 113, 0.4)' : 'none',
               marginBottom: '24px',
               cursor: 'pointer',
               transition: 'all 0.25s ease-in-out'
@@ -273,7 +273,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
           >
             <Cpu size={48} color="var(--accent-cyan)" style={{ margin: '0 auto 16px auto' }} className={isAnalyzing ? "animate-spin" : ""} />
-            <h3 style={{ fontSize: '1.4rem', color: '#fff', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', marginBottom: '8px' }}>
               {isAnalyzing ? "⏳ Analizando resolución judicial con IA Forense PyMuPDF..." : (isDragging ? "¡Suelta aquí tu PDF de la Resolución u OJV!" : "Suelta aquí el PDF de la resolución OJV o carpeta judicial")}
             </h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto 20px auto' }}>
@@ -285,7 +285,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 type="button"
                 className="btn-primary" 
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current && fileInputRef.current.click(); }}
-                style={{ background: 'var(--accent-cyan)', color: '#000', fontWeight: '800' }}
+                style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', fontWeight: '800' }}
               >
                 <UploadCloud size={18} />
                 <span>📂 Seleccionar PDF desde tu disco Linux</span>
@@ -295,7 +295,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 type="button"
                 className="btn-secondary" 
                 onClick={(e) => { e.stopPropagation(); analizarPdfEnDisco(); }}
-                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: '700', border: '1px solid rgba(255,255,255,0.2)' }}
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-primary)', fontWeight: '700', border: '1px solid rgba(255,255,255,0.2)' }}
               >
                 <Sparkles size={18} color="var(--accent-gold)" />
                 <span>⚡ Analizar PDF en Disco (/home/jaime/Descargas)</span>
@@ -306,14 +306,14 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
           {/* RESULTADO DE LA INGESTA REAL */}
           {ingestaRealizada && (
             <div className="animate-fade-in">
-              <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid var(--alert-green)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'rgba(93, 145, 105, 0.15)', border: '1px solid var(--alert-green)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <CheckCircle2 size={24} color="var(--alert-green)" />
                   <div>
-                    <strong style={{ color: '#fff', fontSize: '1rem', display: 'block' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '1rem', display: 'block' }}>
                       ¡Ingesta Procesal Completa! Documento {analizadoData ? `"${analizadoData.archivo}" (${analizadoData.total_paginas} pág)` : "58 páginas"} analizado en 0.4s
                     </strong>
-                    <span style={{ fontSize: '0.85rem', color: '#a7f3d0' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--ok)' }}>
                       Se han registrado automáticamente las partes, tribunal, carátula y el plazo fatal de {analizadoData ? analizadoData.plazo_dias : 5} días {analizadoData ? analizadoData.tipo_plazo : "hábiles (Art. 66 CPC)"}.
                     </span>
                   </div>
@@ -330,7 +330,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                       <span className="badge badge-purple">{analizadoData ? analizadoData.tribunal : "3º Juzgado Civil de Temuco"}</span>
                       <span className="badge badge-blue">{analizadoData ? analizadoData.materia : "Ley 18.101 Arrendamiento"}</span>
                     </div>
-                    <h2 style={{ fontSize: '1.6rem', color: '#fff', margin: 0 }}>
+                    <h2 style={{ fontSize: '1.6rem', color: 'var(--text-primary)', margin: 0 }}>
                       {analizadoData ? analizadoData.caratula : "MEDINA con MORAGA"}
                     </h2>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -340,7 +340,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                   <button 
                     className="btn-primary" 
-                    style={{ background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-cyan))', border: 'none', padding: '10px 20px', fontSize: '0.95rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--accent-gold), var(--accent-cyan))', border: 'none', padding: '10px 20px', fontSize: '0.95rem', fontWeight: '800', boxShadow: '0 4px 15px rgba(201, 148, 70, 0.4)' }}
                     onClick={() => {
                       const casoIntegrado = integrarExpedienteIA(analizadoData || {});
                       alert(`✅ ¡EXPEDIENTE INTEGRADO Y ACTIVO!\n\nCausa: ${casoIntegrado.caratula}\nRol/RIT: ${casoIntegrado.rit}\nTribunal: ${casoIntegrado.tribunal}\n\nTe llevaremos directamente a la Ficha Oficial de la causa en LexControl.`);
@@ -354,20 +354,20 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                 {/* Banner de Audiencia Judicial Programada (Si IA la detecta) */}
                 {analizadoData && analizadoData.fecha_audiencia_fijada && (
-                  <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(239, 68, 68, 0.22))', border: '2px solid var(--accent-gold)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(201, 148, 70, 0.22), rgba(207, 95, 87, 0.22))', border: '2px solid var(--accent-gold)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{ fontSize: '2.2rem' }}>📅</span>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>
                           ⚡ AUDIENCIA JUDICIAL FIJADA POR EL TRIBUNAL
                         </span>
-                        <strong style={{ fontSize: '1.25rem', color: '#fff' }}>
+                        <strong style={{ fontSize: '1.25rem', color: 'var(--text-primary)' }}>
                           {analizadoData.fecha_audiencia_fijada}
                         </strong>
                       </div>
                     </div>
                     <div style={{ background: 'rgba(0,0,0,0.5)', padding: '10px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: '700' }}>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '700' }}>
                         ⏳ {analizadoData.tipo_plazo}
                       </span>
                     </div>
@@ -380,26 +380,26 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                       👤 Parte / Interviniente Detectado
                     </span>
-                    <strong style={{ color: '#fff', fontSize: '0.95rem', display: 'block' }}>{analizadoData ? (analizadoData.caratula.includes("con") ? analizadoData.caratula.split("con")[0] : analizadoData.caratula) : "María Aurora Medina Soto"}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', display: 'block' }}>{analizadoData ? (analizadoData.caratula.includes("con") ? analizadoData.caratula.split("con")[0] : analizadoData.caratula) : "María Aurora Medina Soto"}</strong>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       RUTs: {analizadoData && analizadoData.ruts_detectados && analizadoData.ruts_detectados.length > 0 ? analizadoData.ruts_detectados.join(", ") : "7.503.348-6"}
                     </span>
                   </div>
 
-                  <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+                  <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--border-color)', borderColor: 'rgba(201, 148, 70, 0.4)' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                       🛡️ Parte Contraparte / Mandante
                     </span>
-                    <strong style={{ color: '#fff', fontSize: '0.95rem', display: 'block' }}>{analizadoData && analizadoData.caratula.includes("con") ? analizadoData.caratula.split("con")[1] : "Jaime Marcelo Moraga Carrasco"}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', display: 'block' }}>{analizadoData && analizadoData.caratula.includes("con") ? analizadoData.caratula.split("con")[1] : "Jaime Marcelo Moraga Carrasco"}</strong>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>RUT: 8.328.581-8</span>
                   </div>
 
-                  <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid var(--alert-red)' }}>
+                  <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(207, 95, 87, 0.12)', border: '1px solid var(--alert-red)' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--alert-red)', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                       🚨 {analizadoData ? (analizadoData.tipo_plazo.includes("CPP") ? "HITO PROCESAL PENAL (ART. 14 CPP)" : "HITO PROCESAL FATAL (ART. 66 CPC)") : "HITO PROCESAL FATAL (ART. 66 CPC)"}
                     </span>
-                    <strong style={{ color: '#fff', fontSize: '0.95rem', display: 'block' }}>{analizadoData ? analizadoData.hito_critico : "2º Llamado Absolución de Posiciones"}</strong>
-                    <span style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: '600' }}>⚡ Vencimiento: {analizadoData ? `${analizadoData.plazo_dias} días (${analizadoData.tipo_plazo})` : "Martes 28/07/2026"}</span>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', display: 'block' }}>{analizadoData ? analizadoData.hito_critico : "2º Llamado Absolución de Posiciones"}</strong>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '600' }}>⚡ Vencimiento: {analizadoData ? `${analizadoData.plazo_dias} días (${analizadoData.tipo_plazo})` : "Martes 28/07/2026"}</span>
                   </div>
                 </div>
 
@@ -419,7 +419,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                     <h4 style={{ fontSize: '0.95rem', color: 'var(--accent-blue)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       ⚖️ Análisis Forense de la Demanda / Pretensión de la Actora
                     </h4>
-                    <p style={{ fontSize: '0.85rem', color: '#e2e8f0', margin: 0, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
                       {analizadoData.analisis_demanda_o_pretension}
                     </p>
                   </div>
@@ -427,11 +427,11 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                 {/* NUEVO: Análisis de Defensas y Excepciones */}
                 {analizadoData && analizadoData.analisis_defensas_y_excepciones && (
-                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', marginBottom: '16px' }}>
+                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(93, 145, 105, 0.08)', border: '1px solid rgba(93, 145, 105, 0.3)', marginBottom: '16px' }}>
                     <h4 style={{ fontSize: '0.95rem', color: 'var(--accent-green)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       🛡️ Evaluación de las Defensas / Contestación / Reconvención
                     </h4>
-                    <p style={{ fontSize: '0.85rem', color: '#e2e8f0', margin: 0, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
                       {analizadoData.analisis_defensas_y_excepciones}
                     </p>
                   </div>
@@ -439,18 +439,18 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                 {/* NUEVO: Auditoría Forense de Emplazamiento y Notificaciones (Control de Receptores Judiciales) */}
                 {analizadoData && analizadoData.auditoria_emplazamiento_y_notificaciones && (
-                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '2px solid var(--alert-red)', marginBottom: '16px', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>
-                    <h4 style={{ fontSize: '0.98rem', color: '#f87171', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
+                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(207, 95, 87, 0.15)', border: '2px solid var(--alert-red)', marginBottom: '16px', boxShadow: '0 4px 15px rgba(207, 95, 87, 0.2)' }}>
+                    <h4 style={{ fontSize: '0.98rem', color: 'var(--danger)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
                       🚨 Auditoría Forense de Emplazamiento y Notificaciones (Control de Receptores Judiciales)
                     </h4>
                     {typeof analizadoData.auditoria_emplazamiento_y_notificaciones === 'object' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', color: '#fff' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                         <p style={{ margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.25)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #f87171' }}>
                           <strong>🔍 Verificación Legal de Emplazamiento: </strong> {analizadoData.auditoria_emplazamiento_y_notificaciones.verificacion_notificacion_subsidiaria || JSON.stringify(analizadoData.auditoria_emplazamiento_y_notificaciones)}
                         </p>
                       </div>
                     ) : (
-                      <p style={{ fontSize: '0.85rem', color: '#fff', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.25)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #f87171' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5, background: 'rgba(0,0,0,0.25)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #f87171' }}>
                         {analizadoData.auditoria_emplazamiento_y_notificaciones}
                       </p>
                     )}
@@ -459,19 +459,19 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                 {/* NUEVO: Auditoría Forense de Tramitación (Búsqueda de Vicios y Errores) */}
                 {analizadoData && analizadoData.errores_y_vicios_tramitacion && (
-                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.12)', border: '2px solid var(--alert-red)', marginBottom: '16px' }}>
-                    <h4 style={{ fontSize: '1rem', color: '#f87171', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
+                  <div style={{ padding: '18px', borderRadius: '12px', background: 'rgba(207, 95, 87, 0.12)', border: '2px solid var(--alert-red)', marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--danger)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
                       🚨 Auditoría Forense de Tramitación: Búsqueda de Errores, Vicios y Nulidades
                     </h4>
                     <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {Array.isArray(analizadoData.errores_y_vicios_tramitacion) ? (
                         analizadoData.errores_y_vicios_tramitacion.map((err, idx) => (
-                          <li key={idx} style={{ fontSize: '0.88rem', color: '#fff', lineHeight: 1.4, fontWeight: err.includes("No se detectaron") ? '400' : '700' }}>
+                          <li key={idx} style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.4, fontWeight: err.includes("No se detectaron") ? '400' : '700' }}>
                             {err}
                           </li>
                         ))
                       ) : (
-                        <li style={{ fontSize: '0.88rem', color: '#fff' }}>{analizadoData.errores_y_vicios_tramitacion}</li>
+                        <li style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{analizadoData.errores_y_vicios_tramitacion}</li>
                       )}
                     </ul>
                   </div>
@@ -479,11 +479,11 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
 
                 {/* NUEVO: Estrategia Ofensiva Litigante */}
                 {analizadoData && analizadoData.estrategia_ofensiva_litigante && (
-                  <div style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(168, 85, 247, 0.15))', border: '1px solid var(--accent-gold)', marginBottom: '10px' }}>
+                  <div style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(201, 148, 70, 0.15), rgba(168, 85, 247, 0.15))', border: '1px solid var(--accent-gold)', marginBottom: '10px' }}>
                     <h4 style={{ fontSize: '0.95rem', color: 'var(--accent-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
                       🎯 Estrategia Ofensiva Litigante de Alto Nivel
                     </h4>
-                    <p style={{ fontSize: '0.88rem', color: '#fff', margin: 0, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.5 }}>
                       {analizadoData.estrategia_ofensiva_litigante}
                     </p>
                   </div>
@@ -501,7 +501,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
           
           {/* Columna Izquierda: Selector de Plantilla y Caso */}
           <div className="glass-card" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileCheck2 size={20} color="var(--accent-cyan)" />
               Seleccionar Plantilla Antiburocracia
             </h3>
@@ -517,7 +517,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
               <select
                 value={selectedCasoId}
                 onChange={(e) => setSelectedCasoId(e.target.value)}
-                style={{ width: '100%', background: 'var(--bg-modal)', color: '#fff', border: '1px solid var(--border-hover)', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', outline: 'none' }}
+                style={{ width: '100%', background: 'var(--bg-modal)', color: 'var(--text-primary)', border: '1px solid var(--border-hover)', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', outline: 'none' }}
               >
                 {MOCK_CASOS.map(c => (
                   <option key={c.id} value={c.id}>{c.rit} • {c.caratula} ({c.tribunal})</option>
@@ -540,7 +540,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                   style={{
                     padding: '14px 16px',
                     borderRadius: '10px',
-                    background: selectedTemplate === tpl.id ? 'rgba(0, 240, 255, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                    background: selectedTemplate === tpl.id ? 'rgba(192, 160, 113, 0.12)' : 'rgba(255, 255, 255, 0.02)',
                     border: '1px solid',
                     borderColor: selectedTemplate === tpl.id ? 'var(--accent-cyan)' : 'var(--border-color)',
                     display: 'flex',
@@ -551,7 +551,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                     transition: 'all 0.2s'
                   }}
                 >
-                  <span style={{ fontSize: '0.85rem', fontWeight: selectedTemplate === tpl.id ? '700' : '500', color: selectedTemplate === tpl.id ? '#fff' : 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: selectedTemplate === tpl.id ? '700' : '500', color: selectedTemplate === tpl.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                     {tpl.titulo}
                   </span>
                   <span className={`badge badge-${tpl.color === 'gold' ? 'yellow' : tpl.color}`} style={{ fontSize: '0.65rem' }}>
@@ -570,7 +570,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                   <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', fontWeight: '700', textTransform: 'uppercase' }}>
                     BORRADOR LISTO PARA INGRESO EN OJV
                   </span>
-                  <h3 style={{ fontSize: '1.1rem', color: '#fff', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
                     {casoSeleccionado.caratula} ({casoSeleccionado.rit})
                   </h3>
                 </div>
@@ -585,7 +585,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 padding: '20px',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.82rem',
-                color: '#e2e8f0',
+                color: 'var(--text-primary)',
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
                 maxHeight: '420px',
@@ -605,7 +605,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 justifyContent: 'center', 
                 padding: '16px', 
                 background: copiado ? 'var(--alert-green)' : 'var(--accent-cyan)',
-                color: '#000',
+                color: 'var(--text-inverse)',
                 fontWeight: '800',
                 fontSize: '1rem',
                 transition: 'all 0.3s'
@@ -623,7 +623,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
       {/* CONTENIDO PESTAÑA 3: RADAR ANTI-COLAPSO (ART. 394 CPC) */}
       {activeSubTab === 'radar' && (
         <div className="animate-fade-in">
-          <div style={{ padding: '20px 24px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '2px solid var(--alert-red)', marginBottom: '24px' }}>
+          <div style={{ padding: '20px 24px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(207, 95, 87, 0.2) 0%, rgba(10, 15, 29, 0.9) 100%)', border: '2px solid var(--alert-red)', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--alert-red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ShieldAlert size={28} color="#000" />
@@ -631,15 +631,15 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span className="badge badge-red" style={{ fontSize: '0.8rem', fontWeight: '800' }}>¡ALERTA ROJA INMINENTE!</span>
-                  <span style={{ fontSize: '0.8rem', color: '#fca5a5', fontWeight: '700' }}>ROL C-1869-2026 • 3º JUZGADO CIVIL DE TEMUCO</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '700' }}>ROL C-1869-2026 • 3º JUZGADO CIVIL DE TEMUCO</span>
                 </div>
-                <h2 style={{ fontSize: '1.5rem', color: '#fff', margin: 0 }}>
+                <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', margin: 0 }}>
                   Apercibimiento Grave de Confesión Tácita (Art. 394 CPC)
                 </h2>
               </div>
             </div>
 
-            <p style={{ fontSize: '0.9rem', color: '#fca5a5', lineHeight: 1.5, marginBottom: '20px' }}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--danger)', lineHeight: 1.5, marginBottom: '20px' }}>
               Según consta en la resolución de Folio 24 proveyendo el escrito de folio 23, se ha ordenado citar por <strong>segundo llamado a absolver posiciones</strong> al demandado don Jaime Marcelo Moraga Carrasco para el <strong>MARTES 28 DE JULIO DE 2026 A LAS 11:00 HORAS</strong>. Al ser un segundo llamado tras inasistencia al primero, la falta de comparecencia presencial provocará la <strong>confesión ficta o tácita</strong> de las posiciones adversarias.
             </p>
 
@@ -651,7 +651,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 onClick={() => alert("Simulación: ¡Asistencia al 2º llamado confirmada en la agenda de Temuco! Alerta SMS enviada al teléfono celular del socio.")}
               >
                 <UserCheck size={18} color="var(--alert-green)" />
-                <span style={{ color: '#fff', fontWeight: '700' }}>1. Confirmar Asistencia Presencial</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>1. Confirmar Asistencia Presencial</span>
               </button>
 
               <button 
@@ -660,7 +660,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 onClick={() => onSelectCaso(MOCK_CASOS[0])}
               >
                 <FileText size={18} color="var(--accent-cyan)" />
-                <span style={{ color: '#fff', fontWeight: '700' }}>2. Revisar Pliego de Posiciones</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>2. Revisar Pliego de Posiciones</span>
               </button>
 
               <button 
@@ -669,13 +669,13 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 onClick={() => alert("Simulación: Ruta GPS y recordatorio agendado hacia Balmaceda Nº 490, 3er Piso, Temuco para el Martes 28 a las 10:30 hrs.")}
               >
                 <MapPin size={18} color="var(--accent-gold)" />
-                <span style={{ color: '#fff', fontWeight: '700' }}>3. Logística Balmaceda 490, Temuco</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>3. Logística Balmaceda 490, Temuco</span>
               </button>
             </div>
           </div>
 
           {/* Otros Riesgos Monitoreados en el Estudio */}
-          <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '16px' }}>
             🛡️ Otras Alertas Procesales Monitoreadas en Tiempo Real
           </h3>
           <div className="grid-2">
@@ -684,7 +684,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 <span className="badge badge-yellow">Art. 187 CPP</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RIT O-342-2026 (2º TJOP)</span>
               </div>
-              <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '6px' }}>Ruptura de Cadena de Custodia PDI</h4>
+              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px' }}>Ruptura de Cadena de Custodia PDI</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
                 El hash MD5 del peritaje informático varió en dependencias policiales. Interrogar al perito en audiencia del 30/07.
               </p>
@@ -695,7 +695,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 <span className="badge badge-cyan">Art. 14 CPP</span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>RIT P-908-2025 (7º Garantía)</span>
               </div>
-              <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '6px' }}>Prórroga Automática Vencimiento Fatal</h4>
+              <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '6px' }}>Prórroga Automática Vencimiento Fatal</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
                 Plazo para solicitud de nuevas diligencias prorroga automáticamente al día hábil siguiente por caer en domingo.
               </p>

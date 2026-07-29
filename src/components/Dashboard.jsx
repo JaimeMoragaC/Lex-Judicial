@@ -286,7 +286,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
           padding: '24px', 
           marginBottom: '26px', 
           background: 'rgba(15, 20, 30, 0.65)', 
-          border: '1px solid rgba(0, 240, 255, 0.2)',
+          border: '1px solid rgba(192, 160, 113, 0.2)',
           boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '14px' }}>
@@ -301,7 +301,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>| {datosParteDiario.metodoAutenticacion}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <h2 style={{ fontSize: '1.3rem', color: '#fff', margin: 0, fontWeight: '600' }}>
+                  <h2 style={{ fontSize: '1.3rem', color: 'var(--text-primary)', margin: 0, fontWeight: '600' }}>
                     Parte Diario OJV ({novedadesUnicas.length} Resoluciones)
                   </h2>
                   <select 
@@ -556,12 +556,12 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>
               Causas Activas
             </span>
-            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(0, 240, 255, 0.1)' }}>
+            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(192, 160, 113, 0.1)' }}>
               <Briefcase size={20} color="var(--accent-cyan)" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: '#fff' }}>{MOCK_STATS.casosActivos}</span>
+            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)' }}>{MOCK_STATS.casosActivos}</span>
             <span className="badge badge-blue">En Litigio</span>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>
@@ -580,10 +580,10 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: '#fff' }}>{MOCK_STATS.plazosFatales48h}</span>
+            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)' }}>{MOCK_STATS.plazosFatales48h}</span>
             <span className="badge badge-red">¡ACCIÓN REQUERIDA!</span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: '#fca5a5', marginTop: '10px' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '10px' }}>
             1 vence mañana (Querella CorpSalud)
           </p>
         </div>
@@ -594,12 +594,12 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>
               Audiencias Mes
             </span>
-            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.1)' }}>
+            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(125, 133, 144, 0.1)' }}>
               <Calendar size={20} color="#a78bfa" />
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: '#fff' }}>{MOCK_STATS.audienciasMes}</span>
+            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)' }}>{MOCK_STATS.audienciasMes}</span>
             <span className="badge badge-purple">3 esta semana</span>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>
@@ -618,7 +618,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: '#fff' }}>{MOCK_STATS.pruebaAdmitidaPromedio}</span>
+            <span style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--text-primary)' }}>{MOCK_STATS.pruebaAdmitidaPromedio}</span>
             <span className="badge badge-yellow">Éxito {MOCK_STATS.tasaExitoLitigio}</span>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>
@@ -659,7 +659,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                   style={{
                     padding: '16px',
                     borderRadius: '12px',
-                    backgroundColor: isCritical ? 'rgba(239, 68, 68, 0.08)' : isHigh ? 'rgba(245, 158, 11, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                    backgroundColor: isCritical ? 'rgba(207, 95, 87, 0.08)' : isHigh ? 'rgba(201, 148, 70, 0.06)' : 'rgba(255, 255, 255, 0.03)',
                     borderLeft: isCritical ? '4px solid var(--alert-red)' : isHigh ? '4px solid var(--accent-gold)' : '4px solid var(--alert-blue)',
                     border: '1px solid var(--border-color)',
                     borderLeftWidth: '4px',
@@ -676,12 +676,12 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                       </span>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>• {plazo.caratula}</span>
                     </div>
-                    <p style={{ fontSize: '0.95rem', fontWeight: '600', color: '#fff', margin: 0, marginBottom: '6px' }}>
+                    <p style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0, marginBottom: '6px' }}>
                       {plazo.descripcion}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       <span>👤 Responsable: <strong style={{ color: 'var(--text-secondary)' }}>{plazo.responsable}</strong></span>
-                      <span>⏱️ Vence: <strong style={{ color: isCritical ? '#fca5a5' : '#fff' }}>{plazo.fechaVencimiento}</strong></span>
+                      <span>⏱️ Vence: <strong style={{ color: isCritical ? 'var(--danger)' : 'var(--text-primary)' }}>{plazo.fechaVencimiento}</strong></span>
                     </div>
                   </div>
 
@@ -690,7 +690,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                       fontSize: '1.4rem', 
                       fontWeight: '800', 
                       fontFamily: 'var(--font-mono)',
-                      color: isCritical ? 'var(--alert-red)' : isHigh ? 'var(--accent-gold)' : '#fff' 
+                      color: isCritical ? 'var(--alert-red)' : isHigh ? 'var(--accent-gold)' : 'var(--text-primary)' 
                     }}>
                       {plazo.horasRestantes}h
                     </div>
@@ -760,7 +760,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
       {casosParalizados.length > 0 && (
         <div className="glass-card animate-fade-in" style={{ marginTop: '24px', overflow: 'hidden', borderLeft: '4px solid #f97316' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(249, 115, 22, 0.1)' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '600', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Bell size={18} color="#f97316" />
               Radar Anti-Abandono: Expedientes Paralizados ({casosParalizados.length})
             </h3>
@@ -787,15 +787,15 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
               >
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#f97316', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--warn)', marginBottom: '4px' }}>
                     {item.caso.rit}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
                     {item.caso.caratula}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#f97316' }}>{item.diasInactivos}</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--warn)' }}>{item.diasInactivos}</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Días</div>
                 </div>
               </div>
@@ -862,7 +862,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
                         fontSize: '0.7rem', 
                         fontWeight: '700', 
                         color: isUrgent ? 'var(--alert-red)' : 'var(--accent-gold)',
-                        background: isUrgent ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                        background: isUrgent ? 'rgba(207, 95, 87, 0.1)' : 'rgba(201, 148, 70, 0.1)',
                         padding: '4px 8px',
                         borderRadius: '4px',
                         textTransform: 'uppercase'

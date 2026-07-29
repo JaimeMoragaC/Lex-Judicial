@@ -121,7 +121,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
               borderRadius: '8px',
               border: 'none',
               background: viewMode === 'DISCO_REAL' ? 'var(--accent-cyan)' : 'transparent',
-              color: viewMode === 'DISCO_REAL' ? '#000' : 'var(--text-secondary)',
+              color: viewMode === 'DISCO_REAL' ? 'var(--text-inverse)' : 'var(--text-secondary)',
               fontWeight: '800',
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -142,7 +142,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
               borderRadius: '8px',
               border: 'none',
               background: viewMode === 'MOCK_ESTUDIO' ? 'var(--accent-gold)' : 'transparent',
-              color: viewMode === 'MOCK_ESTUDIO' ? '#000' : 'var(--text-secondary)',
+              color: viewMode === 'MOCK_ESTUDIO' ? 'var(--text-inverse)' : 'var(--text-secondary)',
               fontWeight: '800',
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -161,27 +161,27 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
       {/* KPI Stats Rápidos */}
       <div className="grid-4" style={{ marginBottom: '24px' }}>
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--accent-cyan)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(0, 240, 255, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(192, 160, 113, 0.1)' }}>
             <HardDrive size={22} color="var(--accent-cyan)" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Archivos Sincronizados</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: '#fff' }}>{TOTAL_REAL_FILES.toLocaleString('es-CL')}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)' }}>{TOTAL_REAL_FILES.toLocaleString('es-CL')}</div>
           </div>
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--alert-green)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(93, 145, 105, 0.1)' }}>
             <FolderOpen size={22} color="var(--alert-green)" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Carpetas en /Casos2023</span>
-            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: '#fff' }}>{REAL_DISK_DATA.length}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)' }}>{REAL_DISK_DATA.length}</div>
           </div>
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid var(--accent-gold)' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(201, 148, 70, 0.1)' }}>
             <Monitor size={22} color="var(--accent-gold)" />
           </div>
           <div>
@@ -191,12 +191,12 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
         </div>
 
         <div className="glass-card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #a78bfa' }}>
-          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.1)' }}>
+          <div style={{ padding: '12px', borderRadius: '12px', background: 'rgba(125, 133, 144, 0.1)' }}>
             <Database size={22} color="#a78bfa" />
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Estado Servidor 8888</span>
-            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#a78bfa' }}>⚡ ONLINE</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-secondary)' }}>⚡ ONLINE</div>
           </div>
         </div>
       </div>
@@ -210,7 +210,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
             placeholder={viewMode === 'DISCO_REAL' ? "Buscar por nombre de cliente, RUT o expediente en disco duro..." : "Buscar por RUT, Razón Social o Rubro..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', width: '100%', fontSize: '0.9rem' }}
+            style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.9rem' }}
           />
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: 'rgba(0, 240, 255, 0.08)', borderBottom: '2px solid var(--accent-cyan)', color: 'var(--accent-cyan)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <tr style={{ background: 'rgba(192, 160, 113, 0.08)', borderBottom: '2px solid var(--accent-cyan)', color: 'var(--accent-cyan)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   <th style={{ padding: '16px 20px', width: '40px' }}>#</th>
                   <th style={{ padding: '16px 14px' }}>RUT Mandante</th>
                   <th style={{ padding: '16px 14px' }}>Nombre Cliente / Carpeta Raíz en Disco</th>
@@ -241,11 +241,11 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                       <tr 
                         onClick={() => toggleRow(idx)}
                         style={{
-                          background: isExpanded ? 'rgba(0, 240, 255, 0.1)' : idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                          background: isExpanded ? 'rgba(192, 160, 113, 0.1)' : idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
                           borderBottom: isExpanded ? 'none' : '1px solid var(--border-color)',
                           cursor: 'pointer',
                           transition: 'background-color 0.2s ease',
-                          color: '#fff',
+                          color: 'var(--text-primary)',
                           fontSize: '0.9rem'
                         }}
                         onMouseEnter={(e) => {
@@ -259,11 +259,11 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                           {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                         </td>
                         <td style={{ padding: '16px 14px' }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-gold)', background: 'rgba(245, 158, 11, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-gold)', background: 'rgba(201, 148, 70, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>
                             {cli.rut}
                           </span>
                         </td>
-                        <td style={{ padding: '16px 14px', fontWeight: '700', fontSize: '1rem', color: isExpanded ? 'var(--accent-cyan)' : '#fff' }}>
+                        <td style={{ padding: '16px 14px', fontWeight: '700', fontSize: '1rem', color: isExpanded ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <FolderOpen size={18} color="var(--accent-gold)" />
                             <span>{cli.nombre}</span>
@@ -316,7 +316,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
 
                               {/* 1. BANDEJA GENERAL DEL CLIENTE CON BOTONES DE APERTURA */}
                               {cli.documentosGenerales.length > 0 && (
-                                <div style={{ background: 'rgba(245, 158, 11, 0.08)', borderRadius: '12px', padding: '18px', border: '1px dashed var(--accent-gold)' }}>
+                                <div style={{ background: 'rgba(201, 148, 70, 0.08)', borderRadius: '12px', padding: '18px', border: '1px dashed var(--accent-gold)' }}>
                                   <h4 style={{ fontSize: '1rem', color: 'var(--accent-gold)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Archive size={18} />
                                     Bandeja General del Cliente /_Documentos_Generales_Sin_Rol ({cli.documentosGenerales.length} Archivos)
@@ -329,14 +329,14 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                       <div key={dIdx} style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', background: 'rgba(0,0,0,0.5)', padding: '10px 14px', borderRadius: '10px', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.08)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                           <FileCheck size={15} color="var(--accent-gold)" />
-                                          <span style={{ color: '#fef08a', fontWeight: '600' }} title={doc.name}>{doc.name}</span>
+                                          <span style={{ color: 'var(--warn)', fontWeight: '600' }} title={doc.name}>{doc.name}</span>
                                         </div>
                                         
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '12px' }}>
                                           <button
                                             onClick={(e) => abrirEnEscritorio(doc.path, e)}
                                             title="Abrir con tu programa Linux por defecto (PDF/Word/Visor)"
-                                            style={{ background: 'var(--accent-cyan)', color: '#000', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                           >
                                             <Monitor size={13} />
                                             <span>Abrir Linux</span>
@@ -345,7 +345,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                           <button
                                             onClick={(e) => verEnNavegador(doc.path, e)}
                                             title="Ver documento en una nueva pestaña del navegador"
-                                            style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--border-color)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '5px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                           >
                                             <Eye size={13} />
                                             <span>Ver Web</span>
@@ -359,7 +359,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
 
                               {/* 2. CAUSAS Y EXPEDIENTES DEL CLIENTE CON APERTURA */}
                               <div>
-                                <h4 style={{ fontSize: '1.05rem', color: '#fff', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h4 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <Gavel size={20} color="var(--accent-cyan)" />
                                   Expedientes Judiciales y Subcarpetas en Disco ({cli.causas.length} Causas)
                                 </h4>
@@ -377,7 +377,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                             <span className="badge badge-cyan" style={{ fontSize: '0.85rem', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
                                               {causa.rol}
                                             </span>
-                                            <strong style={{ fontSize: '1.1rem', color: '#fff' }}>
+                                            <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                                               {causa.caratula}
                                             </strong>
                                           </div>
@@ -400,7 +400,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
                                                 {cat.archivos.map((fItem, fIdx) => (
                                                   <div key={fIdx} style={{ display: 'flex', alignItems: 'center', justifyItems: 'space-between', fontSize: '0.78rem', fontFamily: 'var(--font-mono)', background: 'rgba(255,255,255,0.02)', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#a7f3d0' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ok)' }}>
                                                       <FileCheck size={14} color="var(--alert-green)" />
                                                       <span title={fItem.name}>{fItem.name}</span>
                                                     </div>
@@ -409,7 +409,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                                       <button
                                                         onClick={(e) => abrirEnEscritorio(fItem.path, e)}
                                                         title="Abrir archivo nativamente en tu Linux (xdg-open)"
-                                                        style={{ background: 'var(--accent-cyan)', color: '#000', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                        style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', border: 'none', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                                       >
                                                         <Monitor size={12} />
                                                         <span>Abrir</span>
@@ -418,7 +418,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                                       <button
                                                         onClick={(e) => verEnNavegador(fItem.path, e)}
                                                         title="Ver archivo en pestaña del navegador"
-                                                        style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                        style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                                                       >
                                                         <Eye size={12} />
                                                         <span>Ver</span>
@@ -476,11 +476,11 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                       <tr 
                         onClick={() => toggleRow(cli.id)}
                         style={{
-                          background: isExpanded ? 'rgba(0, 240, 255, 0.08)' : 'transparent',
+                          background: isExpanded ? 'rgba(192, 160, 113, 0.08)' : 'transparent',
                           borderBottom: isExpanded ? 'none' : '1px solid var(--border-color)',
                           cursor: 'pointer',
                           transition: 'background-color 0.2s ease',
-                          color: '#fff',
+                          color: 'var(--text-primary)',
                           fontSize: '0.9rem'
                         }}
                       >
@@ -490,7 +490,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                         <td style={{ padding: '18px 14px' }}>
                           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-gold)' }}>{cli.rut}</span>
                         </td>
-                        <td style={{ padding: '18px 14px', fontWeight: '700', fontSize: '1rem', color: isExpanded ? 'var(--accent-cyan)' : '#fff' }}>
+                        <td style={{ padding: '18px 14px', fontWeight: '700', fontSize: '1rem', color: isExpanded ? 'var(--accent-cyan)' : 'var(--text-primary)' }}>
                           {cli.razonSocial}
                         </td>
                         <td style={{ padding: '18px 14px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -513,7 +513,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                         <tr style={{ background: 'rgba(10, 15, 29, 0.95)', borderBottom: '2px solid var(--border-accent)' }}>
                           <td colSpan={8} style={{ padding: '24px 32px' }}>
                             <div style={{ display: 'flex', justifyItems: 'space-between', alignItems: 'center' }}>
-                              <h3 style={{ color: '#fff', margin: 0 }}>Expedientes Asociados ({causas.length})</h3>
+                              <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>Expedientes Asociados ({causas.length})</h3>
                               <button className="btn-secondary" onClick={() => toggleRow(cli.id)}>Cerrar</button>
                             </div>
                             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -521,7 +521,7 @@ export default function DirectorioClientes({ onSelectCaso, onOpenMatriz }) {
                                 <div key={c.id} style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyItems: 'space-between', alignItems: 'center' }}>
                                   <div>
                                     <strong style={{ color: 'var(--accent-cyan)', marginRight: '10px' }}>[{c.rit}]</strong>
-                                    <span style={{ color: '#fff', fontWeight: '600' }}>{c.caratula}</span>
+                                    <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{c.caratula}</span>
                                   </div>
                                   <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }} onClick={() => onSelectCaso(c)}>Ver Ficha</button>
                                 </div>

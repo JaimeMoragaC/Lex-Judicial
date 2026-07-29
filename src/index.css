@@ -735,6 +735,192 @@ button:disabled,
 .empty-state p { font-size: var(--text-sm); max-width: 46ch; margin: 0 auto; }
 
 /* ==========================================================================
+   Barra de filtros y listado de causas
+   ========================================================================== */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--dur) var(--ease);
+}
+
+.buscador:focus-within { border-color: var(--accent-line); }
+
+.buscador-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.buscador-input::placeholder { color: var(--text-muted); }
+
+.select-compacto {
+  width: auto;
+  min-width: 150px;
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+}
+
+.lista-contador {
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-3);
+}
+
+/* Reparto de anchos: la carátula y las gestiones son lo que se lee, el resto
+   se comprime. table-layout fijo evita que una carátula larga descuadre todo. */
+.tabla-causas { table-layout: fixed; }
+.tabla-causas th:nth-child(1), .tabla-causas td:nth-child(1) { width: 22%; }
+.tabla-causas th:nth-child(2), .tabla-causas td:nth-child(2) { width: 16%; }
+.tabla-causas th:nth-child(3), .tabla-causas td:nth-child(3) { width: 12%; }
+.tabla-causas th:nth-child(4), .tabla-causas td:nth-child(4) { width: 22%; }
+.tabla-causas th:nth-child(5), .tabla-causas td:nth-child(5) { width: 22%; }
+.tabla-causas th:nth-child(6), .tabla-causas td:nth-child(6) { width: 6%; }
+
+.tabla-causas tbody tr { cursor: pointer; }
+
+/* Con table-layout fijo, la celda tiene que recortar: si no, un texto largo
+   se desborda y empuja la columna de acciones fuera de la tabla. */
+.tabla-causas td { overflow: hidden; }
+.tabla-causas .stack { min-width: 0; }
+
+/* .truncate sobre un span en línea no recorta nada: necesita ser bloque para
+   que el ancho de la celda lo limite. */
+.tabla-causas td .truncate {
+  display: block;
+  max-width: 100%;
+}
+
+.celda-sec {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Cómputo de términos
+   ========================================================================== */
+
+.regimen {
+  padding: var(--space-4);
+  text-align: left;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+
+.regimen:hover { border-color: var(--border-hover); }
+
+.regimen.is-active {
+  background: var(--bg-surface-2);
+  border-color: var(--accent-line);
+  color: var(--text-primary);
+}
+
+.regimen.is-active svg { color: var(--accent); }
+.regimen strong { color: var(--text-primary); font-size: var(--text-sm); }
+
+.regimen-regla {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+
+.nota-legal {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border-left: 2px solid var(--accent-line);
+  background: var(--accent-wash);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.nota-legal strong { color: var(--accent); }
+
+.aviso-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--warn);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.check input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+.resultado-principal { border-bottom: 1px solid var(--border-color); }
+
+.resultado-fecha {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.aviso-prorroga {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--warn-wash);
+  border: 1px solid var(--warn-line);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--warn);
+}
+
+.desglose { max-height: 340px; overflow-y: auto; }
+
+.desglose-fila {
+  display: grid;
+  grid-template-columns: 92px 46px 58px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--text-xs);
+}
+
+.desglose-fila:last-child { border-bottom: none; }
+.desglose-fila.es-inhabil { color: var(--text-muted); background: var(--bg-inset); }
+.desglose-fecha { color: var(--text-secondary); }
+.desglose-dia { color: var(--text-muted); text-transform: uppercase; }
+.desglose-num { font-weight: 600; color: var(--text-primary); }
+.es-inhabil .desglose-num { color: var(--text-muted); font-weight: 400; }
+.desglose-obs { color: var(--text-muted); }
+
+/* ==========================================================================
    Resultados de búsqueda
    ========================================================================== */
 
