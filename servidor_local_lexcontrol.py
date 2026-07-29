@@ -1400,11 +1400,54 @@ TEXTO:
                 caso = payload.get("caso", {})
                 tipo_escrito = payload.get("tipo_escrito", "Solicitud Procesal")
                 instruccion = payload.get("instruccion", "")
+                modo = payload.get("modo", "ia")  # 'ia' o 'heuristico'
                 
                 caratula = caso.get("caratula") or caso.get("cliente") or "PARTE ACTORA con PARTE DEMANDADA"
                 tribunal = caso.get("tribunal", "JUZGADO CORRESPONDIENTE")
                 rit = caso.get("rit") or caso.get("rol") or caso.get("id") or "C-2026"
                 materia = caso.get("materia", "Derecho Procesal Chileno")
+
+                # MODO HEURÍSTICO 100% LOCAL (SIN IA NI INTERNET)
+                if modo == "heuristico":
+                    snippet_base = ""
+                    try:
+                        db_path = BASE_DIR / "data" / "indice_texto.sqlite"
+                        if db_path.exists():
+                            con_fts = sqlite3.connect(db_path)
+                            kw = re.sub(r'[^a-zA-Z0-9\s]', '', tipo_escrito + " " + materia).strip()
+                            kw_query = " OR ".join([w for w in kw.split() if len(w) > 3][:3])
+                            if kw_query:
+                                res = con_fts.execute("SELECT snippet(textos, 3, '', '', '...', 30) FROM textos WHERE contenido MATCH ? LIMIT 1", (kw_query,)).fetchone()
+                                if res: snippet_base = res[0]
+                            con_fts.close()
+                    except Exception:
+                        pass
+
+                    txt_antecedentes = f"ANTECEDENTES EXTRAÍDOS DE LA BASE DEL ESTUDIO:\n{snippet_base}" if snippet_base else ""
+                    escrito_heuristico = f"""EN LO PRINCIPAL: {tipo_escrito.upper()}.
+
+S. J. L. ({tribunal.upper()})
+
+JAIME MARCELO MORAGA CARRASCO, abogado, por la parte correspondiente en los autos caratulados "{caratula}", ROL/RIT {rit}, a S.S. respetuosamente digo:
+
+Que por este acto vengo en solicitar {tipo_escrito.lower()} conforme a las normas del Código de Procedimiento Civil / Código Procesal Penal.
+
+FUNDAMENTOS DE HECHO Y DE DERECHO:
+{instruccion if instruccion else 'Que habiendo transcurrido el plazo legal sin que existan diligencias pendientes, corresponde dar curso progresivo a los autos.'}
+
+{txt_antecedentes}
+
+POR TANTO,
+A S.S. RUEGO acceder a lo solicitado y proveer de conformidad.
+
+ES JUSTICIA."""
+
+                    self.send_response(200)
+                    self._send_cors_headers()
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "ok", "escrito": escrito_heuristico, "modo": "heuristico_local"}, ensure_ascii=False).encode('utf-8'))
+                    return
 
                 # 🔍 RAG INJECTOR: Buscar automáticamente precedentes históricos en los 12.870 documentos del estudio
                 precedentes_contexto = ""

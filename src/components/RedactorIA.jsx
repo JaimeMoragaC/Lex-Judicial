@@ -55,6 +55,7 @@ export default function RedactorIA({ onSelectCaso }) {
   const [casoSeleccionado, setCasoSeleccionado] = useState(null);
   const [tipoEscrito, setTipoEscrito] = useState('Solicitud de impulso procesal');
   const [instruccion, setInstruccion] = useState('');
+  const [modoGeneracion, setModoGeneracion] = useState('ia'); // 'ia' o 'heuristico'
   const [generando, setGenerando] = useState(false);
   const [escritoResultado, setEscritoResultado] = useState('');
   const [copiado, setCopiado] = useState(false);
@@ -128,7 +129,8 @@ export default function RedactorIA({ onSelectCaso }) {
         body: JSON.stringify({
           caso: casoSeleccionado,
           tipo_escrito: tipoEscrito,
-          instruccion: instruccion || 'Solicitar proveído de conformidad.'
+          instruccion: instruccion || 'Solicitar proveído de conformidad.',
+          modo: modoGeneracion
         })
       });
 
@@ -272,6 +274,45 @@ export default function RedactorIA({ onSelectCaso }) {
               </div>
             </div>
 
+            {/* Selector de Modo: IA vs Heurístico 100% Local */}
+            <div>
+              <label className="field-label" style={{ marginBottom: 'var(--space-2)', display: 'block' }}>
+                Motor de Redacción:
+              </label>
+              <div className="row" style={{ gap: 'var(--space-2)' }}>
+                <button
+                  type="button"
+                  className={`btn-secondary${modoGeneracion === 'ia' ? ' is-active' : ''}`}
+                  onClick={() => setModoGeneracion('ia')}
+                  style={{
+                    flex: 1,
+                    fontSize: 'var(--text-xs)',
+                    padding: '8px',
+                    borderColor: modoGeneracion === 'ia' ? 'var(--accent)' : 'var(--border-color)',
+                    background: modoGeneracion === 'ia' ? 'var(--accent-wash)' : 'transparent'
+                  }}
+                >
+                  <Sparkles size={14} color="var(--accent)" />
+                  <span>🤖 Con IA Gemini</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn-secondary${modoGeneracion === 'heuristico' ? ' is-active' : ''}`}
+                  onClick={() => setModoGeneracion('heuristico')}
+                  style={{
+                    flex: 1,
+                    fontSize: 'var(--text-xs)',
+                    padding: '8px',
+                    borderColor: modoGeneracion === 'heuristico' ? 'var(--ok)' : 'var(--border-color)',
+                    background: modoGeneracion === 'heuristico' ? 'rgba(93, 145, 105, 0.12)' : 'transparent'
+                  }}
+                >
+                  <Gavel size={14} color="var(--ok)" />
+                  <span>⚡ 100% Local (Sin IA)</span>
+                </button>
+              </div>
+            </div>
+
             {/* Instrucción Específica */}
             <div>
               <label className="field-label" style={{ marginBottom: 'var(--space-2)', display: 'block' }}>
@@ -279,7 +320,7 @@ export default function RedactorIA({ onSelectCaso }) {
               </label>
               <textarea
                 className="textarea"
-                style={{ minHeight: '100px', fontSize: 'var(--text-xs)' }}
+                style={{ minHeight: '80px', fontSize: 'var(--text-xs)' }}
                 value={instruccion}
                 onChange={(e) => setInstruccion(e.target.value)}
                 placeholder="Ej: Pedir citación de audiencia y certificación de haber vencido el plazo probatorio..."
