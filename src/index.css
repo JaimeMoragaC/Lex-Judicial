@@ -145,6 +145,47 @@
   --sidebar-w: 260px;
 }
 
+[data-theme="light"] {
+  /* --- Superficies Claro ------------------------------------------------ */
+  --bg-app: #f2f4f8;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #e8ecf2;
+  --bg-raised: #dce2eb;
+  --bg-inset: #f8f9fc;
+
+  /* Compatibilidad con nombres antiguos */
+  --bg-primary: var(--bg-app);
+  --bg-secondary: var(--bg-surface);
+  --bg-card: var(--bg-surface);
+  --bg-card-hover: var(--bg-surface-2);
+  --bg-glass: var(--bg-surface);
+  --bg-modal: var(--bg-surface);
+
+  /* --- Bordes Claro ----------------------------------------------------- */
+  --border-color: rgba(0, 0, 0, 0.10);
+  --border-hover: rgba(0, 0, 0, 0.20);
+  --border-strong: rgba(0, 0, 0, 0.30);
+  --border-accent: rgba(140, 105, 55, 0.45);
+  --border-gold: rgba(140, 105, 55, 0.45);
+
+  /* --- Texto Claro ------------------------------------------------------ */
+  --text-primary: #15181c;
+  --text-secondary: #47505a;
+  --text-muted: #6e7885;
+  --text-inverse: #ffffff;
+  --text-accent: #8b6833;
+
+  /* --- Acento Claro ----------------------------------------------------- */
+  --accent: #8b6833;
+  --accent-hover: #735427;
+  --accent-line: rgba(139, 104, 51, 0.35);
+  --accent-wash: rgba(139, 104, 51, 0.10);
+
+  --accent-cyan: #556575;
+  --accent-gold: var(--accent);
+  --accent-purple: #5c6470;
+}
+
 /* ==========================================================================
    Reset y base
    ========================================================================== */

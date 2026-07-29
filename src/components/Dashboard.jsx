@@ -17,12 +17,14 @@ import {
   Eye,
   RefreshCw,
   Cpu,
-  Database
+  Database,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { MOCK_STATS, MOCK_PLAZOS_FATALES, MOCK_AUDIENCIAS_HOY_SEMANA, MOCK_CASOS } from '../mockData';
 import { PARTE_DIARIO_OJV } from '../parteDiarioData';
 
-export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
+export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, theme, toggleTheme }) {
   const [parteVisible, setParteVisible] = useState(true);
   
   // Cargar historial de LocalStorage
@@ -272,7 +274,18 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
           <h1>Centro de Mando & Control Probatorio</h1>
           <p>Bienvenido, Jaime. Situación en vivo de tus expedientes, auditoría automática de la OJV y control de plazos fatales.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {toggleTheme && (
+            <button
+              className="btn-secondary"
+              onClick={toggleTheme}
+              title="Cambiar entre modo claro y oscuro"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              {theme === 'light' ? <Moon size={18} color="var(--accent)" /> : <Sun size={18} color="var(--accent)" />}
+              <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+            </button>
+          )}
           <button className="btn-secondary" onClick={() => onNavigateToMatriz()}>
             <ShieldCheck size={18} color="var(--accent-gold)" />
             <span>Ver Matriz Probatoria</span>

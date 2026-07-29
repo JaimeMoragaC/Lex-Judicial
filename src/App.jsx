@@ -39,6 +39,19 @@ export default function App() {
   const [selectedCasoForModal, setSelectedCasoForModal] = useState(null);
   const [selectedCasoForMatriz, setSelectedCasoForMatriz] = useState(null);
 
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('lexcontrol_theme') || 'dark';
+  });
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('lexcontrol_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Navegar a la matriz de un caso en particular
   const handleOpenMatriz = (caso) => {
     setSelectedCasoForMatriz(caso);
@@ -62,12 +75,14 @@ export default function App() {
       <OmniSearch onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />
       
       {/* Barra Lateral de Navegación */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} theme={theme} toggleTheme={toggleTheme} />
 
       {/* Contenido Principal */}
       <main className="main-content">
         {activeTab === 'dashboard' && (
           <Dashboard 
+            theme={theme}
+            toggleTheme={toggleTheme}
             onNavigateToCaso={(caso) => {
               if (caso) {
                 setSelectedCasoForModal(caso);

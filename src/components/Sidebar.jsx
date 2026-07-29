@@ -13,13 +13,15 @@ import {
   Search,
   FileSearch,
   Download,
-  MessageSquare
+  MessageSquare,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 import { MOCK_STATS } from '../mockData';
 import { cargarPlazos, resumen } from '../utils/radarPlazos.js';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme }) {
   // El aviso del pie era un texto fijo en el código ("ALERTA ROJA 28/07") que
   // seguiría diciendo lo mismo para siempre. Ahora sale del registro real.
   const [alerta, setAlerta] = useState(null);
@@ -56,12 +58,24 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </span>
       </div>
 
-      <div className="sidebar-user">
-        <span className="avatar" aria-hidden="true">JM</span>
-        <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-          <span className="sidebar-user-name truncate">Jaime Moraga C.</span>
-          <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>Socio litigante</span>
-        </span>
+      <div className="sidebar-user" style={{ justifyContent: 'space-between' }}>
+        <div className="row" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+          <span className="avatar" aria-hidden="true">JM</span>
+          <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+            <span className="sidebar-user-name truncate">Jaime Moraga C.</span>
+            <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>Socio litigante</span>
+          </span>
+        </div>
+        {toggleTheme && (
+          <button
+            onClick={toggleTheme}
+            className="btn-ghost"
+            style={{ padding: '6px', borderRadius: 'var(--radius-sm)' }}
+            title={theme === 'light' ? 'Cambiar a Modo Oscuro' : 'Cambiar a Modo Claro'}
+          >
+            {theme === 'light' ? <Moon size={16} color="var(--text-primary)" /> : <Sun size={16} color="var(--accent)" />}
+          </button>
+        )}
       </div>
 
       <nav className="sidebar-nav" aria-label="Módulos del estudio">
