@@ -997,14 +997,10 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                         status, mensajes = mail.search(None, '(FROM "no-responder@pjud.cl")')
                         ids_mail = mensajes[0].split()
                         if ids_mail:
-                            movimientos_consolidados = []
-                            vistos_clave = set()
-                            archivos_procesados = []
-                            desglose_combinado = {}
-                            fecha_diario_hallada = None
-
-                            # Revisar desde el correo más reciente hacia atrás (hasta 20 correos)
-                            for mail_id in reversed(ids_mail[-20:]):
+                            # 1. Escanear adjuntos recientes y agrupar por fecha del Estado Diario
+                            partes_por_fecha = {}
+                            
+                            for mail_id in reversed(ids_mail[-15:]):
                                 res, msg_data = mail.fetch(mail_id, "(RFC822)")
                                 for response_part in msg_data:
                                     if isinstance(response_part, tuple):
@@ -1024,27 +1020,41 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                                     continue
                                                 
                                                 res_temp = procesar_excel_pjud(dest_path)
-                                                if res_temp.get("status") == "ok" and res_temp.get("movimientos"):
-                                                    archivos_procesados.append(clean_fname)
-                                                    if not fecha_diario_hallada:
-                                                        fecha_diario_hallada = res_temp.get("fecha_estado_diario")
-                                                    for m in res_temp["movimientos"]:
-                                                        clave_u = f"{m.get('rol')}-{m.get('tribunal')}-{m.get('estado')}"
-                                                        if clave_u not in vistos_clave:
-                                                            vistos_clave.add(clave_u)
-                                                            movimientos_consolidados.append(m)
-                                                            trib = m.get("jurisdiccion", "Otros")
-                                                            desglose_combinado[trib] = desglose_combinado.get(trib, 0) + 1
+                                                if res_temp.get("status") == "ok" and res_temp.get("total_movimientos", 0) > 0:
+                                                    f_date = res_temp.get("fecha_estado_diario") or "HOY"
+                                                    if f_date not in partes_por_fecha:
+                                                        partes_por_fecha[f_date] = []
+                                                    partes_por_fecha[f_date].append((clean_fname, dest_path, res_temp))
 
-                            if movimientos_consolidados:
-                                archivo_procesar = ", ".join(archivos_procesados[:3])
-                                origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Consolidado Multi-Excel ({len(archivos_procesados)} planillas)"
+                            # 2. Tomar la fecha MÁS RECIENTE que tenga movimientos oficiales del PJUD
+                            if partes_por_fecha:
+                                fechas_ordenadas = sorted(partes_por_fecha.keys(), reverse=True)
+                                ultima_fecha = fechas_ordenadas[0]
+                                adjuntos_dia = partes_por_fecha[ultima_fecha]
+
+                                movimientos_consolidados = []
+                                vistos_clave = set()
+                                archivos_procesados = []
+                                desglose_combinado = {}
+
+                                for clean_fname, dest_path, res_temp in adjuntos_dia:
+                                    archivos_procesados.append(clean_fname)
+                                    for m in res_temp["movimientos"]:
+                                        clave_u = f"{m.get('rol')}-{m.get('tribunal')}-{m.get('estado')}"
+                                        if clave_u not in vistos_clave:
+                                            vistos_clave.add(clave_u)
+                                            movimientos_consolidados.append(m)
+                                            trib = m.get("jurisdiccion", "Otros")
+                                            desglose_combinado[trib] = desglose_combinado.get(trib, 0) + 1
+
+                                archivo_procesar = ", ".join(archivos_procesados)
+                                origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Parte Oficial ({len(archivos_procesados)} planillas del {ultima_fecha})"
                                 resultado_sync = {
                                     "status": "ok",
                                     "archivo_procesado": archivo_procesar,
-                                    "path_completo": os.path.join("/home/jaime/Descargas", f"gmail_pjud_{archivos_procesados[0]}"),
-                                    "fecha_estado_diario": fecha_diario_hallada or time.strftime("%Y-%m-%d"),
-                                    "antiguedad_dias": 0,
+                                    "path_completo": adjuntos_dia[0][1],
+                                    "fecha_estado_diario": ultima_fecha,
+                                    "antiguedad_dias": (datetime.date.today() - datetime.date.fromisoformat(ultima_fecha)).days if ultima_fecha != "HOY" and "-" in str(ultima_fecha) else 0,
                                     "es_de_hoy": True,
                                     "leido_en": time.strftime("%Y-%m-%d %H:%M:%S"),
                                     "total_movimientos": len(movimientos_consolidados),
@@ -1052,7 +1062,7 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                     "movimientos": movimientos_consolidados,
                                     "origen_sync": origen_sync
                                 }
-                                print(f"✅ [GMAIL IMAP CONSOLIDADO] {len(movimientos_consolidados)} movimientos consolidados desde {len(archivos_procesados)} archivos Excel del PJUD.")
+                                print(f"✅ [GMAIL IMAP OFICIAL] {len(movimientos_consolidados)} causas informadas para la fecha oficial {ultima_fecha} desde {len(archivos_procesados)} archivo(s).")
                         mail.close()
                         mail.logout()
                     except Exception as e_imap:
