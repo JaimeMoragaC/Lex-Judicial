@@ -23,6 +23,7 @@ import glob
 import time
 import re
 import fitz
+import unicodedata
 import pandas as pd
 import urllib.request
 import shutil
@@ -1007,13 +1008,11 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                                 continue
                                             filename = part.get_filename()
                                             es_planilla = filename and any(filename.lower().endswith(ext) for ext in [".xls", ".xlsx"])
-                                            # Sólo se acepta el tipo pedido (por defecto el Estado
-                                            # Diario). Antes entraba cualquier adjunto y, como el
-                                            # correo de Movimientos llega más tarde, se leía ése y
-                                            # el Estado Diario del día quedaba sin abrir.
-                                            if es_planilla and tipo_de_planilla(filename) != tipo_buscado:
-                                                print(f"   ↪ omitido {filename}: es '{tipo_de_planilla(filename)}', se busca '{tipo_buscado}'")
-                                                continue
+                                            # Aceptar tanto EstadoDiario como Movimientos para no ignorar los correos del PJUD del día
+                                            if es_planilla and tipo_buscado != "auto" and tipo_buscado not in ["estado_diario", "movimientos"]:
+                                                if tipo_de_planilla(filename) != tipo_buscado:
+                                                    print(f"   ↪ omitido {filename}: es '{tipo_de_planilla(filename)}', se busca '{tipo_buscado}'")
+                                                    continue
                                             if es_planilla and any(k in filename.lower() for k in ['movimiento', 'estadodiario', 'causa', '8328581']):
                                                 clean_fname = filename.replace("/", "_").replace("\\", "_")
                                                 dest_path = os.path.join("/home/jaime/Descargas", f"gmail_pjud_{clean_fname}")
