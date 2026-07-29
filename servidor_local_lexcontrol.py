@@ -997,14 +997,25 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                         status, mensajes = mail.search(None, '(FROM "no-responder@pjud.cl")')
                         ids_mail = mensajes[0].split()
                         if ids_mail:
-                            # 1. Escanear adjuntos recientes y agrupar por fecha del Estado Diario
-                            partes_por_fecha = {}
+                            # 1. Escanear adjuntos de los correos recibidos en los últimos 2 días y agrupar por FECHA DE RECEPCIÓN DEL CORREO (o fecha del reporte)
+                            partes_por_fecha_correo = {}
                             
                             for mail_id in reversed(ids_mail[-15:]):
                                 res, msg_data = mail.fetch(mail_id, "(RFC822)")
                                 for response_part in msg_data:
                                     if isinstance(response_part, tuple):
                                         msg = email.message_from_bytes(response_part[1])
+                                        
+                                        # Obtener la fecha de recepción del correo (YYYY-MM-DD)
+                                        raw_date = msg.get("Date")
+                                        fecha_envio_str = time.strftime("%Y-%m-%d")
+                                        if raw_date:
+                                            try:
+                                                dt_msg = email.utils.parsedate_to_datetime(raw_date)
+                                                fecha_envio_str = dt_msg.strftime("%Y-%m-%d")
+                                            except Exception:
+                                                pass
+
                                         for part in msg.walk():
                                             if part.get_content_maintype() == "multipart" or part.get("Content-Disposition") is None:
                                                 continue
@@ -1021,16 +1032,15 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                                 
                                                 res_temp = procesar_excel_pjud(dest_path)
                                                 if res_temp.get("status") == "ok" and res_temp.get("total_movimientos", 0) > 0:
-                                                    f_date = res_temp.get("fecha_estado_diario") or "HOY"
-                                                    if f_date not in partes_por_fecha:
-                                                        partes_por_fecha[f_date] = []
-                                                    partes_por_fecha[f_date].append((clean_fname, dest_path, res_temp))
+                                                    if fecha_envio_str not in partes_por_fecha_correo:
+                                                        partes_por_fecha_correo[fecha_envio_str] = []
+                                                    partes_por_fecha_correo[fecha_envio_str].append((clean_fname, dest_path, res_temp))
 
-                            # 2. Tomar la fecha MÁS RECIENTE que tenga movimientos oficiales del PJUD
-                            if partes_por_fecha:
-                                fechas_ordenadas = sorted(partes_por_fecha.keys(), reverse=True)
-                                ultima_fecha = fechas_ordenadas[0]
-                                adjuntos_dia = partes_por_fecha[ultima_fecha]
+                            # 2. Tomar la FECHA DE RECEPCIÓN MÁS RECIENTE que contenga planillas del PJUD
+                            if partes_por_fecha_correo:
+                                fechas_ordenadas = sorted(partes_por_fecha_correo.keys(), reverse=True)
+                                ultima_fecha_correo = fechas_ordenadas[0]
+                                adjuntos_dia = partes_por_fecha_correo[ultima_fecha_correo]
 
                                 movimientos_consolidados = []
                                 vistos_clave = set()
@@ -1048,13 +1058,13 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                             desglose_combinado[trib] = desglose_combinado.get(trib, 0) + 1
 
                                 archivo_procesar = ", ".join(archivos_procesados)
-                                origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Parte Oficial ({len(archivos_procesados)} planillas del {ultima_fecha})"
+                                origen_sync = f"GMAIL_IMAP ({usuario_gmail}) - Entrega Matutina ({len(archivos_procesados)} planillas recibidas el {ultima_fecha_correo})"
                                 resultado_sync = {
                                     "status": "ok",
                                     "archivo_procesado": archivo_procesar,
                                     "path_completo": adjuntos_dia[0][1],
-                                    "fecha_estado_diario": ultima_fecha,
-                                    "antiguedad_dias": (datetime.date.today() - datetime.date.fromisoformat(ultima_fecha)).days if ultima_fecha != "HOY" and "-" in str(ultima_fecha) else 0,
+                                    "fecha_estado_diario": ultima_fecha_correo,
+                                    "antiguedad_dias": (datetime.date.today() - datetime.date.fromisoformat(ultima_fecha_correo)).days if "-" in str(ultima_fecha_correo) else 0,
                                     "es_de_hoy": True,
                                     "leido_en": time.strftime("%Y-%m-%d %H:%M:%S"),
                                     "total_movimientos": len(movimientos_consolidados),
@@ -1062,7 +1072,7 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                     "movimientos": movimientos_consolidados,
                                     "origen_sync": origen_sync
                                 }
-                                print(f"✅ [GMAIL IMAP OFICIAL] {len(movimientos_consolidados)} causas informadas para la fecha oficial {ultima_fecha} desde {len(archivos_procesados)} archivo(s).")
+                                print(f"✅ [GMAIL IMAP ENTREGA MATUTINA] {len(movimientos_consolidados)} causas consolidadas de {len(archivos_procesados)} planillas recibidas el {ultima_fecha_correo}.")
                         mail.close()
                         mail.logout()
                     except Exception as e_imap:
