@@ -325,9 +325,33 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename="", archivar=True
     # 6. CEREBRO IA REAL (Google Gemini 2.5 Flash)
     data_gemini = analizar_con_gemini(texto_completo, filename_clean, total_paginas)
     if data_gemini:
+        # Si el escrito declara la carátula con su rótulo ('Carátula:',
+        # 'Caratulado:', 'autos caratulados'), ese dato manda sobre lo que
+        # infiera el modelo: está escrito, no deducido. Se lo ha visto devolver
+        # "Causa Penal: RIT C-272-2025" para un documento cuyas partes estaban
+        # a la vista.
+        declarada = caratula_declarada(texto_completo)
+        if declarada:
+            if data_gemini.get("caratula") and data_gemini["caratula"] != declarada:
+                print(f"📝 [CARÁTULA] Declarada en el escrito: {declarada!r} (la IA dijo {data_gemini['caratula']!r})")
+            data_gemini["caratula"] = declarada
+            data_gemini["caratula_origen"] = "declarada en el documento"
+        else:
+            data_gemini["caratula_origen"] = "inferida por IA"
+
         if tmp_path and os.path.exists(tmp_path):
-            ruta_g = archivar_pdf_fisicamente(tmp_path, filename_clean, data_gemini.get("rol", ""), "", data_gemini.get("caratula", ""))
-            data_gemini["ruta_guardado"] = ruta_g
+            if archivar:
+                data_gemini["ruta_guardado"] = archivar_pdf_fisicamente(
+                    tmp_path, filename_clean, data_gemini.get("rol", ""), "", data_gemini.get("caratula", "")
+                )
+            else:
+                # La rama de Gemini retornaba acá sin mirar `archivar`, así que la
+                # vista previa archivaba igual. Ahora también respeta el sólo lectura.
+                data_gemini["ruta_guardado"] = None
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
         return data_gemini
 
     # Reglas Procesales Chilenas Multi-Materia (CPC / CPP / Laboral / Familia) [FALLBACK OFFLINE]
@@ -361,8 +385,13 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename="", archivar=True
         rol = match_fn_rol.group(1).upper() if match_fn_rol else ("RIT OJV-Penal/2026" if es_penal else "ROL OJV-2026")
 
     # Extraer Carátula
-    caratula = ""
-    if es_penal:
+    caratula = caratula_declarada(texto_completo) or ""
+    # Se registra de dónde salió: la declarada en el escrito y la adivinada por
+    # heurística no merecen la misma confianza, y la pantalla lo distingue.
+    caratula_origen = "declarada en el documento" if caratula else "inferida por reglas"
+    if caratula:
+        pass  # el escrito la dice literalmente: no hay nada que adivinar
+    elif es_penal:
         # Buscar imputados o partes penales
         imputados = re.findall(r'(?:imputado|imputados|acusado|acusados|querellado|querellados)\s*(?:[:\n]\s*|\b)([A-ZÁÉÍÓÚÑ\s,y]+?)(?=\n\n|\.\s|\n[A-Z][a-z]|de la audiencia|quedan|hora|sala|$)', texto_completo, re.IGNORECASE)
         if imputados and len(imputados[0].strip()) > 3:
@@ -537,6 +566,7 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename="", archivar=True
         "rol": rol,
         "tribunal": tribunal,
         "caratula": caratula,
+        "caratula_origen": caratula_origen,
         "materia": materia_str,
         "cuaderno": "Principal",
         "ruts_detectados": ruts,
@@ -663,6 +693,45 @@ def ruta_segura_de_subida(carpeta_cliente, filename, raiz):
                 destino = candidato
                 break
     return destino, None
+
+
+def caratula_declarada(texto):
+    """Extrae la carátula cuando el propio escrito la declara con etiqueta.
+
+    Los escritos chilenos la rotulan de varias formas y antes ninguna se buscaba:
+    se iba directo a adivinar el patrón "X con Y" y, si fallaba, a emparejar
+    palabras en mayúscula. Estos son los rótulos reales:
+
+        Carátula: MEDINA con MUNICIPALIDAD
+        Caratulado: "MEDINA / MUNICIPALIDAD"
+        Caratula   :  MEDINA CON MUNICIPALIDAD
+        en los autos caratulados "MEDINA con MUNICIPALIDAD"
+
+    Devuelve None si el documento no la declara, para que sigan los heurísticos.
+    """
+    if not texto:
+        return None
+
+    etiquetas = (
+        r"(?:autos\s+)?caratulad[oa]s?",   # 'caratulado', 'caratulada', 'autos caratulados'
+        r"car[áa]tulas?",                  # 'carátula', 'caratula'
+    )
+    for etiqueta in etiquetas:
+        # Tras la etiqueta: dos puntos opcionales, comillas opcionales, y el
+        # contenido hasta el cierre de comillas o el fin de línea.
+        m = re.search(
+            rf"{etiqueta}\s*:?\s*[\"“«']?\s*([^\n\"”»']{{4,140}})",
+            texto,
+            re.IGNORECASE,
+        )
+        if not m:
+            continue
+        valor = re.sub(r"\s+", " ", m.group(1)).strip(" .,;:-–—")
+        # Descarta capturas que en realidad arrastraron el campo siguiente.
+        valor = re.split(r"\s+(?:ROL|RIT|RUC|TRIBUNAL|MATERIA|CUADERNO)\b", valor, flags=re.IGNORECASE)[0].strip()
+        if len(valor) >= 4 and not valor.lower().startswith(("de la causa", "del proceso")):
+            return valor[:140]
+    return None
 
 
 def _primera_columna(row):

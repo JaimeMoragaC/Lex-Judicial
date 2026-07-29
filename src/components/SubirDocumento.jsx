@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   UploadCloud, FileText, Loader2, CheckCircle2, AlertCircle,
-  X, FolderOpen, Eye
+  X, FolderOpen, Eye, FolderPlus
 } from 'lucide-react';
 
 import { LEXCONTROL_API } from '../apiBase.js';
@@ -29,6 +29,8 @@ export default function SubirDocumento() {
   const [resultado, setResultado] = useState(null);
   const [carpeta, setCarpeta] = useState('');
   const [arrastrando, setArrastrando] = useState(false);
+  const [creandoCarpeta, setCreandoCarpeta] = useState(false);
+  const [nombreNuevaCarpeta, setNombreNuevaCarpeta] = useState('');
   const inputRef = useRef(null);
 
   // Candidatos de carpeta ordenados por parecido. No basta con la carátula que
@@ -55,6 +57,7 @@ export default function SubirDocumento() {
     if (urlPrevia) URL.revokeObjectURL(urlPrevia);
     setArchivo(null); setUrlPrevia(null); setAnalisis(null);
     setError(null); setResultado(null); setCarpeta(''); setEstado('vacio');
+    setCreandoCarpeta(false); setNombreNuevaCarpeta('');
   };
 
   const recibirArchivo = async (file) => {
@@ -248,9 +251,19 @@ export default function SubirDocumento() {
                     <span>{v}</span>
                   </div>
                 ))}
-                <p className="aviso-inline" style={{ marginTop: 'var(--space-3)' }}>
-                  <AlertCircle size={12} /> Extraído por IA: verifícalo contra el documento antes de confiar en él.
-                </p>
+                {/* Distingue el dato que el escrito declara del que la IA dedujo:
+                    no merecen la misma confianza. */}
+                {analisis?.caratula_origen === 'declarada en el documento' ? (
+                  <p className="aviso-inline" style={{ marginTop: 'var(--space-3)', color: 'var(--ok)' }}>
+                    <CheckCircle2 size={12} /> La carátula está declarada en el propio escrito.
+                    El resto lo dedujo la IA: verifícalo.
+                  </p>
+                ) : (
+                  <p className="aviso-inline" style={{ marginTop: 'var(--space-3)' }}>
+                    <AlertCircle size={12} /> El escrito no rotula su carátula, así que todo esto
+                    lo dedujo la IA. Verifícalo contra el documento.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -261,7 +274,7 @@ export default function SubirDocumento() {
                   <button
                     key={c.nombre}
                     className={`opcion-destino${carpeta === c.nombre ? ' is-active' : ''}`}
-                    onClick={() => setCarpeta(c.nombre)}
+                    onClick={() => { setCreandoCarpeta(false); setCarpeta(c.nombre); }}
                     disabled={estado !== 'revisando'}
                   >
                     <span className="row" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
@@ -272,7 +285,7 @@ export default function SubirDocumento() {
                 ))}
                 <button
                   className={`opcion-destino${carpeta === BANDEJA ? ' is-active' : ''}`}
-                  onClick={() => setCarpeta(BANDEJA)}
+                  onClick={() => { setCreandoCarpeta(false); setCarpeta(BANDEJA); }}
                   disabled={estado !== 'revisando'}
                 >
                   <span className="row" style={{ gap: 'var(--space-2)' }}>
@@ -281,10 +294,64 @@ export default function SubirDocumento() {
                   </span>
                 </button>
 
+                <button
+                  className={`opcion-destino${creandoCarpeta ? ' is-active' : ''}`}
+                  onClick={() => { setCreandoCarpeta(true); setCarpeta(nombreNuevaCarpeta.trim()); }}
+                  disabled={estado !== 'revisando'}
+                >
+                  <span className="row" style={{ gap: 'var(--space-2)' }}>
+                    <FolderPlus size={14} />
+                    <span>Crear una carpeta nueva</span>
+                  </span>
+                </button>
+
+                {creandoCarpeta && (
+                  <div className="stack" style={{ gap: 'var(--space-2)' }}>
+                    <input
+                      className="input"
+                      autoFocus
+                      value={nombreNuevaCarpeta}
+                      placeholder="Nombre del cliente o del asunto"
+                      onChange={(e) => {
+                        setNombreNuevaCarpeta(e.target.value);
+                        setCarpeta(e.target.value.trim());
+                      }}
+                      aria-label="Nombre de la carpeta nueva"
+                      disabled={estado !== 'revisando'}
+                    />
+                    {(() => {
+                      // Avisa si ya existe una carpeta parecida, para no terminar
+                      // con el mismo cliente repartido en dos carpetas.
+                      const similar = nombreNuevaCarpeta.trim().length >= 3
+                        ? REAL_DISK_DATA
+                            .map((c) => ({ n: c.folderName, s: parecido(c.folderName, nombreNuevaCarpeta) }))
+                            .filter((c) => c.s >= 0.6)
+                            .sort((a, b) => b.s - a.s)[0]
+                        : null;
+                      return similar ? (
+                        <p className="aviso-inline">
+                          <AlertCircle size={12} /> Ya existe una carpeta parecida:{' '}
+                          <button
+                            className="btn-ghost btn-sm"
+                            style={{ padding: 0, textDecoration: 'underline' }}
+                            onClick={() => { setCreandoCarpeta(false); setCarpeta(similar.n); }}
+                          >
+                            {similar.n}
+                          </button>
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+
                 <select
                   className="select"
-                  value={candidatos.some((c) => c.nombre === carpeta) || carpeta === BANDEJA ? '' : carpeta}
-                  onChange={(e) => setCarpeta(e.target.value)}
+                  value={candidatos.some((c) => c.nombre === carpeta) || carpeta === BANDEJA ? '' : ''}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    setCreandoCarpeta(false);
+                    setCarpeta(e.target.value);
+                  }}
                   disabled={estado !== 'revisando'}
                   aria-label="Buscar otra carpeta de cliente"
                   style={{ marginTop: 'var(--space-2)' }}
@@ -294,6 +361,13 @@ export default function SubirDocumento() {
                     <option key={c.folderName} value={c.folderName}>{c.folderName}</option>
                   ))}
                 </select>
+
+                {carpeta && (
+                  <p className="muted" style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-2)' }}>
+                    Destino: <strong className="mono">{carpeta}</strong>
+                    {creandoCarpeta && !REAL_DISK_DATA.some((c) => c.folderName === carpeta) && ' (se creará)'}
+                  </p>
+                )}
               </div>
             </div>
 
