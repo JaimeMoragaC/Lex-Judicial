@@ -14,6 +14,7 @@ import {
   FileSearch,
   Download,
   MessageSquare,
+  UploadCloud,
   Sun,
   Moon
 } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
     { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
     { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
     { id: 'clientes', label: 'Directorio de Clientes', icon: Users },
+    { id: 'smartdrive', label: 'Subida & Organizador de Documentos', icon: UploadCloud },
     { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare }
   ];
 

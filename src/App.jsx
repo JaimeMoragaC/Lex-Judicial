@@ -165,6 +165,10 @@ export default function App() {
             onOpenMatriz={handleOpenMatriz}
           />
         )}
+
+        {activeTab === 'smartdrive' && (
+          <SmartDriveSorter />
+        )}
       </main>
 
       {/* Modal de Detalle de Caso */}
