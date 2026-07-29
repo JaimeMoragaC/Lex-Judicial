@@ -37,6 +37,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
     { id: 'redactor', label: 'Redactor & Copiloto IA', icon: Sparkles },
     { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
     { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
+    { id: 'clientes', label: 'Directorio de Clientes', icon: Users },
     { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare }
   ];
 
