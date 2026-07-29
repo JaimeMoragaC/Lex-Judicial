@@ -131,7 +131,55 @@ export function crearExpediente({ cliente, asunto, tipo = 'extrajudicial' }, exp
 export async function cargarExpedientes() {
   const res = await fetch(`${LEXCONTROL_API}/expedientes`);
   if (!res.ok) throw new Error(`El servidor respondió HTTP ${res.status}`);
-  return (await res.json()).expedientes || [];
+  let serverExpedientes = (await res.json()).expedientes || [];
+
+  // Migración de respaldo desde localStorage por si hay expedientes creados antes de la servidorización
+  try {
+    let migrados = false;
+    const mappingStr = localStorage.getItem('lexcontrol_extrajudicial_mapping');
+    if (mappingStr) {
+      const mapping = JSON.parse(mappingStr);
+      for (const [cliente, extId] of Object.entries(mapping)) {
+        if (!serverExpedientes.some((e) => e.id === extId || normalizar(e.cliente) === normalizar(cliente))) {
+          serverExpedientes.push({
+            id: extId,
+            cliente,
+            asunto: 'gestión general',
+            tipo: extId.startsWith('ADM') ? 'administrativo' : 'extrajudicial',
+            creadoEn: new Date().toISOString(),
+            gestiones: []
+          });
+          migrados = true;
+        }
+      }
+    }
+
+    const casosIAStr = localStorage.getItem('lexcontrol_casos_ia');
+    if (casosIAStr) {
+      const casosIA = JSON.parse(casosIAStr);
+      for (const c of casosIA) {
+        if (c.cliente && !serverExpedientes.some((e) => e.id === c.id || normalizar(e.cliente) === normalizar(c.cliente))) {
+          serverExpedientes.push({
+            id: c.id || `EXT-${Date.now()}`,
+            cliente: c.cliente,
+            asunto: c.asunto || c.caratula || 'gestión general',
+            tipo: 'extrajudicial',
+            creadoEn: new Date().toISOString(),
+            gestiones: []
+          });
+          migrados = true;
+        }
+      }
+    }
+
+    if (migrados) {
+      guardarExpedientes(serverExpedientes).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('Aviso migración expedientes:', e);
+  }
+
+  return serverExpedientes;
 }
 
 export async function guardarExpedientes(expedientes) {
