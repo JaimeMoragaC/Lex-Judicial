@@ -1,0 +1,567 @@
+{
+ "generado_en": "2026-07-29T17:56:28",
+ "advertencia": "dias_sin_aparecer cuenta días desde la última vez que la causa figuró en el Estado Diario. NO equivale a 'sin gestión útil' del Art. 152 CPC: es un indicador para decidir qué expedientes revisar, no una conclusión jurídica.",
+ "cobertura": {
+  "desde": "2026-06-15",
+  "hasta": "2026-07-29",
+  "dias_capturados": 35,
+  "dias_habiles_esperados": 33,
+  "dias_habiles_faltantes": [
+   "2026-06-29",
+   "2026-06-30",
+   "2026-07-13"
+  ],
+  "nota_faltantes": "Un día faltante NO es un día sin movimiento: es un día que el sistema no leyó. Puede incluir feriados, que sí son días sin publicación.",
+  "snapshots_por_tipo": {
+   "estado_diario": 22,
+   "movimientos": 24,
+   "otro": 12
+  },
+  "tipos_que_alimentan_el_reloj": [
+   "estado_diario",
+   "movimientos"
+  ],
+  "filas_descartadas": {
+   "tipo_no_confiable": 2688,
+   "sin_rol_valido": 0
+  },
+  "nota_descartes": "tipo_no_confiable son filas de planillas que no son la nómina del estudio (la tabla de la Corte de Apelaciones): se capturan como evidencia pero no cuentan como actividad."
+ },
+ "total_causas_vistas": 23,
+ "causas": [
+  {
+   "rol_normalizado": "FAMILIA-57-2026",
+   "rol_visto": "Familia-57-2026",
+   "caratula": "ALMIRON/TOLEDO",
+   "tribunal": "C.A. de Punta Arenas",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-06-15",
+   "ultima_aparicion": "2026-06-15",
+   "veces_visto": 1,
+   "ultimo_estado": "Corte apelaciones",
+   "dias_sin_aparecer": 44
+  },
+  {
+   "rol_normalizado": "C-11977-2024",
+   "rol_visto": "C-11977-2024",
+   "caratula": "GENERAL MOTORS FINANCIAL CHILE SOCIEDAD ANÓNIMA/QU",
+   "tribunal": "11º Juzgado Civil de Santiago",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-16",
+   "ultima_aparicion": "2026-06-17",
+   "veces_visto": 3,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 42
+  },
+  {
+   "rol_normalizado": "C-3106-2017",
+   "rol_visto": "C-3106-2017",
+   "caratula": "RODRÍGUEZ/BRIONES",
+   "tribunal": "2º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-18",
+   "ultima_aparicion": "2026-06-18",
+   "veces_visto": 5,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 41
+  },
+  {
+   "rol_normalizado": "C-191-2025",
+   "rol_visto": "C-191-2025",
+   "caratula": "CAMPOS/ILUSTRE MUNICIPALIDAD DE CAÑETE",
+   "tribunal": "Juzgado de Letras de Cañete",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-17",
+   "ultima_aparicion": "2026-07-01",
+   "veces_visto": 16,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 28
+  },
+  {
+   "rol_normalizado": "T-27-2023",
+   "rol_visto": "T-27-2023",
+   "caratula": "OSSES/CLINICA TARAPA S.A.",
+   "tribunal": "Juzgado de Letras del Trabajo de Iquique",
+   "jurisdiccion": "Laboral",
+   "primera_aparicion": "2026-06-25",
+   "ultima_aparicion": "2026-07-01",
+   "veces_visto": 3,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 28
+  },
+  {
+   "rol_normalizado": "C-353-2025",
+   "rol_visto": "C-353-2025",
+   "caratula": "FISCO DE CHILE (CONSEJO DEFENSA DEL ESTADO)/REYES",
+   "tribunal": "2º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-26",
+   "ultima_aparicion": "2026-07-02",
+   "veces_visto": 3,
+   "ultimo_estado": "Movimiento reportado en OJV",
+   "dias_sin_aparecer": 27
+  },
+  {
+   "rol_normalizado": "POLICIALOCAL-220-2024",
+   "rol_visto": "Policia Local-220-2024",
+   "caratula": "DECAR S.A./CASTRO INOX LTDA",
+   "tribunal": "C.A. de Temuco",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-07-06",
+   "ultima_aparicion": "2026-07-06",
+   "veces_visto": 1,
+   "ultimo_estado": "Corte apelaciones",
+   "dias_sin_aparecer": 23
+  },
+  {
+   "rol_normalizado": "C-942-2021",
+   "rol_visto": "C-942-2021",
+   "caratula": "EMPRESA ELECTRICA CAREN S.A/SEPÚLVEDA",
+   "tribunal": "2º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-18",
+   "ultima_aparicion": "2026-07-07",
+   "veces_visto": 6,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 22
+  },
+  {
+   "rol_normalizado": "C-304-2025",
+   "rol_visto": "C-304-2025",
+   "caratula": "PALACIOS/INZUNZA",
+   "tribunal": "Juzgado de Letras de Cañete",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-24",
+   "ultima_aparicion": "2026-07-10",
+   "veces_visto": 11,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 19
+  },
+  {
+   "rol_normalizado": "FAMILIA-4998-2025",
+   "rol_visto": "Familia-4998-2025",
+   "caratula": "ESPINOZA/VÁSQUEZ",
+   "tribunal": "C.A. de Santiago",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-06-19",
+   "ultima_aparicion": "2026-07-15",
+   "veces_visto": 2,
+   "ultimo_estado": "Relator",
+   "dias_sin_aparecer": 14
+  },
+  {
+   "rol_normalizado": "Z-1011-2023",
+   "rol_visto": "Z-1011-2023",
+   "caratula": "BARRIA / MUÑOZ",
+   "tribunal": "Juzgado de Familia Pudahuel",
+   "jurisdiccion": "Familia",
+   "primera_aparicion": "2026-07-11",
+   "ultima_aparicion": "2026-07-15",
+   "veces_visto": 3,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 14
+  },
+  {
+   "rol_normalizado": "Z-20-2022",
+   "rol_visto": "Z-20-2022",
+   "caratula": "DÍAZ/DÍAZ",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "primera_aparicion": "2026-06-16",
+   "ultima_aparicion": "2026-07-16",
+   "veces_visto": 6,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 13
+  },
+  {
+   "rol_normalizado": "Z-8-2011",
+   "rol_visto": "Z-8-2011",
+   "caratula": "DIAZ / ITURRA",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "primera_aparicion": "2026-06-23",
+   "ultima_aparicion": "2026-07-18",
+   "veces_visto": 14,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 11
+  },
+  {
+   "rol_normalizado": "C-1869-2026",
+   "rol_visto": "C-1869-2026",
+   "caratula": "MEDINA/MORAGA",
+   "tribunal": "3º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-06-22",
+   "ultima_aparicion": "2026-07-25",
+   "veces_visto": 18,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 4
+  },
+  {
+   "rol_normalizado": "C-178-2026",
+   "rol_visto": "C-178-2026",
+   "caratula": "ESPINOZA/TORRES",
+   "tribunal": "Juzgado de Letras y Gar.de Pucón",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-07-03",
+   "ultima_aparicion": "2026-07-25",
+   "veces_visto": 9,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 4
+  },
+  {
+   "rol_normalizado": "C-858-2023",
+   "rol_visto": "C-858-2023",
+   "caratula": "RIVERA/FIGUEROA",
+   "tribunal": "Juzgado de Letras de Villarrica",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-07-24",
+   "ultima_aparicion": "2026-07-25",
+   "veces_visto": 2,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 4
+  },
+  {
+   "rol_normalizado": "821",
+   "rol_visto": "821",
+   "caratula": "INTENDENCIA REGION DEL BIO BIO CONTRA CARLOS ALFONSO PALACIO NAVARRO, GUILLERMO EDUARDO ISAIAS CARRERA ZUÑIGA",
+   "tribunal": "C.A. de Concepción",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-07-20",
+   "ultima_aparicion": "2026-07-27",
+   "veces_visto": 2,
+   "ultimo_estado": "Relator",
+   "dias_sin_aparecer": 2
+  },
+  {
+   "rol_normalizado": "PENAL-821-2026",
+   "rol_visto": "Penal-821-2026",
+   "caratula": "INTENDENCIA REGION DEL BIO BIO CONTRA CARLOS ALFONSO PALACIO NAVARRO, GUILLERMO EDUARDO ISAIAS CARRERA ZUÑIGA",
+   "tribunal": "C.A. de Concepción",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-06-15",
+   "ultima_aparicion": "2026-07-28",
+   "veces_visto": 6,
+   "ultimo_estado": "Relator",
+   "dias_sin_aparecer": 1
+  },
+  {
+   "rol_normalizado": "C-3183-2024",
+   "rol_visto": "C-3183-2024",
+   "caratula": "MORAGA/CORPORACION EDUCACION SANTA CLARA",
+   "tribunal": "1º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-07-03",
+   "ultima_aparicion": "2026-07-28",
+   "veces_visto": 51,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 1
+  },
+  {
+   "rol_normalizado": "Z-232-2017",
+   "rol_visto": "Z-232-2017",
+   "caratula": "MENA MORAGA",
+   "tribunal": "Juzgado de Familia Castro",
+   "jurisdiccion": "Familia",
+   "primera_aparicion": "2026-07-03",
+   "ultima_aparicion": "2026-07-28",
+   "veces_visto": 7,
+   "ultimo_estado": "Concluido",
+   "dias_sin_aparecer": 1
+  },
+  {
+   "rol_normalizado": "CIVIL-1820-2025",
+   "rol_visto": "Civil-1820-2025",
+   "caratula": "VILLENA/MORAGA",
+   "tribunal": "C.A. de Temuco",
+   "jurisdiccion": "Corte Apelaciones",
+   "primera_aparicion": "2026-07-28",
+   "ultima_aparicion": "2026-07-28",
+   "veces_visto": 1,
+   "ultimo_estado": "Corte apelaciones",
+   "dias_sin_aparecer": 1
+  },
+  {
+   "rol_normalizado": "35002-2026",
+   "rol_visto": "35002-2026",
+   "caratula": "ALMIRON/TOLEDO",
+   "tribunal": "Jurisdicción Corte Suprema",
+   "jurisdiccion": "Corte Suprema",
+   "primera_aparicion": "2026-07-28",
+   "ultima_aparicion": "2026-07-28",
+   "veces_visto": 1,
+   "ultimo_estado": "(Familia) Casación Fondo",
+   "dias_sin_aparecer": 1
+  },
+  {
+   "rol_normalizado": "C-272-2025",
+   "rol_visto": "C-272-2025",
+   "caratula": "MEDINA/ILUSTRE MUNICIPALIDAD DE PICHILEMU",
+   "tribunal": "Juzgado de Letras y Gar.de Pichilemu",
+   "jurisdiccion": "Civil",
+   "primera_aparicion": "2026-07-28",
+   "ultima_aparicion": "2026-07-29",
+   "veces_visto": 2,
+   "ultimo_estado": "Tramitación",
+   "dias_sin_aparecer": 0
+  }
+ ],
+ "cruce_catalogo": {
+  "total_en_catalogo": 1557,
+  "con_alguna_aparicion": 37,
+  "sin_ninguna_aparicion": 1520,
+  "nota": "sin_ninguna_aparicion alto es lo normal mientras la serie sea corta: sólo dice que no se movieron en los días capturados.",
+  "muestra_sin_aparicion": [
+   {
+    "rit": "ROL 26875-2026",
+    "tribunal": "Corte Suprema",
+    "caratula": "INTENDENCIA REGION DEL BIOBIO C/ GUILLERMO EDUARDO ISAIAS CARRERA ZUNIGA"
+   },
+   {
+    "rit": "ROL 20783-2026",
+    "tribunal": "Corte Suprema",
+    "caratula": "MORAGA/MAS"
+   },
+   {
+    "rit": "ROL 18079-2026",
+    "tribunal": "Corte Suprema",
+    "caratula": "ROCO/CORPORACION EDUCACION SANTA CLARA"
+   },
+   {
+    "rit": "ROL 9249-2026",
+    "tribunal": "Corte Suprema",
+    "caratula": "PALACIO NAVARRO CARLOS ALFONSO CONTRA TRIBUNAL DE JUICIO ORAL EN LO PENAL DE CAÑETE"
+   },
+   {
+    "rit": "ROL 3685-2026",
+    "tribunal": "Corte Suprema",
+    "caratula": "PALACIO NAVARRO CARLOS ALFONSO  CONTRA TRIBUNAL DE JUICIO ORAL EN LO PENAL DE CAÑETE"
+   },
+   {
+    "rit": "ROL 37627-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "TRANSMISORA VALLE ALLIPEN S.A./TRECAMÁN"
+   },
+   {
+    "rit": "ROL 32743-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "FISCALIA FISCALIA LOCAL C/ VLADIMIR RAMON TOLEDO VILLALON"
+   },
+   {
+    "rit": "ROL 32583-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "TRANSMISORA VALLE ALLIPEN S.A./JOSE PATRICIO CALFULLÁN MORALES"
+   },
+   {
+    "rit": "ROL 31982-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "TRANSMISORA VALLE ALLIPEN S.A./HUENCHUMÁN"
+   },
+   {
+    "rit": "ROL 30364-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "DUARTE/CORPORACIÓN MUNICIPAL DE CASTRO"
+   },
+   {
+    "rit": "ROL 26047-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "CUEVAS SALAZAR FROILAN CON TORRES LEFIÑANCO SUDELIA (S)"
+   },
+   {
+    "rit": "ROL 7960-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "RODRIGO JAVIER OJEDA ESPINOZA/ISAPRE NUEVA MASVIDA  S.A."
+   },
+   {
+    "rit": "ROL 7959-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "BUSTOS/NUEVA MASVIDA S.A"
+   },
+   {
+    "rit": "ROL 7627-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "CURAQUEO SOTO SEBASTIÁN ALEJANDRO Y OTRO/CURAQUEO CURAQUEO ÁLVARO EMILIO"
+   },
+   {
+    "rit": "ROL 2643-2025",
+    "tribunal": "Corte Suprema",
+    "caratula": "TRANSMISORA VALLE ALLIPEN S.A. CONTRA JUANICO HERNÁNDEZ ALFREDO GREGORIO Y OTROS"
+   },
+   {
+    "rit": "ROL 61803-2024",
+    "tribunal": "Corte Suprema",
+    "caratula": "BURGOS BUSTOS MIREYA/Ópticas Welt SpA"
+   },
+   {
+    "rit": "ROL 36097-2024",
+    "tribunal": "Corte Suprema",
+    "caratula": "TRANSMISORA VALLE ALLIPEN S.A. CONTRA MORAGA CARRASCO JAIME MARCELO"
+   },
+   {
+    "rit": "ROL 20063-2024",
+    "tribunal": "Corte Suprema",
+    "caratula": "GONZALO ENRIQUE SEPULVEDA LARA C/ ADRIAN HENRIQUEZ JUANICO"
+   },
+   {
+    "rit": "ROL 17072-2024",
+    "tribunal": "Corte Suprema",
+    "caratula": "CALFULLÁN/tRANSMISORA PITRUFQUEN S.A."
+   },
+   {
+    "rit": "ROL 231360-2023",
+    "tribunal": "Corte Suprema",
+    "caratula": "PINCHEIRA PARDO MOISES/SANHUEZA BRAVO RODRIGO - (LTE) - VUELVE A TABLA"
+   },
+   {
+    "rit": "ROL 147173-2023",
+    "tribunal": "Corte Suprema",
+    "caratula": "NÚÑEZ/COMISIÓN DE MEDICINA PREVENTIVA E INVALIDEZ (COMPIN )"
+   },
+   {
+    "rit": "ROL 68571-2023",
+    "tribunal": "Corte Suprema",
+    "caratula": "CONTRERAS QUILAPI PATRICIO CONTRA GENDARMERÍA DE CHILE"
+   },
+   {
+    "rit": "ROL 170293-2022",
+    "tribunal": "Corte Suprema",
+    "caratula": "OSSES/UNIVERSIDAD DE LA FRONTERA"
+   },
+   {
+    "rit": "ROL 69638-2022",
+    "tribunal": "Corte Suprema",
+    "caratula": "CONTRERAS QUILAPI PATRICIO CONTRA TRIBUNAL JUICIO ORAL TEMUCO"
+   },
+   {
+    "rit": "ROL 67557-2022",
+    "tribunal": "Corte Suprema",
+    "caratula": "--"
+   },
+   {
+    "rit": "ROL 96953-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "ITURRA/GUÍÑEZ"
+   },
+   {
+    "rit": "ROL 75899-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "JOFRÉ/MADRID"
+   },
+   {
+    "rit": "ROL 66263-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "PARDO ESCOBARA JUAN ANTONIO CON DIRECCIÓN GENERAL DE AGUAS MINISTERIO DE OBRAS PUBLICAS."
+   },
+   {
+    "rit": "ROL 52836-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "ROMULO SEBASTIAN PINCHEIRA PARDO C/ SCOTTA CHILE S.A."
+   },
+   {
+    "rit": "ROL 45420-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "SEPÚLVEDA/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 31792-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "PARDO/MINISTERIO DE OBRAS PUBLICAS DGA"
+   },
+   {
+    "rit": "ROL 27002-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "COMUNIDAD INDIGENA PAINETRU SA C/ ROMAN IGNACIO GOMEZ CONTRERAS"
+   },
+   {
+    "rit": "ROL 12490-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "CONTRERAS QUILAPI PATRICIO CONTRA JUZGADO DE GARANTIA DE CARAHUE."
+   },
+   {
+    "rit": "ROL 11468-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "PARDO/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 4427-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "CALFULLÁN/TRANSMISORA VALLE ALLIPEN S.A."
+   },
+   {
+    "rit": "ROL 4334-2021",
+    "tribunal": "Corte Suprema",
+    "caratula": "CAYUMÁN/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 122193-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "MARAGA CARRASCO JAIME CONTRA CARABINEROS DE CHILE."
+   },
+   {
+    "rit": "ROL 100823-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "SEPÚLVEDA/SCOTTA CHILE S.A."
+   },
+   {
+    "rit": "ROL 94820-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "APABLAZA/BOOTH"
+   },
+   {
+    "rit": "ROL 92156-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "SEPÚLVEDA/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 85090-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "COMUNIDAD INDIGENA PAINETRU SAHUELHUE/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 76422-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "AURORA DICENIA FLORES MACAYA CON HDI SEGUROS S.A."
+   },
+   {
+    "rit": "ROL 72166-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "REINALDO ENRIQUE ESPINOZA MARDONES C/ EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 59503-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "ESPINOZA/EMPRESA ELECTRICA CAREN S.A"
+   },
+   {
+    "rit": "ROL 21154-2020",
+    "tribunal": "Corte Suprema",
+    "caratula": "PARDO/SCOTTA CHILE S.A."
+   },
+   {
+    "rit": "ROL 33871-2019",
+    "tribunal": "Corte Suprema",
+    "caratula": "ALTAMIRANO/GENDARMERÍA DE CHILE"
+   },
+   {
+    "rit": "ROL 28211-2019",
+    "tribunal": "Corte Suprema",
+    "caratula": "GÓMEZ ESPINOLA MARIA SOLIDAD CON CARRASCO ANGULO MONICA(S)"
+   },
+   {
+    "rit": "ROL 26938-2019",
+    "tribunal": "Corte Suprema",
+    "caratula": "CARRILLO ESPINOZA MARÍA CLOTILDE Y OTROS  CONTRA CARABINEROS DE CHILE RETÉN MELIPEUCO Y VILLARICA.(ROL ICA TEMUCO N° 156-2019)"
+   },
+   {
+    "rit": "ROL 26937-2019",
+    "tribunal": "Corte Suprema",
+    "caratula": "MORAGA CARRASCO JAIME MARCELO, PARADA PARDO MARÍA ELIZABETH Y PINCHEIRA CARRILLO RAÚL HERNÁN CONTRA CARABINEROS DE CHILE RETÉN MELIPEUCO.(ROL ICA TEMUCO N° 157-2019)"
+   },
+   {
+    "rit": "ROL 12462-2019",
+    "tribunal": "Corte Suprema",
+    "caratula": "RECURSO DE PROTECCION PARDO ESCOBAR JOSE ANTONIO / DIRECCION GENERAL DE AGUAS"
+   }
+  ]
+ }
+}

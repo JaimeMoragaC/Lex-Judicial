@@ -1,0 +1,33 @@
+{
+ "fecha_reporte": "2026-07-06",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__06072026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__06072026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 1,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 0,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 1,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Corte Apelaciones-0",
+   "rol": "Policia Local-220-2024",
+   "caratula": "DECAR S.A./CASTRO INOX LTDA",
+   "tribunal": "C.A. de Temuco",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "12/09/2024",
+   "estado": "Corte apelaciones",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

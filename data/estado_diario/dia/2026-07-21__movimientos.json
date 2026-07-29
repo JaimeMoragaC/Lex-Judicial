@@ -1,0 +1,33 @@
+{
+ "fecha_reporte": "2026-07-21",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "movimientos",
+ "archivo": "Movimientos_8328581__21_07_2026.xls",
+ "archivo_original_pjud": "Movimientos_8328581__21_07_2026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 1,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 0,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 1,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Familia-0",
+   "rol": "Z-232-2017",
+   "caratula": "MENA MORAGA",
+   "tribunal": "Juzgado de Familia Castro",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "2017/08/02",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

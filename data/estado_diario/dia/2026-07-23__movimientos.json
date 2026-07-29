@@ -1,0 +1,72 @@
+{
+ "fecha_reporte": "2026-07-23",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "movimientos",
+ "archivo": "Movimientos_8328581__23_07_2026.xls",
+ "archivo_original_pjud": "Movimientos_8328581__23_07_2026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 4,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 4,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-1869-2026",
+   "caratula": "MEDINA/MORAGA",
+   "tribunal": "3º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2026/04/24",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-1",
+   "rol": "C-178-2026",
+   "caratula": "ESPINOZA/TORRES",
+   "tribunal": "Juzgado de Letras y Gar.de Pucón",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2026/03/29",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-2",
+   "rol": "C-1869-2026",
+   "caratula": "MEDINA/MORAGA",
+   "tribunal": "3º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2026/04/24",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-3",
+   "rol": "C-178-2026",
+   "caratula": "ESPINOZA/TORRES",
+   "tribunal": "Juzgado de Letras y Gar.de Pucón",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2026/03/29",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

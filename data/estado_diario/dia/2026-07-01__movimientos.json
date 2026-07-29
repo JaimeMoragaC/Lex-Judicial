@@ -1,0 +1,59 @@
+{
+ "fecha_reporte": "2026-07-01",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "movimientos",
+ "archivo": "Movimientos_8328581__01_07_2026.xls",
+ "archivo_original_pjud": "Movimientos_8328581__01_07_2026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 3,
+ "desglose_tribunales": {
+  "Laboral": 1,
+  "Civil": 1,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 1,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Laboral-0",
+   "rol": "T-27-2023",
+   "caratula": "OSSES/CLINICA TARAPA S.A.",
+   "tribunal": "Juzgado de Letras del Trabajo de Iquique",
+   "jurisdiccion": "Laboral",
+   "fechaIngreso": "2023/01/23",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-191-2025",
+   "caratula": "CAMPOS/ILUSTRE MUNICIPALIDAD DE CAÑETE",
+   "tribunal": "Juzgado de Letras de Cañete",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2025/07/29",
+   "estado": "Tramitación",
+   "esFatal": true,
+   "alerta": "⚠️ PLAZO O TRÁMITE ACTIVO: Verificar vencimientos fatales (Art. 66 CPC / Días Corridos).",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Familia-0",
+   "rol": "Z-8-2011",
+   "caratula": "DIAZ / ITURRA",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "2011/01/29",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

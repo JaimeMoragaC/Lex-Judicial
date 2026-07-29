@@ -12,6 +12,7 @@ import CasoDetailModal from './components/CasoDetailModal';
 import OmniSearch from './components/OmniSearch';
 import RadarPlazos from './components/RadarPlazos';
 import BuscadorTexto from './components/BuscadorTexto';
+import SubirDocumento from './components/SubirDocumento';
 import BitacoraOmnicanal from './components/BitacoraOmnicanal';
 import RedactorIA from './components/RedactorIA';
 import { MOCK_CASOS } from './mockData';
@@ -111,6 +112,8 @@ export default function App() {
         )}
 
         {activeTab === 'buscador' && <BuscadorTexto />}
+
+        {activeTab === 'subir' && <SubirDocumento />}
 
         {activeTab === 'proactivo' && (
           <AsistenteProactivo 

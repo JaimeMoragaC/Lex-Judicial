@@ -1,0 +1,111 @@
+{
+ "fecha_reporte": "2026-07-08",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__08072026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__08072026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 7,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 4,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 3,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-304-2025",
+   "caratula": "PALACIOS/INZUNZA",
+   "tribunal": "Juzgado de Letras de Cañete",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "27/10/2025",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-1",
+   "rol": "C-304-2025",
+   "caratula": "PALACIOS/INZUNZA",
+   "tribunal": "Juzgado de Letras de Cañete",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "27/10/2025",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-2",
+   "rol": "C-1869-2026",
+   "caratula": "MEDINA/MORAGA",
+   "tribunal": "3º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "24/04/2026",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-3",
+   "rol": "C-1869-2026",
+   "caratula": "MEDINA/MORAGA",
+   "tribunal": "3º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "24/04/2026",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Familia-0",
+   "rol": "Z-20-2022",
+   "caratula": "DÍAZ/DÍAZ",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "15/03/2022",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Familia-1",
+   "rol": "Z-8-2011",
+   "caratula": "DIAZ / ITURRA",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "29/01/2011",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Familia-2",
+   "rol": "Z-8-2011",
+   "caratula": "DIAZ / ITURRA",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "29/01/2011",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "fecha_reporte": "2026-06-19",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__19062026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__19062026.xls",
+ "capturado_en": "2026-07-29T17:56:27",
+ "total_movimientos": 1,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 0,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 1,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Corte Apelaciones-0",
+   "rol": "Familia-4998-2025",
+   "caratula": "ESPINOZA/VÁSQUEZ",
+   "tribunal": "C.A. de Santiago",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "10/12/2025",
+   "estado": "Oficina Tabla",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

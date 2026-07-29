@@ -1,0 +1,46 @@
+{
+ "fecha_reporte": "2026-06-15",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__15062026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__15062026.xls",
+ "capturado_en": "2026-07-29T17:56:27",
+ "total_movimientos": 2,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 0,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 2,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Corte Apelaciones-0",
+   "rol": "Familia-57-2026",
+   "caratula": "ALMIRON/TOLEDO",
+   "tribunal": "C.A. de Punta Arenas",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "27/02/2026",
+   "estado": "Corte apelaciones",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Corte Apelaciones-1",
+   "rol": "Penal-821-2026",
+   "caratula": "INTENDENCIA REGION DEL BIOBIO C/ CARLOS ALFONSO PALACIO NAVARRO",
+   "tribunal": "C.A. de Concepción",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "03/06/2026",
+   "estado": "Corte apelaciones",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

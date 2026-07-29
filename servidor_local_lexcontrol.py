@@ -247,7 +247,13 @@ def analizar_con_gemini(texto_completo, filename_clean, total_paginas):
         print(f"⚠️ [GEMINI 2.5 FALLBACK] No se pudo consultar IA ({e_ia}). Usando motor RegEx local...")
         return None
 
-def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename=""):
+def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename="", archivar=True):
+    """Analiza el documento y, si `archivar`, lo mueve al expediente.
+
+    Con archivar=False el análisis es de sólo lectura: nada se mueve ni se indexa.
+    Hace falta para poder mirar el documento y revisar lo que la IA extrajo ANTES
+    de integrarlo, en vez de que entre al expediente en el mismo gesto de subirlo.
+    """
     texto_completo = ""
     total_paginas = 1
     tmp_path = None
@@ -513,7 +519,15 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename=""):
 
     ruta_guardado = None
     if tmp_path and os.path.exists(tmp_path):
-        ruta_guardado = archivar_pdf_fisicamente(tmp_path, filename_clean, rol, "", caratula)
+        if archivar:
+            ruta_guardado = archivar_pdf_fisicamente(tmp_path, filename_clean, rol, "", caratula)
+        else:
+            # Análisis en sólo lectura: se borra el temporal y no se toca el
+            # expediente. El archivado lo pide el abogado después, al confirmar.
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
     return {
         "status": "ok",
@@ -1425,8 +1439,12 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                     except Exception as e_mp:
                         print(f"Aviso parseando multipart: {e_mp}")
                 
-                print(f"📥 [SUBIDA DE DOCUMENTO] Recibidos {len(post_data)} bytes del archivo '{filename}'")
-                res = extraer_metadatos_forenses_pdf(post_data, filename)
+                # ?archivar=false analiza sin mover nada: sirve para revisar el
+                # documento y lo que extrajo la IA antes de integrarlo.
+                archivar = query_params.get("archivar", ["true"])[0].lower() not in ("false", "0", "no")
+                print(f"📥 [{'SUBIDA' if archivar else 'VISTA PREVIA'}] {len(post_data)} bytes de '{filename}'")
+                res = extraer_metadatos_forenses_pdf(post_data, filename, archivar=archivar)
+                res["archivado"] = bool(res.get("ruta_guardado"))
 
                 self.send_response(200)
                 self._send_cors_headers()

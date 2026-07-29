@@ -1,0 +1,15 @@
+{
+ "fecha_reporte": "2026-07-25",
+ "fuente_fecha": "fecha_correo",
+ "tipo_planilla": "otro",
+ "archivo": "2026-07-25__CORTE DE APELACIONES DE TEMUCO.xls",
+ "archivo_original_pjud": "CORTE DE APELACIONES DE TEMUCO.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 240,
+ "desglose_tribunales": {
+  "CORTE DE APELACIONES DE TEMUCO": 240
+ },
+ "movimientos": [],
+ "filas_no_guardadas": 240,
+ "motivo": "Tipo de planilla que no alimenta el reloj: sin columna de rol confiable. Las filas quedan en el .xls original en planillas/."
+}

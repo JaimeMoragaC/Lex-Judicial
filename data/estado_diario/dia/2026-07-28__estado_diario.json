@@ -1,0 +1,72 @@
+{
+ "fecha_reporte": "2026-07-28",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__28072026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__28072026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 4,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 1,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 2,
+  "Corte Suprema": 1
+ },
+ "movimientos": [
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-272-2025",
+   "caratula": "MEDINA/ILUSTRE MUNICIPALIDAD DE PICHILEMU",
+   "tribunal": "Juzgado de Letras y Gar.de Pichilemu",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "06/11/2025",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Corte Apelaciones-0",
+   "rol": "Penal-821-2026",
+   "caratula": "INTENDENCIA REGION DEL BIO BIO CONTRA CARLOS ALFONSO PALACIO NAVARRO, GUILLERMO EDUARDO ISAIAS CARRERA ZUÑIGA",
+   "tribunal": "C.A. de Concepción",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "03/06/2026",
+   "estado": "Relator",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Corte Apelaciones-1",
+   "rol": "Civil-1820-2025",
+   "caratula": "VILLENA/MORAGA",
+   "tribunal": "C.A. de Temuco",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "09/10/2025",
+   "estado": "Corte apelaciones",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Corte Suprema-0",
+   "rol": "35002-2026",
+   "caratula": "ALMIRON/TOLEDO",
+   "tribunal": "Jurisdicción Corte Suprema",
+   "jurisdiccion": "Corte Suprema",
+   "fechaIngreso": "16/06/2026",
+   "estado": "(Familia) Casación Fondo",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

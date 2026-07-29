@@ -53,10 +53,8 @@ import argparse
 import datetime
 import email
 import email.utils
-import glob
 import imaplib
 import json
-import os
 import re
 import socket
 import sys
@@ -83,6 +81,7 @@ DIR_PLANILLAS = RAIZ / "planillas"
 DIR_DIAS = RAIZ / "dia"
 BITACORA = RAIZ / "bitacora_capturas.jsonl"
 INDICE = RAIZ / "ultimo_movimiento.json"
+CACHE_UIDS = RAIZ / "correos_procesados.json"
 CAUSAS_JSON = DATOS_DIR / "pjudCausesData.json"
 
 REMITENTE_POR_DEFECTO = "no-responder@pjud.cl"
@@ -90,6 +89,17 @@ REMITENTE_POR_DEFECTO = "no-responder@pjud.cl"
 # considera planilla del PJUD.
 CLAVES_ADJUNTO = ("movimiento", "estadodiario", "causa", "8328581", "corte")
 EXT_PLANILLA = (".xls", ".xlsx")
+
+# Sólo estas planillas alimentan el reloj de inactividad.
+#
+# El PJUD manda también la tabla completa de la Corte de Apelaciones
+# ('CORTE DE APELACIONES DE TEMUCO.xls', que cae en el tipo 'otro'): 240 filas
+# fijas, en su mayoría causas ajenas, y sin columna de rol —la primera columna
+# trae el nombre del tribunal—. Al parsearla, las 240 filas quedaban como una
+# única "causa" llamada CORTE DE APELACIONES DE TEMUCO con 2.880 apariciones, y
+# el reloj se contaminaba. Se sigue capturando como evidencia, pero no cuenta
+# como actividad: una tabla pública no es la nómina del estudio.
+TIPOS_PARA_INDICE = ("estado_diario", "movimientos")
 
 TIEMPO_LIMITE_IMAP = 90  # sin esto una bandeja que no responde cuelga el timer
 
@@ -139,6 +149,57 @@ def normalizar_rol(rol):
     return re.sub(r"\s+", "", t)
 
 
+def parece_rol(clave):
+    """Red de seguridad contra filas que no son causas.
+
+    Todo identificador del PJUD lleva dígitos: C-3183-2024, Z-8-2011, 35002-2026.
+    Un valor sin ningún dígito ('CORTE DE APELACIONES DE TEMUCO', 'S/N', un
+    encabezado suelto) no es un rol. El filtro por tipo de planilla ya ataja el
+    caso conocido; esto cubre los que aparezcan cuando el PJUD cambie un formato.
+    """
+    return bool(clave) and clave != "S/N" and any(c.isdigit() for c in clave)
+
+
+def cargar_cache_uids(uidvalidity):
+    """Correos ya bajados, para no volver a descargarlos en cada corrida.
+
+    Sin esto, un timer que corre dos veces al día se baja de nuevo los 30 días de
+    adjuntos cada vez: minutos de parseo y megas de tráfico para reescribir lo
+    mismo. Los UID son estables dentro de una bandeja mientras no cambie su
+    UIDVALIDITY; si cambia, el mapa de UID anterior ya no significa nada y la
+    caché se descarta entera.
+    """
+    if not CACHE_UIDS.exists():
+        return set()
+    try:
+        cache = json.loads(CACHE_UIDS.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    if str(cache.get("uidvalidity")) != str(uidvalidity):
+        log("· la bandeja cambió de UIDVALIDITY: se descarta la caché de correos")
+        return set()
+    return set(cache.get("uids_procesados", []))
+
+
+def guardar_cache_uids(uidvalidity, uids):
+    CACHE_UIDS.write_text(
+        json.dumps(
+            {
+                "uidvalidity": str(uidvalidity),
+                "actualizado_en": datetime.datetime.now().isoformat(timespec="seconds"),
+                "nota": (
+                    "Correos del PJUD ya descargados. Borrar este archivo obliga a "
+                    "releer la bandeja completa de la ventana."
+                ),
+                "uids_procesados": sorted(uids, key=lambda u: int(u) if str(u).isdigit() else 0),
+            },
+            ensure_ascii=False,
+            indent=1,
+        ),
+        encoding="utf-8",
+    )
+
+
 def _fecha_correo(msg):
     """Fecha de recepción del correo, como respaldo si el nombre del adjunto no
     trae fecha. Se marca en el registro para no confundir una con otra."""
@@ -151,31 +212,49 @@ def _fecha_correo(msg):
         return None
 
 
-def descargar_planillas(usuario, clave, remitente, dias_atras):
-    """Baja del correo todas las planillas del PJUD de la ventana pedida.
+def descargar_planillas(usuario, clave, remitente, dias_atras, usar_cache=True):
+    """Baja del correo las planillas del PJUD de la ventana pedida.
 
-    Devuelve (lista_de_rutas, error). `error` no vacío significa que no se pudo
-    leer la bandeja — distinto de haber leído y no encontrar nada.
+    Devuelve (lista_de_rutas, error, uids_nuevos, uidvalidity). `error` no vacío
+    significa que no se pudo leer la bandeja — distinto de haber leído y no
+    encontrar nada.
     """
     desde = (datetime.date.today() - datetime.timedelta(days=dias_atras)).strftime("%d-%b-%Y")
     rutas = []
+    uids_ok = set()
+    uidvalidity = None
     mail = None
     try:
         socket.setdefaulttimeout(TIEMPO_LIMITE_IMAP)
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
         mail.login(usuario, clave)
         mail.select("inbox")
-        criterio = f'(FROM "{remitente}" SINCE "{desde}")'
-        estado, respuesta = mail.search(None, criterio)
-        if estado != "OK":
-            return [], f"la búsqueda IMAP respondió {estado}"
-        ids = respuesta[0].split()
-        log(f"✉ {len(ids)} correos de {remitente} desde {desde}")
+        estado_uv, resp_uv = mail.status("inbox", "(UIDVALIDITY)")
+        if estado_uv == "OK" and resp_uv and resp_uv[0]:
+            m = re.search(rb"UIDVALIDITY\s+(\d+)", resp_uv[0])
+            if m:
+                uidvalidity = m.group(1).decode()
 
-        for mid in ids:
-            estado, datos = mail.fetch(mid, "(RFC822)")
+        criterio = f'(FROM "{remitente}" SINCE "{desde}")'
+        estado, respuesta = mail.uid("search", None, criterio)
+        if estado != "OK":
+            return [], f"la búsqueda IMAP respondió {estado}", set(), uidvalidity
+        ids = respuesta[0].split()
+        ya_vistos = cargar_cache_uids(uidvalidity) if usar_cache else set()
+        pendientes = [u for u in ids if u.decode() not in ya_vistos]
+        log(f"✉ {len(ids)} correos de {remitente} desde {desde} · "
+            f"{len(pendientes)} sin procesar")
+
+        for mid in pendientes:
+            estado, datos = mail.uid("fetch", mid, "(RFC822)")
             if estado != "OK":
                 continue
+            uid_actual = mid.decode()
+            # Se marca como leído aunque no traiga planillas: hay correos del PJUD
+            # sin adjunto útil y volver a bajarlos cada corrida no aporta nada.
+            # Si alguna de sus planillas sale ilegible, main lo saca de la caché
+            # para que la próxima corrida lo reintente.
+            uids_ok.add(uid_actual)
             for parte in datos:
                 if not isinstance(parte, tuple):
                     continue
@@ -195,10 +274,23 @@ def descargar_planillas(usuario, clave, remitente, dias_atras):
                     if not any(k in bajo for k in CLAVES_ADJUNTO):
                         continue
                     limpio = nombre.replace("/", "_").replace("\\", "_")
-                    # El nombre original se conserva porque de ahí sale la fecha
-                    # del reporte. Si dos correos traen el mismo nombre es la
-                    # misma planilla y sobrescribir es correcto.
+                    # Cuando el nombre trae la fecha ('estadoDiario_..._28072026.xls')
+                    # se conserva tal cual: dos correos con ese nombre son la misma
+                    # planilla y sobrescribir es correcto.
+                    #
+                    # Pero la tabla de la Corte llega todos los días como
+                    # 'CORTE DE APELACIONES DE TEMUCO.xls', sin fecha: guardarla con
+                    # su nombre hacía que cada día borrara al anterior y quedara una
+                    # sola copia. Se le antepone la fecha del correo para no perder
+                    # la evidencia de los días previos.
+                    if fecha_del_estado_diario(limpio) is None and fecha_msg:
+                        limpio = f"{fecha_msg.isoformat()}__{limpio}"
                     destino = DIR_PLANILLAS / limpio
+                    # El nombre original viaja aparte: la fecha y el tipo se leen
+                    # de él y no del archivo en disco, para que el prefijo que
+                    # acabamos de agregar no se confunda con una fecha que hubiera
+                    # venido del PJUD.
+                    nombre_pjud = nombre.replace("/", "_").replace("\\", "_")
                     try:
                         carga = sub.get_payload(decode=True)
                         if not carga:
@@ -207,14 +299,14 @@ def descargar_planillas(usuario, clave, remitente, dias_atras):
                     except Exception as e:
                         log(f"  ⚠ no se pudo guardar {limpio}: {e}")
                         continue
-                    rutas.append((destino, fecha_msg))
-        return rutas, ""
+                    rutas.append((destino, fecha_msg, nombre_pjud, uid_actual))
+        return rutas, "", uids_ok, uidvalidity
     except imaplib.IMAP4.error as e:
-        return [], f"IMAP rechazó la sesión ({e}) — revisar clave de aplicación"
+        return [], f"IMAP rechazó la sesión ({e}) — revisar clave de aplicación", set(), None
     except (socket.timeout, OSError) as e:
-        return [], f"no hubo red o el servidor no respondió ({e})"
+        return [], f"no hubo red o el servidor no respondió ({e})", set(), None
     except Exception as e:
-        return [], f"fallo inesperado leyendo la bandeja ({e})"
+        return [], f"fallo inesperado leyendo la bandeja ({e})", set(), None
     finally:
         socket.setdefaulttimeout(None)
         if mail is not None:
@@ -228,14 +320,18 @@ def descargar_planillas(usuario, clave, remitente, dias_atras):
                 pass
 
 
-def guardar_dia(ruta_planilla, fecha_correo, forzar):
+def guardar_dia(ruta_planilla, fecha_correo, nombre_pjud, forzar):
     """Procesa una planilla y la guarda como el snapshot de su día.
+
+    `nombre_pjud` es el nombre tal como lo mandó el PJUD; de ahí salen la fecha y
+    el tipo. La ruta en disco puede llevar un prefijo agregado por nosotros y no
+    sirve para eso.
 
     Devuelve (estado, fecha_iso, tipo) donde estado es 'nuevo', 'ya_estaba',
     'sin_movimientos' o 'ilegible'.
     """
-    tipo = tipo_de_planilla(ruta_planilla.name)
-    fecha = fecha_del_estado_diario(str(ruta_planilla))
+    tipo = tipo_de_planilla(nombre_pjud)
+    fecha = fecha_del_estado_diario(nombre_pjud)
     fuente_fecha = "nombre_archivo"
     if fecha is None:
         # Respaldo: la fecha de recepción del correo. Menos confiable —el correo
@@ -268,11 +364,24 @@ def guardar_dia(ruta_planilla, fecha_correo, forzar):
         "fuente_fecha": fuente_fecha,
         "tipo_planilla": tipo,
         "archivo": ruta_planilla.name,
+        "archivo_original_pjud": nombre_pjud,
         "capturado_en": datetime.datetime.now().isoformat(timespec="seconds"),
         "total_movimientos": len(movimientos),
         "desglose_tribunales": res.get("desglose_tribunales", {}),
-        "movimientos": movimientos,
     }
+    if tipo in TIPOS_PARA_INDICE:
+        registro["movimientos"] = movimientos
+    else:
+        # De la tabla de la Corte se guarda el recuento pero no las filas: son 240
+        # por día, en su mayoría causas ajenas, y ya se decidió que no cuentan como
+        # actividad. Eran el 87% del peso de los snapshots. La evidencia sigue
+        # completa en planillas/, que es el archivo tal como lo mandó el PJUD.
+        registro["movimientos"] = []
+        registro["filas_no_guardadas"] = len(movimientos)
+        registro["motivo"] = (
+            "Tipo de planilla que no alimenta el reloj: sin columna de rol "
+            "confiable. Las filas quedan en el .xls original en planillas/."
+        )
     destino.write_text(
         json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8"
     )
@@ -309,6 +418,7 @@ def reconstruir_indice():
     causas = {}
     fechas_cubiertas = set()
     por_tipo = {}
+    descartados = {"tipo_no_confiable": 0, "sin_rol_valido": 0}
 
     for ruta in archivos:
         try:
@@ -319,13 +429,22 @@ def reconstruir_indice():
         fecha = reg.get("fecha_reporte")
         if not fecha:
             continue
-        fechas_cubiertas.add(fecha)
         tipo = reg.get("tipo_planilla", "otro")
         por_tipo[tipo] = por_tipo.get(tipo, 0) + 1
 
+        if tipo not in TIPOS_PARA_INDICE:
+            descartados["tipo_no_confiable"] += reg.get("total_movimientos", 0)
+            continue
+
+        # Un día cuenta como cubierto sólo si se leyó una planilla que sirve para
+        # el reloj. Si el único archivo de ese día fue la tabla de la Corte, el
+        # día sigue siendo un hueco y así debe figurar.
+        fechas_cubiertas.add(fecha)
+
         for mov in reg.get("movimientos", []):
             clave = normalizar_rol(mov.get("rol"))
-            if not clave or clave == "S/N":
+            if not parece_rol(clave):
+                descartados["sin_rol_valido"] += 1
                 continue
             entrada = causas.get(clave)
             if entrada is None:
@@ -384,6 +503,13 @@ def reconstruir_indice():
                 "publicación."
             ),
             "snapshots_por_tipo": por_tipo,
+            "tipos_que_alimentan_el_reloj": list(TIPOS_PARA_INDICE),
+            "filas_descartadas": descartados,
+            "nota_descartes": (
+                "tipo_no_confiable son filas de planillas que no son la nómina del "
+                "estudio (la tabla de la Corte de Apelaciones): se capturan como "
+                "evidencia pero no cuentan como actividad."
+            ),
         },
         "total_causas_vistas": len(causas),
         "causas": sorted(
@@ -435,6 +561,9 @@ def main():
                     help="re-escribe snapshots de días ya guardados")
     ap.add_argument("--solo-indice", action="store_true",
                     help="no toca el correo: sólo reconstruye el índice")
+    ap.add_argument("--releer-correos", action="store_true",
+                    help="ignora la caché de correos ya procesados y baja la ventana "
+                         "completa de nuevo")
     args = ap.parse_args()
 
     for d in (RAIZ, DIR_PLANILLAS, DIR_DIAS):
@@ -461,7 +590,9 @@ def main():
     usuario, clave, remitente = creds
 
     log(f"→ leyendo bandeja de {usuario}, ventana {args.dias} días")
-    planillas, error = descargar_planillas(usuario, clave, remitente, args.dias)
+    planillas, error, uids_nuevos, uidvalidity = descargar_planillas(
+        usuario, clave, remitente, args.dias, usar_cache=not args.releer_correos
+    )
 
     if error:
         # Este es el caso que el scraper OJV reportaba como "sin cambios".
@@ -477,13 +608,22 @@ def main():
 
     conteo = {"nuevo": 0, "ya_estaba": 0, "sin_movimientos": 0, "ilegible": 0}
     dias_nuevos = []
-    for ruta, fecha_correo in planillas:
-        estado, fecha_iso, tipo = guardar_dia(ruta, fecha_correo, args.forzar)
+    uids_con_falla = set()
+    for ruta, fecha_correo, nombre_pjud, uid in planillas:
+        estado, fecha_iso, tipo = guardar_dia(ruta, fecha_correo, nombre_pjud, args.forzar)
         conteo[estado] = conteo.get(estado, 0) + 1
         if estado in ("nuevo", "sin_movimientos") and fecha_iso:
             dias_nuevos.append(f"{fecha_iso}/{tipo}")
         if estado == "ilegible":
+            uids_con_falla.add(uid)
             log(f"  ⚠ planilla ilegible o sin fecha: {ruta.name}")
+
+    # La caché se extiende sólo con los correos que quedaron enteramente
+    # resueltos. Uno con una planilla ilegible se deja fuera para que la próxima
+    # corrida lo reintente en vez de darlo por hecho.
+    if uidvalidity:
+        cache_previa = cargar_cache_uids(uidvalidity) if not args.releer_correos else set()
+        guardar_cache_uids(uidvalidity, cache_previa | (uids_nuevos - uids_con_falla))
 
     log(f"· planillas: {len(planillas)} · nuevas {conteo['nuevo']} · "
         f"ya estaban {conteo['ya_estaba']} · vacías {conteo['sin_movimientos']} · "

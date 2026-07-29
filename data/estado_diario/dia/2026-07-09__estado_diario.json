@@ -1,0 +1,46 @@
+{
+ "fecha_reporte": "2026-07-09",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "estado_diario",
+ "archivo": "estadoDiario_8328581__09072026.xls",
+ "archivo_original_pjud": "estadoDiario_8328581__09072026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 2,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 2,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-3183-2024",
+   "caratula": "MORAGA/CORPORACION EDUCACION SANTA CLARA",
+   "tribunal": "1º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "13/06/2024",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-1",
+   "rol": "C-3183-2024",
+   "caratula": "MORAGA/CORPORACION EDUCACION SANTA CLARA",
+   "tribunal": "1º Juzgado Civil de Temuco",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "13/06/2024",
+   "estado": "Movimiento reportado en OJV",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

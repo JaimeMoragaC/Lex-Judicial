@@ -12,6 +12,7 @@ import {
   HardDrive,
   Search,
   FileSearch,
+  FileSignature,
   Download,
   MessageSquare,
   UploadCloud,
@@ -42,10 +43,11 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
     { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
     { id: 'calculadora', label: 'Cómputo de Términos', icon: Calculator },
 
-    { id: 'proactivo', label: 'Subir & Analizar Documento', icon: UploadCloud, grupo: 'Documentos' },
+    { id: 'subir', label: 'Subir & Analizar Documento', icon: UploadCloud, grupo: 'Documentos' },
+    { id: 'proactivo', label: 'Asistente Proactivo (IA)', icon: Sparkles, grupo: 'Documentos' },
     { id: 'smartdrive', label: 'Explorador del Disco', icon: HardDrive, grupo: 'Documentos' },
     { id: 'buscador', label: 'Buscar en el Contenido', icon: FileSearch, grupo: 'Documentos' },
-    { id: 'redactor', label: 'Redactor & Copiloto IA', icon: Sparkles, grupo: 'Documentos' },
+    { id: 'redactor', label: 'Redactor & Copiloto IA', icon: FileSignature, grupo: 'Documentos' },
 
     { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null, grupo: 'Expedientes' },
     { id: 'matriz', label: 'Matriz Probatoria', icon: Scale, grupo: 'Expedientes' },

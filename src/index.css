@@ -965,6 +965,65 @@ button:disabled,
 .desglose-obs { color: var(--text-muted); }
 
 /* ==========================================================================
+   Subida con vista previa
+   ========================================================================== */
+
+.zona-suelta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+
+.zona-suelta.is-activa {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.zona-suelta h3 { font-weight: 500; }
+.zona-suelta p { font-size: var(--text-sm); max-width: 52ch; }
+
+/* Alto fijo para que el panel de análisis quede al lado y no debajo. */
+.previsor {
+  width: 100%;
+  height: 620px;
+  border: 0;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--bg-inset);
+}
+
+.previsor-imagen {
+  padding: var(--space-4);
+  max-height: 620px;
+  overflow: auto;
+  text-align: center;
+}
+
+.previsor-imagen img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.dato-fila {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--text-sm);
+}
+
+.dato-fila:last-of-type { border-bottom: none; }
+
+/* ==========================================================================
    Elección de expediente en la Bitácora
    ========================================================================== */
 

@@ -1,0 +1,59 @@
+{
+ "fecha_reporte": "2026-06-17",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "movimientos",
+ "archivo": "Movimientos_8328581__17_06_2026.xls",
+ "archivo_original_pjud": "Movimientos_8328581__17_06_2026.xls",
+ "capturado_en": "2026-07-29T17:56:27",
+ "total_movimientos": 3,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 2,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 1,
+  "Corte Apelaciones": 0,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Civil-0",
+   "rol": "C-11977-2024",
+   "caratula": "GENERAL MOTORS FINANCIAL CHILE SOCIEDAD ANÓNIMA/QU",
+   "tribunal": "11º Juzgado Civil de Santiago",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2024/07/04",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Civil-1",
+   "rol": "C-11977-2024",
+   "caratula": "GENERAL MOTORS FINANCIAL CHILE SOCIEDAD ANÓNIMA/QU",
+   "tribunal": "11º Juzgado Civil de Santiago",
+   "jurisdiccion": "Civil",
+   "fechaIngreso": "2024/07/04",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  },
+  {
+   "id": "mov-Familia-0",
+   "rol": "Z-20-2022",
+   "caratula": "DÍAZ/DÍAZ",
+   "tribunal": "Jgdo. L. y G. de  Collipulli",
+   "jurisdiccion": "Familia",
+   "fechaIngreso": "2022/03/15",
+   "estado": "Concluido",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}

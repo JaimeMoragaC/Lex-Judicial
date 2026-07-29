@@ -1,0 +1,33 @@
+{
+ "fecha_reporte": "2026-07-27",
+ "fuente_fecha": "nombre_archivo",
+ "tipo_planilla": "movimientos",
+ "archivo": "Movimientos_8328581__27_07_2026.xls",
+ "archivo_original_pjud": "Movimientos_8328581__27_07_2026.xls",
+ "capturado_en": "2026-07-29T17:56:28",
+ "total_movimientos": 1,
+ "desglose_tribunales": {
+  "Laboral": 0,
+  "Civil": 0,
+  "Cobranza": 0,
+  "Penal": 0,
+  "Familia": 0,
+  "Corte Apelaciones": 1,
+  "Corte Suprema": 0
+ },
+ "movimientos": [
+  {
+   "id": "mov-Corte Apelaciones-0",
+   "rol": "821",
+   "caratula": "INTENDENCIA REGION DEL BIO BIO CONTRA CARLOS ALFONSO PALACIO NAVARRO, GUILLERMO EDUARDO ISAIAS CARRERA ZUÑIGA",
+   "tribunal": "C.A. de Concepción",
+   "jurisdiccion": "Corte Apelaciones",
+   "fechaIngreso": "2026/06/03",
+   "estado": "Relator",
+   "esFatal": false,
+   "alerta": "✓ Trámite o resolución registrada. Monitoreo pasivo.",
+   "carpetaHermana": "No vinculada a carpeta en disco",
+   "pathHermana": null
+  }
+ ]
+}
