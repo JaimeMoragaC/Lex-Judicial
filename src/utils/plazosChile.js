@@ -54,6 +54,20 @@ export function esDomingo(fecha) {
 }
 
 /**
+ * Convierte un Date a 'YYYY-MM-DD' usando el calendario LOCAL.
+ *
+ * No usar toISOString() para esto: devuelve la fecha en UTC, así que en cualquier
+ * huso horario al este de Greenwich la medianoche local cae el día anterior en UTC
+ * y todo el cómputo se corre un día. En Chile (UTC-4/-3) coincidía por casualidad.
+ */
+function aFechaLocal(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
+/**
  * Verifica si un día es inhábil según el Código de Procedimiento Civil (Art. 66 CPC)
  * En el CPC, son inhábiles los domingos y los feriados legales. Los sábados SON HÁBILES (a menos que caigan en feriado).
  */
@@ -74,19 +88,21 @@ export function formatearFechaEs(fechaStr) {
 /**
  * Motor de Cálculo para el Código de Procedimiento Civil (CPC - Días Hábiles)
  * Art. 66 CPC: Los términos de días que establece el Código son de días hábiles.
- * @param {string} fechaNotificacion - Fecha inicial YYYY-MM-DD
- * @param {number} diasPlazo - Cantidad de días hábiles a sumar
+ * @param {string} fechaNotificacion - Fecha inicial YYYY-MM-DD (o fecha de la audiencia si se cuenta hacia atrás)
+ * @param {number} diasPlazo - Cantidad de días hábiles a contar
+ * @param {boolean} esHaciaAtras - true para plazos de anticipación ("X días hábiles ANTES de la audiencia")
  * @returns {object} { fechaVencimiento, desglose: Array<{ dia, fecha, diaSemana, estado, observacion }> }
  */
-export function calcularPlazoCPC(fechaNotificacion, diasPlazo) {
+export function calcularPlazoCPC(fechaNotificacion, diasPlazo, esHaciaAtras = false) {
   let diasContados = 0;
   let fechaActual = new Date(fechaNotificacion + 'T00:00:00');
   const desglose = [];
+  const paso = esHaciaAtras ? -1 : 1;
 
   while (diasContados < diasPlazo) {
-    // Avanzar al día siguiente
-    fechaActual.setDate(fechaActual.getDate() + 1);
-    const fechaStr = fechaActual.toISOString().split('T')[0];
+    // Avanzar al día siguiente (o retroceder, si el plazo es de anticipación)
+    fechaActual.setDate(fechaActual.getDate() + paso);
+    const fechaStr = aFechaLocal(fechaActual);
     const diaSemana = fechaActual.toLocaleDateString('es-CL', { weekday: 'short' });
 
     if (esInhabilCPC(fechaStr)) {
@@ -100,7 +116,7 @@ export function calcularPlazoCPC(fechaNotificacion, diasPlazo) {
       });
     } else {
       diasContados++;
-      const esSabado = diaSemana.toLowerCase().includes('sáb') || diaSemana.toLowerCase().includes('sab') || fechaActual.getDay() === 6;
+      const esSabado = fechaActual.getDay() === 6;
       desglose.push({
         numero: `Día ${diasContados}`,
         fecha: fechaStr,
@@ -112,14 +128,19 @@ export function calcularPlazoCPC(fechaNotificacion, diasPlazo) {
     }
   }
 
-  const fechaVencimiento = fechaActual.toISOString().split('T')[0];
+  const fechaVencimiento = aFechaLocal(fechaActual);
 
   return {
     fechaVencimiento,
-    fechaVencimientoTexto: `${formatearFechaEs(fechaVencimiento)} a las 23:59 hrs.`,
+    fechaVencimientoTexto: esHaciaAtras
+      ? `${formatearFechaEs(fechaVencimiento)} (último día para presentar, hasta las 23:59 hrs.)`
+      : `${formatearFechaEs(fechaVencimiento)} a las 23:59 hrs.`,
     diasTotalesTranscurridos: desglose.length,
     desglose,
-    normativa: "Art. 66 Código de Procedimiento Civil (Días hábiles, excluye domingos y feriados. ¡Sábados son legalmente hábiles!)."
+    esHaciaAtras,
+    normativa: esHaciaAtras
+      ? "Art. 66 Código de Procedimiento Civil (Días hábiles contados HACIA ATRÁS desde la audiencia. Excluye domingos y feriados; los sábados son hábiles)."
+      : "Art. 66 Código de Procedimiento Civil (Días hábiles, excluye domingos y feriados. ¡Sábados son legalmente hábiles!)."
   };
 }
 
@@ -127,14 +148,15 @@ export function calcularPlazoCPC(fechaNotificacion, diasPlazo) {
  * Motor de Cálculo para Materia Laboral y Administrativa (Lunes a Viernes Hábiles)
  * Art. 445 Código del Trabajo y Ley 19.880: Excluye sábados, domingos y feriados chilenos.
  */
-export function calcularPlazoLaboralAdmin(fechaNotificacion, diasPlazo) {
+export function calcularPlazoLaboralAdmin(fechaNotificacion, diasPlazo, esHaciaAtras = false) {
   let diasContados = 0;
   let fechaActual = new Date(fechaNotificacion + 'T00:00:00');
   const desglose = [];
+  const paso = esHaciaAtras ? -1 : 1;
 
   while (diasContados < diasPlazo) {
-    fechaActual.setDate(fechaActual.getDate() + 1);
-    const fechaStr = fechaActual.toISOString().split('T')[0];
+    fechaActual.setDate(fechaActual.getDate() + paso);
+    const fechaStr = aFechaLocal(fechaActual);
     const diaSemana = fechaActual.toLocaleDateString('es-CL', { weekday: 'short' });
     const esSabado = fechaActual.getDay() === 6;
     const esDom = fechaActual.getDay() === 0;
@@ -162,14 +184,19 @@ export function calcularPlazoLaboralAdmin(fechaNotificacion, diasPlazo) {
     }
   }
 
-  const fechaVencimiento = fechaActual.toISOString().split('T')[0];
+  const fechaVencimiento = aFechaLocal(fechaActual);
 
   return {
     fechaVencimiento,
-    fechaVencimientoTexto: `${formatearFechaEs(fechaVencimiento)} a las 23:59 hrs.`,
+    fechaVencimientoTexto: esHaciaAtras
+      ? `${formatearFechaEs(fechaVencimiento)} (último día para presentar, hasta las 23:59 hrs.)`
+      : `${formatearFechaEs(fechaVencimiento)} a las 23:59 hrs.`,
     diasTotalesTranscurridos: desglose.length,
     desglose,
-    normativa: "Art. 445 Código del Trabajo / Ley 19.880 (Plazo de días hábiles de lunes a viernes, excluyendo sábados, domingos y feriados)."
+    esHaciaAtras,
+    normativa: esHaciaAtras
+      ? "Plazo de anticipación contado HACIA ATRÁS desde la audiencia en días hábiles de lunes a viernes (Art. 453 Nº 1 y Nº 5 Código del Trabajo / Art. 54 Ley 19.968)."
+      : "Art. 445 Código del Trabajo / Ley 19.880 (Plazo de días hábiles de lunes a viernes, excluyendo sábados, domingos y feriados)."
   };
 }
 
@@ -191,7 +218,7 @@ export function calcularPlazoCPP(fechaNotificacion, diasPlazo, esHaciaAtras = fa
       fechaActual.setDate(fechaActual.getDate() + 1);
     }
     
-    const fechaStr = fechaActual.toISOString().split('T')[0];
+    const fechaStr = aFechaLocal(fechaActual);
     const diaSemana = fechaActual.toLocaleDateString('es-CL', { weekday: 'short' });
     const esInhabil = esDomingo(fechaStr) || esFeriado(fechaStr);
     const esSabado = fechaActual.getDay() === 6;
@@ -206,7 +233,7 @@ export function calcularPlazoCPP(fechaNotificacion, diasPlazo, esHaciaAtras = fa
     });
   }
 
-  let fechaVencimientoStr = fechaActual.toISOString().split('T')[0];
+  let fechaVencimientoStr = aFechaLocal(fechaActual);
   let observacionProrroga = null;
 
   // REGLA DE SALVACIÓN ART. 14 CPP: Si el día del vencimiento cae en Domingo o Feriado, se prorroga al siguiente día hábil
@@ -214,7 +241,7 @@ export function calcularPlazoCPP(fechaNotificacion, diasPlazo, esHaciaAtras = fa
     const fechaOrigen = fechaVencimientoStr;
     while (esDomingo(fechaVencimientoStr) || esFeriado(fechaVencimientoStr)) {
       fechaActual.setDate(fechaActual.getDate() + 1);
-      fechaVencimientoStr = fechaActual.toISOString().split('T')[0];
+      fechaVencimientoStr = aFechaLocal(fechaActual);
     }
     const diaSemanaProrroga = fechaActual.toLocaleDateString('es-CL', { weekday: 'short' });
     

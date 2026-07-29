@@ -60,27 +60,47 @@ export default function CalculadoraTerminos({ onSelectCaso }) {
     if (!fechaNotificacion || !diasPersonalizados) return;
 
     if (codigoActivo === 'CPC') {
-      const res = calcularPlazoCPC(fechaNotificacion, parseInt(diasPersonalizados, 10));
+      const res = calcularPlazoCPC(fechaNotificacion, parseInt(diasPersonalizados, 10), esHaciaAtras);
       setResultado(res);
     } else if (codigoActivo === 'CPP') {
       const res = calcularPlazoCPP(fechaNotificacion, parseInt(diasPersonalizados, 10), esHaciaAtras);
       setResultado(res);
     } else {
-      const res = calcularPlazoLaboralAdmin(fechaNotificacion, parseInt(diasPersonalizados, 10));
+      const res = calcularPlazoLaboralAdmin(fechaNotificacion, parseInt(diasPersonalizados, 10), esHaciaAtras);
       setResultado(res);
     }
   }, [codigoActivo, fechaNotificacion, diasPersonalizados, esHaciaAtras]);
 
+  // Nombre del cuerpo legal y del tipo de cómputo según el código activo.
+  // Ojo: LAB_ADMIN no es penal; antes caía en el 'else' y el certificado citaba
+  // el Art. 14 CPP en un plazo laboral.
+  const CUERPOS_LEGALES = {
+    CPC: {
+      nombre: 'Código de Procedimiento Civil (CPC Chile)',
+      computo: 'días hábiles civiles (Art. 66 CPC)'
+    },
+    CPP: {
+      nombre: 'Código Procesal Penal (CPP Chile)',
+      computo: 'días corridos (Art. 14 CPP)'
+    },
+    LAB_ADMIN: {
+      nombre: 'Código del Trabajo / Ley 19.968 / Ley 19.880 (Chile)',
+      computo: 'días hábiles de lunes a viernes (Art. 445 CT)'
+    }
+  };
+
   // Generar minuta judicial para el portapapeles
   const copiarMinuta = () => {
     if (!resultado || !procSeleccionado) return;
-    
+
+    const cuerpoLegal = CUERPOS_LEGALES[codigoActivo] || CUERPOS_LEGALES.CPC;
+
     const texto = `=== CERTIFICADO DE CÓMPUTO DE PLAZO JUDICIAL (LEXCONTROL) ===
-Código: ${codigoActivo === 'CPC' ? 'Código de Procedimiento Civil (CPC Chile)' : 'Código Procesal Penal (CPP Chile)'}
+Código: ${cuerpoLegal.nombre}
 Actuación / Hito: ${procSeleccionado.nombre}
 Normativa Legal: ${procSeleccionado.articulo}
-Fecha de Notificación / Hito Base: ${formatearFechaEs(fechaNotificacion)}
-Plazo Legal: ${diasPersonalizados} ${codigoActivo === 'CPC' ? 'días hábiles civiles (Art. 66 CPC)' : 'días corridos (Art. 14 CPP)'} ${esHaciaAtras ? '(contados hacia atrás antes de la audiencia)' : ''}
+${esHaciaAtras ? 'Fecha de la Audiencia / Hito Base' : 'Fecha de Notificación / Hito Base'}: ${formatearFechaEs(fechaNotificacion)}
+Plazo Legal: ${diasPersonalizados} ${cuerpoLegal.computo} ${esHaciaAtras ? '(contados hacia atrás desde la audiencia)' : ''}
 
 >>> FECHA FATAL DE VENCIMIENTO: ${resultado.fechaVencimientoTexto.toUpperCase()} <<<
 ${resultado.observacionProrroga ? '\n' + resultado.observacionProrroga + '\n' : ''}
