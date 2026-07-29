@@ -1,338 +1,286 @@
-import React, { useState, useEffect } from 'react';
-import { Send, Mic, Paperclip, Loader2, CheckCircle2, Clock } from 'lucide-react';
-import { MOCK_CASOS } from '../mockData'; // Usamos MOCK_CASOS para resolver ROLs si la IA se equivoca un poco
+import React, { useEffect, useState } from 'react';
+import { Send, Loader2, CheckCircle2, FolderPlus, AlertCircle, ArrowRight } from 'lucide-react';
+
+import { MOCK_CASOS } from '../mockData';
+import { LEXCONTROL_API } from '../apiBase.js';
+import {
+  buscarCandidatos,
+  crearExpediente,
+  cargarExpedientes,
+  guardarExpedientes
+} from '../utils/expedientes.js';
+
+const TIPOS_NUEVO = [
+  ['extrajudicial', 'Extrajudicial'],
+  ['administrativo', 'Administrativo']
+];
 
 export default function BitacoraOmnicanal() {
   const [texto, setTexto] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null);
-  const [actividadesHoy, setActividadesHoy] = useState([]);
+  const [estado, setEstado] = useState('escribiendo'); // escribiendo | analizando | confirmando | guardando
+  const [error, setError] = useState(null);
+  const [aviso, setAviso] = useState(null);
+  const [expedientes, setExpedientes] = useState([]);
 
-  // Cargar actividades de hoy al montar
-  const cargarActividadesHoy = () => {
-    const hoyStr = new Date().toLocaleDateString('es-CL');
-    const hoyActs = [];
-    
-    // Buscar en TODOS los localStorage que sean gestiones
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('lexcontrol_gestiones_')) {
-        try {
-          const guardado = localStorage.getItem(key);
-          if (guardado) {
-            const gestiones = JSON.parse(guardado);
-            
-            // Determinar a qué causa pertenece esto por la llave
-            let idCaso = key.replace('lexcontrol_gestiones_', '');
-            let nombreCaso = idCaso;
-            // Intentar buscar el nombre bonito si existe en MOCK_CASOS
-            let casoEnMock = MOCK_CASOS.find(c => (c.id === idCaso || c.rit === idCaso));
-            if (casoEnMock) {
-              nombreCaso = casoEnMock.rol || casoEnMock.rit;
-            }
-
-            gestiones.forEach(g => {
-              if (g.fecha === hoyStr && g.cuaderno === "Bitácora Omnicanal") {
-                hoyActs.push({ ...g, casoAsociado: nombreCaso });
-              }
-            });
-          }
-        } catch (e) {
-          console.error("Error leyendo localStorage key:", key, e);
-        }
-      }
-    }
-    
-    // Ordenar de más reciente a más antiguo por timestamp
-    hoyActs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    setActividadesHoy(hoyActs);
-  };
+  // Lo que devolvió la IA, a la espera de que el abogado diga dónde va.
+  const [propuesta, setPropuesta] = useState(null);
+  const [candidatos, setCandidatos] = useState([]);
+  const [eleccion, setEleccion] = useState(null);
+  const [tipoNuevo, setTipoNuevo] = useState('extrajudicial');
 
   useEffect(() => {
-    cargarActividadesHoy();
+    cargarExpedientes()
+      .then(setExpedientes)
+      .catch((e) => setError(`No se pudo leer el registro de expedientes: ${e.message}`));
   }, []);
 
-  const handleSubmit = async (e) => {
+  const analizar = async (e) => {
     e.preventDefault();
     if (!texto.trim()) return;
-
-    setLoading(true);
-    setSuccess(null);
+    setEstado('analizando');
+    setError(null);
+    setAviso(null);
 
     try {
-      const response = await fetch("http://localhost:8888/bitacora_omnicanal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+      const res = await fetch(`${LEXCONTROL_API}/bitacora_omnicanal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto })
       });
-
-      const data = await response.json();
-      
-      if (data.status === "ok" && data.datos) {
-        let { cliente_detectado, rol_detectado, tramite_generado, estado, urgencia } = data.datos;
-        
-        let casoReal = null;
-        
-        // Solo intentar cruzar con causas reales si no fue declarado explícitamente como EXTRAJUDICIAL
-        if (rol_detectado !== 'EXTRAJUDICIAL') {
-          casoReal = MOCK_CASOS.find(c => 
-            (c.rit && rol_detectado && c.rit.includes(rol_detectado)) || 
-            (c.rol && rol_detectado && c.rol.includes(rol_detectado)) ||
-            (c.caratula && cliente_detectado && c.caratula.toLowerCase().includes(cliente_detectado.toLowerCase()))
-          );
-        }
-
-        let idGuardar = casoReal ? (casoReal.id || casoReal.rit) : rol_detectado;
-        
-        // Lógica de Correlativo Extrajudicial
-        if (!casoReal && (rol_detectado === 'EXTRAJUDICIAL' || !rol_detectado)) {
-          let mapping = {};
-          try {
-            mapping = JSON.parse(localStorage.getItem('lexcontrol_extrajudicial_mapping') || '{}');
-          } catch(e) {}
-          
-          let normalizedClient = (cliente_detectado || "CLIENTE_DESCONOCIDO").toUpperCase().trim();
-          
-          // Buscar si ya le asignamos un correlativo a este cliente (búsqueda parcial)
-          let existingKey = Object.keys(mapping).find(k => k.includes(normalizedClient) || normalizedClient.includes(k));
-          
-          if (existingKey) {
-            idGuardar = mapping[existingKey];
-          } else {
-            // Generar nuevo correlativo
-            const currentYear = new Date().getFullYear();
-            const count = Object.values(mapping).filter(v => v.endsWith(`-${currentYear}`)).length + 1;
-            idGuardar = `EXT-${count.toString().padStart(3, '0')}-${currentYear}`;
-            mapping[normalizedClient] = idGuardar;
-            localStorage.setItem('lexcontrol_extrajudicial_mapping', JSON.stringify(mapping));
-          }
-          // Actualizamos rol_detectado para que la UI lo muestre bonito
-          rol_detectado = idGuardar;
-        }
-        
-        // Crear el objeto de la nueva gestión
-        const nuevaGestion = {
-          fecha: new Date().toLocaleDateString('es-CL'),
-          tramite: tramite_generado,
-          estado: estado || "COMPLETADO",
-          folio: "-",
-          cuaderno: "Bitácora Omnicanal",
-          origen: `Registro Rápido - Cliente: ${cliente_detectado}`,
-          timestamp: new Date().toISOString()
-        };
-
-        // Inyectar en localStorage
-        const key = `lexcontrol_gestiones_${idGuardar}`;
-        let gestionesPrevias = [];
-        try {
-          const guardado = localStorage.getItem(key);
-          if (guardado) gestionesPrevias = JSON.parse(guardado);
-        } catch(e) {}
-        
-        gestionesPrevias.unshift(nuevaGestion); // Ponerla al principio
-        localStorage.setItem(key, JSON.stringify(gestionesPrevias));
-
-        setSuccess(`✅ Gestión inyectada en Causa: ${casoReal ? (casoReal.rol || casoReal.rit) : rol_detectado}`);
-        setTexto('');
-        cargarActividadesHoy(); // Refrescar línea de tiempo
-        
-        setTimeout(() => setSuccess(null), 5000);
-      } else {
-        alert("Error de la IA: " + data.error);
+      const data = await res.json();
+      if (data.status !== 'ok' || !data.datos) {
+        throw new Error(data.error || 'La IA no pudo clasificar el registro');
       }
+
+      const d = data.datos;
+      const info = {
+        cliente: d.cliente_detectado || '',
+        asunto: d.asunto_detectado || '',
+        rol: d.rol_detectado || '',
+        tramite: d.tramite_generado || texto.slice(0, 120),
+        estadoGestion: d.estado || 'COMPLETADO',
+        urgencia: d.urgencia || 'NORMAL'
+      };
+
+      const encontrados = buscarCandidatos(info, expedientes, MOCK_CASOS);
+      setPropuesta(info);
+      setCandidatos(encontrados);
+      // Se preselecciona el mejor candidato, pero NUNCA se guarda sin confirmar:
+      // el problema original era justamente que el sistema decidía en silencio.
+      setEleccion(encontrados.length ? { modo: 'existente', ref: encontrados[0] } : { modo: 'nuevo' });
+      setEstado('confirmando');
     } catch (err) {
-      console.error(err);
-      alert("Error conectando con el servidor. ¿Está corriendo servidor_local_lexcontrol.py?");
-    } finally {
-      setLoading(false);
+      setError(err.message);
+      setEstado('escribiendo');
     }
   };
 
+  const confirmar = async () => {
+    if (!propuesta || !eleccion) return;
+    setEstado('guardando');
+
+    const gestion = {
+      fecha: new Date().toLocaleDateString('es-CL'),
+      tramite: propuesta.tramite,
+      estado: propuesta.estadoGestion,
+      urgencia: propuesta.urgencia,
+      textoOriginal: texto,
+      cuaderno: 'Bitácora Omnicanal',
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      let destino;
+      let siguientes = [...expedientes];
+
+      if (eleccion.modo === 'nuevo') {
+        const nuevo = crearExpediente(
+          { cliente: propuesta.cliente, asunto: propuesta.asunto, tipo: tipoNuevo },
+          expedientes
+        );
+        nuevo.gestiones = [gestion];
+        siguientes.push(nuevo);
+        destino = { id: nuevo.id, etiqueta: `${nuevo.cliente}${nuevo.asunto ? ` — ${nuevo.asunto}` : ''}`, nuevo: true };
+      } else if (eleccion.ref.tipo === 'causa') {
+        // Las causas judiciales viven en el catálogo del PJUD y no se modifican
+        // desde acá: se abre un expediente de seguimiento enlazado al ROL.
+        const causa = eleccion.ref.ref;
+        let exp = siguientes.find((x) => x.ritVinculado === causa.rit);
+        if (!exp) {
+          exp = crearExpediente({ cliente: causa.caratula, asunto: propuesta.asunto, tipo: 'judicial' }, siguientes);
+          exp.id = causa.rit;
+          exp.ritVinculado = causa.rit;
+          siguientes.push(exp);
+        }
+        exp.gestiones = [gestion, ...(exp.gestiones || [])];
+        destino = { id: causa.rit, etiqueta: causa.caratula, nuevo: false };
+      } else {
+        const exp = siguientes.find((x) => x.id === eleccion.ref.ref.id);
+        exp.gestiones = [gestion, ...(exp.gestiones || [])];
+        destino = {
+          id: exp.id,
+          etiqueta: `${exp.cliente}${exp.asunto ? ` — ${exp.asunto}` : ''}`,
+          nuevo: false,
+          total: exp.gestiones.length
+        };
+      }
+
+      await guardarExpedientes(siguientes);
+      setExpedientes(siguientes);
+      setAviso({
+        id: destino.id,
+        texto: destino.nuevo
+          ? `Expediente ${destino.id} creado para ${destino.etiqueta}.`
+          : `Agregado al expediente ${destino.id} — ${destino.etiqueta}${destino.total ? ` (${conteoGestiones(destino.total)})` : ''}.`
+      });
+      setTexto('');
+      setPropuesta(null);
+      setCandidatos([]);
+      setEleccion(null);
+      setEstado('escribiendo');
+    } catch (err) {
+      setError(`No se pudo guardar: ${err.message}`);
+      setEstado('confirmando');
+    }
+  };
+
+  const descartar = () => {
+    setPropuesta(null);
+    setCandidatos([]);
+    setEleccion(null);
+    setEstado('escribiendo');
+  };
+
+  const conteoGestiones = (n) => (n === 1 ? '1 gestión' : `${n} gestiones`);
+
+  const etiquetaCandidato = (c) =>
+    c.tipo === 'causa'
+      ? `${c.ref.rit} — ${(c.ref.caratula || '').slice(0, 46)}`
+      : `${c.ref.id} — ${c.ref.cliente}${c.ref.asunto ? ` · ${c.ref.asunto}` : ''}` +
+        `${c.ref.gestiones?.length ? ` (${conteoGestiones(c.ref.gestiones.length)})` : ''}`;
+
   return (
-    <div className="glass-card animate-fade-in" style={{ 
-      padding: '24px', 
-      marginBottom: '26px', 
-      background: 'rgba(10, 15, 25, 0.75)', 
-      border: '1px solid rgba(192, 160, 113, 0.3)',
-      boxShadow: '0 8px 32px 0 rgba(192, 160, 113, 0.1)',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Glow Effect Top */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '2px',
-        background: 'linear-gradient(90deg, transparent, var(--accent), transparent)',
-        opacity: 0.8
-      }} />
+    <div className="card card-static">
+      <div className="card-header">
+        <span className="card-title">Bitácora omnicanal</span>
+        {expedientes.length > 0 && (
+          <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+            {expedientes.length} expedientes abiertos
+          </span>
+        )}
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        {/* Columna Izquierda: Ingreso Inteligente */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(192, 160, 113, 0.1)' }}>
-              <Mic size={20} color="var(--accent)" />
-            </div>
-            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora Omnicanal</h3>
+      <div className="card-pad">
+        {aviso && (
+          <div className="card sem sem-AL_DIA card-pad" style={{ marginBottom: 'var(--space-4)' }}>
+            <span className="row" style={{ gap: 'var(--space-2)' }}>
+              <CheckCircle2 size={15} color="var(--ok)" />
+              <span style={{ color: 'var(--ok)' }}>{aviso.texto}</span>
+            </span>
           </div>
+        )}
 
-          <form onSubmit={handleSubmit} style={{ position: 'relative' }}>
+        {error && (
+          <div className="card sem sem-VENCIDO card-pad" style={{ marginBottom: 'var(--space-4)' }}>
+            <span className="row" style={{ gap: 'var(--space-2)' }}>
+              <AlertCircle size={15} color="var(--danger)" />
+              <span style={{ color: 'var(--danger)' }}>{error}</span>
+            </span>
+          </div>
+        )}
+
+        {estado !== 'confirmando' && (
+          <form onSubmit={analizar}>
             <textarea
+              className="textarea"
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Ej: Hablé con Froilán por WhatsApp, me dijo que mañana transfiere el poder. Causa ROL 25727."
-              style={{
-                width: '100%',
-                minHeight: '120px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                padding: '16px',
-                color: 'var(--text-primary)',
-                fontSize: '1rem',
-                resize: 'vertical',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                fontFamily: 'var(--font-sans)'
-              }}
-              onFocus={(e) => e.target.style.borderColor = 'rgba(192, 160, 113, 0.5)'}
-              onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+              placeholder="Ej: llamé a don Víctor Garai por la camioneta, quedó de mandar los papeles el lunes"
+              aria-label="Registro rápido de gestión"
+              disabled={estado === 'analizando'}
             />
-            
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginTop: '12px' 
-            }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="button" style={{ 
-                  background: 'transparent', 
-                  border: 'none', 
-                  color: 'var(--text-muted)', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}>
-                  <Paperclip size={18} />
-                  <span style={{ fontSize: '0.9rem' }}>Adjuntar Doc</span>
-                </button>
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading || !texto.trim()}
-                style={{
-                  background: loading ? 'transparent' : 'linear-gradient(45deg, var(--accent), var(--accent))',
-                  border: loading ? '1px solid var(--accent)' : 'none',
-                  padding: '10px 24px',
-                  borderRadius: '24px',
-                  color: loading ? 'var(--accent)' : 'var(--text-inverse)',
-                  fontWeight: '600',
-                  cursor: (loading || !texto.trim()) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  opacity: (!texto.trim() && !loading) ? 0.5 : 1,
-                  transition: 'all 0.3s'
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={18} className="spin" />
-                    <span>Procesando IA...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={18} />
-                    <span>Registrar Gestión</span>
-                  </>
-                )}
+            <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+              <button type="submit" className="btn-primary" disabled={estado === 'analizando' || !texto.trim()}>
+                {estado === 'analizando' ? <Loader2 size={15} className="spin" /> : <Send size={15} />}
+                {estado === 'analizando' ? 'Analizando…' : 'Registrar'}
               </button>
+              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                Antes de guardar te preguntará a qué expediente va.
+              </span>
             </div>
           </form>
+        )}
 
-          {success && (
-            <div className="animate-fade-in" style={{
-              marginTop: '16px',
-              padding: '12px 16px',
-              background: 'rgba(0, 255, 128, 0.1)',
-              border: '1px solid rgba(0, 255, 128, 0.3)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              color: '#00ff80',
-              fontWeight: '500'
-            }}>
-              <CheckCircle2 size={20} />
-              <span>{success}</span>
+        {estado === 'confirmando' && propuesta && (
+          <div className="stack" style={{ gap: 'var(--space-4)' }}>
+            <div className="nota-legal" style={{ marginBottom: 0 }}>
+              <strong>{propuesta.cliente || 'Cliente sin identificar'}</strong>
+              {propuesta.asunto ? ` · ${propuesta.asunto}` : ''}
+              <br />
+              {propuesta.tramite}
             </div>
-          )}
-        </div>
 
-        {/* Columna Derecha: Línea de Tiempo de Hoy */}
-        <div style={{
-          borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
-          paddingLeft: '24px',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ padding: '8px', borderRadius: '50%', background: 'rgba(255, 170, 0, 0.1)' }}>
-              <Clock size={20} color="var(--accent-gold)" />
-            </div>
-            <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: '500' }}>Bitácora del Día</h3>
-          </div>
-          
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: '200px', paddingRight: '8px' }}>
-            {actividadesHoy.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', textAlign: 'center', marginTop: '30px' }}>
-                Aún no has registrado interacciones hoy.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {actividadesHoy.map((act, index) => {
-                  const hora = new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            <div>
+              <p className="field-label">¿A qué expediente va?</p>
+              <div className="stack" style={{ gap: 'var(--space-2)' }}>
+                {candidatos.map((c, i) => {
+                  const activo = eleccion?.modo === 'existente' && eleccion.ref === c;
                   return (
-                    <div key={index} className="animate-fade-in" style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      position: 'relative'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                        <div style={{ color: 'var(--accent)', fontSize: '0.75rem', fontWeight: '600', fontFamily: 'var(--font-mono)' }}>
-                          [{hora}] {act.casoAsociado}
-                        </div>
-                        <span style={{
-                          fontSize: '0.65rem',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: act.estado === 'COMPLETADO' ? 'rgba(0, 255, 128, 0.15)' : 'rgba(255, 170, 0, 0.15)',
-                          color: act.estado === 'COMPLETADO' ? '#00ff80' : 'var(--accent-gold)',
-                          fontWeight: '600'
-                        }}>
-                          {act.estado}
-                        </span>
-                      </div>
-                      <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', lineHeight: '1.4' }}>
-                        {act.tramite}
-                      </div>
-                    </div>
+                    <button
+                      key={`${c.tipo}-${c.ref.id || c.ref.rit}-${i}`}
+                      className={`opcion-destino${activo ? ' is-active' : ''}`}
+                      onClick={() => setEleccion({ modo: 'existente', ref: c })}
+                    >
+                      <span className="row" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+                        <ArrowRight size={14} />
+                        <span className="truncate">{etiquetaCandidato(c)}</span>
+                      </span>
+                      <span className="badge">{c.tipo === 'causa' ? 'Judicial' : 'Abierto'}</span>
+                    </button>
                   );
                 })}
+
+                <button
+                  className={`opcion-destino${eleccion?.modo === 'nuevo' ? ' is-active' : ''}`}
+                  onClick={() => setEleccion({ modo: 'nuevo' })}
+                >
+                  <span className="row" style={{ gap: 'var(--space-2)' }}>
+                    <FolderPlus size={14} />
+                    <span>
+                      {candidatos.length ? 'Ninguno: abrir expediente nuevo' : 'Abrir expediente nuevo'}
+                    </span>
+                  </span>
+                  {eleccion?.modo === 'nuevo' && (
+                    <span className="row" style={{ gap: 'var(--space-1)' }}>
+                      {TIPOS_NUEVO.map(([valor, etiqueta]) => (
+                        <span
+                          key={valor}
+                          role="button"
+                          tabIndex={0}
+                          className={`badge${tipoNuevo === valor ? ' badge-gold' : ''}`}
+                          onClick={(ev) => { ev.stopPropagation(); setTipoNuevo(valor); }}
+                          onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.stopPropagation(); setTipoNuevo(valor); } }}
+                        >
+                          {etiqueta}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </button>
               </div>
-            )}
+            </div>
+
+            <div className="row">
+              <button className="btn-primary" onClick={confirmar} disabled={estado === 'guardando' || !eleccion}>
+                {estado === 'guardando' ? <Loader2 size={15} className="spin" /> : <CheckCircle2 size={15} />}
+                Confirmar y guardar
+              </button>
+              <button className="btn-ghost" onClick={descartar} disabled={estado === 'guardando'}>
+                Cancelar
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

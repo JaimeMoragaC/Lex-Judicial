@@ -64,3 +64,19 @@ def cargar_plazos():
 
 def guardar_plazos(plazos):
     return guardar(PLAZOS, {"plazos": plazos})
+
+
+# Expedientes extrajudiciales y administrativos abiertos desde la Bitácora.
+# Antes vivían en el localStorage del navegador: limpiar datos del sitio borraba
+# la relación entre cada cliente y su correlativo, y las gestiones quedaban
+# huérfanas. Un registro de expedientes no puede depender del navegador.
+
+EXPEDIENTES = "expedientes"
+
+
+def cargar_expedientes():
+    return cargar(EXPEDIENTES, {"expedientes": []}).get("expedientes", [])
+
+
+def guardar_expedientes(expedientes):
+    return guardar(EXPEDIENTES, {"expedientes": expedientes})

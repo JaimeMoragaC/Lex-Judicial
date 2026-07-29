@@ -1121,6 +1121,10 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         elif parsed_url.path == "/plazos":
             self._responder_json({"plazos": catalogos.cargar_plazos()})
 
+        # ENDPOINT 13: /expedientes (Extrajudiciales y administrativos con sus gestiones)
+        elif parsed_url.path == "/expedientes":
+            self._responder_json({"expedientes": catalogos.cargar_expedientes()})
+
         # ENDPOINT 12: /buscar_texto?q=... (Busca DENTRO del contenido de los PDF)
         elif parsed_url.path == "/buscar_texto":
             self._buscar_texto(query_params.get("q", [""])[0])
@@ -1159,6 +1163,23 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                 catalogos.guardar_plazos(plazos)
                 print(f"⏱️  [RADAR] Registro de plazos guardado: {len(plazos)} vigilados")
                 self._responder_json({"status": "ok", "total": len(plazos)})
+            except Exception as e:
+                self._responder_json({"error": str(e)}, 500)
+            return
+
+        # Guarda el registro completo de expedientes extrajudiciales.
+        if parsed_url.path == "/expedientes":
+            try:
+                largo = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(largo).decode("utf-8"))
+                expedientes = payload.get("expedientes")
+                if not isinstance(expedientes, list):
+                    self._responder_json({"error": "Se esperaba {\"expedientes\": [...]}"}, 400)
+                    return
+                catalogos.guardar_expedientes(expedientes)
+                gestiones = sum(len(e.get("gestiones", [])) for e in expedientes)
+                print(f"📁 [EXPEDIENTES] {len(expedientes)} expedientes, {gestiones} gestiones")
+                self._responder_json({"status": "ok", "total": len(expedientes)})
             except Exception as e:
                 self._responder_json({"error": str(e)}, 500)
             return
@@ -1232,20 +1253,26 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                 schema = {
                     "type": "object",
                     "properties": {
-                        "cliente_detectado": {"type": "string"},
-                        "rol_detectado": {"type": "string", "description": "El rol de la causa o RIT al que se asocia, si es posible inferirlo o adivinarlo por el nombre del cliente."},
+                        "cliente_detectado": {"type": "string", "description": "Sólo el nombre de la persona o empresa, SIN tratamientos ('don', 'doña', 'señor', 'sr.', 'sra.'). Ej: 'Víctor Garai', no 'don Víctor Garai'."},
+                        "asunto_detectado": {"type": "string", "description": "El objeto concreto del que trata la gestión, en 1 a 4 palabras, sin verbos. Es lo que distingue dos asuntos distintos del MISMO cliente. Ej: 'camioneta', 'arriendo local Ñuñoa', 'despido injustificado', 'pensión de alimentos'. Si no se puede determinar, cadena vacía."},
+                        "rol_detectado": {"type": "string", "description": "El ROL o RIT literal de la causa SÓLO si aparece escrito en el texto con formato de rol chileno (C-1869-2026, O-934-2023, RIT 700-2026, ROL 35002-2026). Si no hay un rol con ese formato, devuelve exactamente 'EXTRAJUDICIAL'. NUNCA inventes un rol ni pongas acá el tipo de gestión ('Embargo', 'Cobranza'): eso va en el asunto."},
                         "tramite_generado": {"type": "string", "description": "Un resumen ejecutivo forense de la gestión realizada o a realizar. No mas de 12 palabras."},
                         "estado": {"type": "string", "description": "Debe ser 'COMPLETADO' o 'PENDIENTE (POR HACER)'"},
                         "urgencia": {"type": "string", "description": "Debe ser 'NORMAL', 'ALTA' o 'URGENTE'"}
                     },
-                    "required": ["cliente_detectado", "rol_detectado", "tramite_generado", "estado", "urgencia"]
+                    "required": ["cliente_detectado", "asunto_detectado", "rol_detectado", "tramite_generado", "estado", "urgencia"]
                 }
-                
+
                 prompt = f"""
 Eres un asistente jurídico. Clasifica el siguiente registro ingresado rápidamente por un abogado.
-Extrae el cliente, el ROL o causa, y genera un trámite procesal o acción realizada en base a lo escrito.
+Extrae el cliente, el asunto concreto, el ROL o causa, y genera un trámite procesal o acción realizada en base a lo escrito.
 Identifica si la gestión está terminada o pendiente.
+
 REGLA DE ORO: Si de la lectura se concluye que es una gestión administrativa, una asesoría o un caso extrajudicial sin ROL/RIT aparente, debes asignar "EXTRAJUDICIAL" en el campo rol_detectado.
+
+SOBRE EL CLIENTE: entrega el nombre limpio, sin "don", "doña", "señor" ni abreviaturas de tratamiento. El sistema usa ese nombre para reconocer que dos anotaciones distintas hablan de la misma persona, así que debe escribirse igual siempre.
+
+SOBRE EL ASUNTO: es el objeto de la gestión, no la acción. Un mismo cliente puede tener varios asuntos abiertos a la vez y cada uno es un expediente separado; el asunto es lo que los distingue. Usa el sustantivo del objeto: si el texto dice "llamé a Víctor Garai por la camioneta que le embargaron", el asunto es "camioneta".
 
 TEXTO:
 {texto_bitacora}
