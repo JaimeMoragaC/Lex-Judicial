@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { MOCK_STATS, MOCK_PLAZOS_FATALES, MOCK_AUDIENCIAS_HOY_SEMANA, MOCK_CASOS } from '../mockData';
 import { PARTE_DIARIO_OJV } from '../parteDiarioData';
-import BitacoraOmnicanal from './BitacoraOmnicanal';
 
 export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
   const [parteVisible, setParteVisible] = useState(true);
@@ -284,8 +283,6 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
           </button>
         </div>
       </div>
-
-      <BitacoraOmnicanal />
 
       {/* BANNER VIP: PARTE DIARIO DE NOVEDADES OJV AUTOMATIZADO (SIN CRASH NI LENTITUD) */}
       {parteVisible && datosParteDiario && (
