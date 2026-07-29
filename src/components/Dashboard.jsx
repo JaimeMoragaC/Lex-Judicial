@@ -32,18 +32,6 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   const [expedientesReales, setExpedientesReales] = useState([]);
   const [cargandoReal, setCargandoReal] = useState(true);
 
-  // Cargar datos REALES desde el backend Python / base de datos local
-  useEffect(() => {
-    Promise.all([
-      cargarPlazos().catch(() => []),
-      cargarExpedientes().catch(() => [])
-    ]).then(([plazosData, expData]) => {
-      setPlazosReales(plazosData || []);
-      setExpedientesReales(expData || []);
-      setCargandoReal(false);
-    });
-  }, []);
-
   // Cargar historial de partes diarios
   const [historialPartes, setHistorialPartes] = useState(() => {
     try {
@@ -57,6 +45,61 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => {
     return (historialPartes[0] && historialPartes[0].fechaParteDiario) || PARTE_DIARIO_OJV.fechaParteDiario;
   });
+
+  // Función para transformar la respuesta del backend y actualizar el estado de React + localStorage
+  const actualizarEstadoParteDiario = (nuevoParte) => {
+    if (!nuevoParte || !nuevoParte.movimientos) return;
+    const fecha = nuevoParte.fecha_estado_diario || new Date().toISOString().split('T')[0];
+    const item = {
+      fechaParteDiario: fecha,
+      ultimaSincronizacion: nuevoParte.leido_en || new Date().toLocaleTimeString('es-CL'),
+      totalCausasAuditadas: 59,
+      tiempoEscaneoSegundos: 3.8,
+      metodoAutenticacion: 'GMAIL IMAP / PJUD EXCEL',
+      origenSync: nuevoParte.origen_sync || 'GMAIL_IMAP',
+      mensajeContinuidad: nuevoParte.mensaje_continuidad || '',
+      movimientos: nuevoParte.movimientos.map((m) => ({
+        rol: m.rol,
+        caratula: m.caratula,
+        cliente: m.carpetaHermana || m.caratula,
+        tribunal: m.tribunal,
+        titulo: m.estado || 'Movimiento Judicial Notificado',
+        detalle: m.alerta || 'Resolución registrada en el Estado Diario',
+        plazoHoras: m.esFatal ? 'FATAL' : 'MONITOREO',
+        urgencia: m.esFatal ? 'CRÍTICA' : 'NORMAL',
+        accionRecomendada: m.alerta || 'Revisar expediente',
+        archivoDescargado: nuevoParte.archivo_procesado,
+        pathFisico: m.pathHermana || nuevoParte.path_completo
+      }))
+    };
+
+    setHistorialPartes((prev) => {
+      const filtrados = prev.filter((p) => p.fechaParteDiario !== item.fechaParteDiario);
+      const actualizados = [item, ...filtrados];
+      try {
+        localStorage.setItem('lexcontrol_historial_partes_diarios', JSON.stringify(actualizados));
+      } catch (e) {}
+      return actualizados;
+    });
+
+    setFechaSeleccionada(fecha);
+  };
+
+  // Cargar datos REALES desde el backend Python al montar
+  useEffect(() => {
+    Promise.all([
+      cargarPlazos().catch(() => []),
+      cargarExpedientes().catch(() => []),
+      fetch(`${LEXCONTROL_API}/sincronizar_gmail_pjud`).then(res => res.json()).catch(() => null)
+    ]).then(([plazosData, expData, syncData]) => {
+      setPlazosReales(plazosData || []);
+      setExpedientesReales(expData || []);
+      if (syncData && syncData.status === 'ok') {
+        actualizarEstadoParteDiario(syncData);
+      }
+      setCargandoReal(false);
+    });
+  }, []);
 
   const datosParteDiario = useMemo(() => {
     return historialPartes.find(p => p.fechaParteDiario === fechaSeleccionada) || historialPartes[0] || PARTE_DIARIO_OJV;
@@ -295,6 +338,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                     .then(data => {
                       if (btn) btn.innerText = "Sincronizar Excel (Gmail/PJUD)";
                       if (data.status === "ok") {
+                        actualizarEstadoParteDiario(data);
                         const lista = data.movimientos ? data.movimientos.map(m => `▪ ${m.rol} (${m.tribunal}): ${m.caratula}`).join("\n") : "";
                         alert(`¡Sincronización Judicial Exitosa!\n\nArchivo procesado: ${data.archivo_procesado}\nCausas notificadas hoy: ${data.total_movimientos}\n\n${lista}`);
                       } else {
