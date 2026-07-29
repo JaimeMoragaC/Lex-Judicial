@@ -284,7 +284,51 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                 </span>
               </div>
             </div>
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
+            <div className="row" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <button
+                id="btn-sync-gmail"
+                onClick={() => {
+                  const btn = document.getElementById("btn-sync-gmail");
+                  if (btn) btn.innerText = "Leyendo Excel...";
+                  fetch(`${LEXCONTROL_API}/sincronizar_gmail_pjud`)
+                    .then(res => res.json())
+                    .then(data => {
+                      if (btn) btn.innerText = "Sincronizar Excel (Gmail/PJUD)";
+                      if (data.status === "ok") {
+                        const lista = data.movimientos ? data.movimientos.map(m => `▪ ${m.rol} (${m.tribunal}): ${m.caratula}`).join("\n") : "";
+                        alert(`¡Sincronización Judicial Exitosa!\n\nArchivo procesado: ${data.archivo_procesado}\nCausas notificadas hoy: ${data.total_movimientos}\n\n${lista}`);
+                      } else {
+                        alert("Aviso de sincronización: " + (data.error || "No se pudo procesar el Excel."));
+                      }
+                    })
+                    .catch(() => {
+                      alert("Servidor local no detectado en puerto 8888.");
+                      if (btn) btn.innerText = "Sincronizar Excel (Gmail/PJUD)";
+                    });
+                }}
+                className="btn-primary"
+                style={{ fontSize: 'var(--text-xs)', padding: '6px 12px', gap: '6px' }}
+                title="Sincronizar resoluciones leyendo el Excel matutino enviado a tu Gmail por el PJUD"
+              >
+                <RefreshCw size={13} />
+                <span>Sincronizar Excel (Gmail/PJUD)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  fetch(`${LEXCONTROL_API}/login_humano`)
+                    .then(res => res.json())
+                    .then(() => alert("Ventana interactiva de login abriéndose en Linux."))
+                    .catch(() => alert("Servidor local no detectado."));
+                }}
+                className="btn-secondary"
+                style={{ fontSize: 'var(--text-xs)', padding: '6px 12px' }}
+                title="Abrir navegador visible en Linux para validar CAPTCHA humano OJV"
+              >
+                <Monitor size={13} />
+                <span>Validar Sesión OJV</span>
+              </button>
+
               <select
                 value={fechaSeleccionada}
                 onChange={(e) => setFechaSeleccionada(e.target.value)}
