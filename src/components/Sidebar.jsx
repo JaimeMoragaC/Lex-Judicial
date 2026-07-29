@@ -11,7 +11,8 @@ import {
   Sparkles,
   HardDrive,
   Search,
-  FileSearch
+  FileSearch,
+  Download
 } from 'lucide-react';
 
 import { MOCK_STATS } from '../mockData';
@@ -98,6 +99,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <kbd className="kbd">K</kbd>
         </span>
       </button>
+
+      <a
+        href="http://localhost:8888/descargar_backup"
+        download
+        className="sidebar-search"
+        style={{ marginTop: 'var(--space-2)', textDecoration: 'none', color: 'inherit' }}
+        title="Descargar copia de seguridad en formato ZIP"
+      >
+        <span className="row" style={{ gap: 'var(--space-2)' }}>
+          <Download size={14} />
+          <span>Respaldar Datos (ZIP)</span>
+        </span>
+      </a>
 
       {alerta && alerta.accionables > 0 && (
         <button className="sidebar-alert sem sem-VENCIDO" onClick={() => setActiveTab('radar')}>

@@ -29,7 +29,8 @@ import shutil
 import gzip
 import sqlite3
 import datetime
-import unicodedata
+import zipfile
+import io
 
 import catalogos
 
@@ -1128,6 +1129,38 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         # ENDPOINT 12: /buscar_texto?q=... (Busca DENTRO del contenido de los PDF)
         elif parsed_url.path == "/buscar_texto":
             self._buscar_texto(query_params.get("q", [""])[0])
+
+        # ENDPOINT BACKUP: /descargar_backup (Genera ZIP con data/*.json)
+        elif parsed_url.path == "/descargar_backup":
+            try:
+                buffer = io.BytesIO()
+                data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+                fecha_str = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
+                zip_filename = f"lexcontrol_backup_{fecha_str}.zip"
+
+                with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                    if os.path.exists(data_dir):
+                        for f_name in os.listdir(data_dir):
+                            if f_name.endswith(".json") or f_name.endswith(".sqlite"):
+                                f_path = os.path.join(data_dir, f_name)
+                                zf.write(f_path, arcname=os.path.join("data", f_name))
+                
+                contenido_zip = buffer.getvalue()
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Disposition", f'attachment; filename="{zip_filename}"')
+                self.send_header("Content-Length", str(len(contenido_zip)))
+                self.end_headers()
+                self.wfile.write(contenido_zip)
+                print(f"📦 [BACKUP ZIP] Copia de seguridad generada y entregada: {zip_filename} ({len(contenido_zip)/1024:.1f} KB)")
+            except Exception as e:
+                self.send_response(500)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            return
 
         # ENDPOINT 6: /status (Verificación de salud del puente)
         elif parsed_url.path == "/status" or parsed_url.path == "/":
