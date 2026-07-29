@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-LexControl - Índice de texto completo de los expedientes
-========================================================
-Extrae el texto de los PDF del disco forense y lo deja en un índice SQLite FTS5,
-para poder buscar una cláusula, un RUT o un argumento y saber en qué expediente
-está. Hasta ahora el buscador sólo miraba nombres de archivo y carátulas.
+LexControl - Índice de texto completo de los expedientes (PDF, DOCX, OCR)
+========================================================================
+Extrae el texto de todos los PDF y documentos Word (DOCX) del disco forense y lo deja en un índice SQLite FTS5.
+Soporta OCR automático con Tesseract para PDFs escaneados (imágenes).
 
 Es incremental: guarda el tamaño y la fecha de cada archivo ya procesado, así que
 volver a correrlo sólo indexa lo nuevo o lo que cambió. Se puede interrumpir con
@@ -23,9 +22,18 @@ import time
 from pathlib import Path
 
 import fitz  # PyMuPDF
+try:
+    import docx  # python-docx
+except ImportError:
+    docx = None
 
-# Los PDF del PJUD traen anotaciones que MuPDF no sabe dibujar y llena la salida
-# de avisos. No afectan la extracción de texto, así que se silencian.
+try:
+    import pytesseract
+    from PIL import Image
+    import io
+except ImportError:
+    pytesseract = None
+
 fitz.TOOLS.mupdf_display_errors(False)
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,8 +44,6 @@ RAICES = [
     Path("/home/jaime/Descargas/Casos2023-Consolidados"),
 ]
 
-# Un escrito judicial rara vez pasa de unas decenas de páginas; más allá suelen
-# ser anexos escaneados que aportan poco y cuestan mucho tiempo de extracción.
 MAX_PAGINAS = 60
 MAX_CARACTERES = 400_000
 
@@ -69,53 +75,95 @@ def abrir_indice():
     return con
 
 
-def extraer_texto(ruta):
-    """Devuelve (texto, n_paginas). Un PDF ilegible no detiene el proceso."""
+def extraer_texto_docx(ruta):
+    if not docx:
+        return None, 0
+    try:
+        doc = docx.Document(ruta)
+        parrafos = [p.text for p in doc.paragraphs if p.text.strip()]
+        for t in doc.tables:
+            for row in t.rows:
+                row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                if row_text:
+                    parrafos.append(row_text)
+        texto = "\n".join(parrafos)[:MAX_CARACTERES]
+        return texto, 1
+    except Exception as e:
+        return None, 0
+
+
+def extraer_texto_pdf(ruta):
     try:
         with fitz.open(ruta) as doc:
             total = doc.page_count
             partes = []
+            ocr_necesario = False
+            
             for i, pagina in enumerate(doc):
                 if i >= MAX_PAGINAS:
                     break
-                partes.append(pagina.get_text())
+                txt = pagina.get_text()
+                if txt and len(txt.strip()) > 30:
+                    partes.append(txt)
+                else:
+                    # Si no hay texto directo y tenemos pytesseract, intentamos OCR en la página
+                    if pytesseract:
+                        try:
+                            pix = pagina.get_pixmap(dpi=150)
+                            img = Image.open(io.BytesIO(pix.tobytes("png")))
+                            txt_ocr = pytesseract.image_to_string(img, lang="spa")
+                            if txt_ocr and len(txt_ocr.strip()) > 20:
+                                partes.append(f"[OCR] {txt_ocr}")
+                        except Exception:
+                            pass
                 if sum(len(p) for p in partes) > MAX_CARACTERES:
                     break
             return "\n".join(partes)[:MAX_CARACTERES], total
     except Exception as e:
-        print(f"   ⚠️  ilegible: {Path(ruta).name} ({str(e)[:60]})")
         return None, 0
 
 
-def recolectar_pdfs():
+def extraer_texto(ruta):
+    p = Path(ruta)
+    ext = p.suffix.lower()
+    if ext == ".docx":
+        return extraer_texto_docx(ruta)
+    elif ext == ".pdf":
+        return extraer_texto_pdf(ruta)
+    elif ext in [".txt", ".md"]:
+        try:
+            with open(ruta, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read(MAX_CARACTERES), 1
+        except Exception:
+            return None, 0
+    return None, 0
+
+
+def recolectar_archivos():
     raiz = next((r for r in RAICES if r.exists()), None)
     if raiz is None:
         print("❌ No se encuentra el disco de casos. Conéctalo y vuelve a intentar.")
-        print("   Rutas probadas:")
         for r in RAICES:
             print(f"     {r}")
         sys.exit(1)
     print(f"📂 Recorriendo {raiz}")
-    return raiz, sorted(str(p) for p in raiz.rglob("*") if p.suffix.lower() == ".pdf" and p.is_file())
+    extensiones = {".pdf", ".docx", ".txt"}
+    archivos = sorted(str(p) for p in raiz.rglob("*") if p.suffix.lower() in extensiones and p.is_file())
+    return raiz, archivos
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Indexa el texto de los expedientes PDF")
-    ap.add_argument("--rehacer", action="store_true", help="borra el índice y lo reconstruye")
-    ap.add_argument("--limite", type=int, default=0, help="procesa a lo más N archivos")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description="Índice FTS5 de expedientes (PDF, DOCX, OCR)")
+    parser.add_argument("--rehacer", action="store_true", help="Borra el índice actual y lo recrea")
+    parser.add_argument("--limite", type=int, default=0, help="Límite de archivos a procesar")
+    args = parser.parse_args()
 
     if args.rehacer and INDICE.exists():
+        print(f"⚠️  Borrando índice anterior: {INDICE}")
         INDICE.unlink()
-        for extra in (".wal", ".shm"):
-            p = Path(str(INDICE) + extra)
-            if p.exists():
-                p.unlink()
-        print("🗑️  Índice anterior eliminado.")
 
     con = abrir_indice()
-    raiz, pdfs = recolectar_pdfs()
-    print(f"📄 {len(pdfs)} PDF encontrados en disco.")
+    raiz, lista_archivos = recolectar_archivos()
 
     ya = {
         ruta: (tam, mod)
@@ -123,7 +171,7 @@ def main():
     }
 
     pendientes = []
-    for ruta in pdfs:
+    for ruta in lista_archivos:
         try:
             st = os.stat(ruta)
         except OSError:
@@ -136,9 +184,9 @@ def main():
     if args.limite:
         pendientes = pendientes[: args.limite]
 
-    print(f"🔎 {len(pendientes)} por indexar ({len(pdfs) - len(pendientes)} ya estaban al día).")
+    print(f"🔎 {len(pendientes)} documentos por indexar ({len(lista_archivos) - len(pendientes)} ya al día).")
     if not pendientes:
-        print("✅ El índice ya está al día.")
+        print("✅ El índice de contenido está 100% al día.")
         return
 
     inicio = time.time()
@@ -146,7 +194,7 @@ def main():
     try:
         for n, (ruta, st) in enumerate(pendientes, 1):
             texto, paginas = extraer_texto(ruta)
-            if texto is None:
+            if not texto:
                 fallidos += 1
                 continue
 
@@ -169,7 +217,7 @@ def main():
                 transcurrido = time.time() - inicio
                 ritmo = n / transcurrido if transcurrido else 0
                 faltan = (len(pendientes) - n) / ritmo if ritmo else 0
-                print(f"   {n}/{len(pendientes)}  ({ritmo:.1f} arch/s, faltan ~{faltan/60:.1f} min)")
+                print(f"   {n}/{len(pendientes)}  ({ritmo:.1f} doc/s, faltan ~{faltan/60:.1f} min)")
     except KeyboardInterrupt:
         print("\n⏸️  Interrumpido. Lo indexado queda guardado; vuelve a correrlo para continuar.")
     finally:
@@ -179,8 +227,8 @@ def main():
         con.close()
 
     total = time.time() - inicio
-    print(f"\n✅ {hechos} documentos indexados en {total/60:.1f} min. {fallidos} ilegibles.")
-    print(f"   Índice: {INDICE}  ({INDICE.stat().st_size/1048576:.1f} MB)")
+    print(f"\n✅ {hechos} documentos indexados con éxito en {total/60:.1f} min. {fallidos} sin texto extraíble.")
+    print(f"   Índice local: {INDICE}  ({INDICE.stat().st_size/1048576:.1f} MB)")
 
 
 if __name__ == "__main__":
