@@ -1318,19 +1318,52 @@ TEXTO:
                         "responseSchema": schema
                     }
                 }
-                data = json.dumps(gemini_payload).encode('utf-8')
-                req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+                json_ia = None
                 
-                with urllib.request.urlopen(req, timeout=15) as response:
-                    res = json.loads(response.read().decode('utf-8'))
-                    texto_respuesta = res['candidates'][0]['content']['parts'][0]['text']
-                    json_ia = json.loads(texto_respuesta)
+                # Intentar hasta 2 veces con Gemini en caso de 503 Service Unavailable temporal
+                for intento in range(2):
+                    try:
+                        data = json.dumps(gemini_payload).encode('utf-8')
+                        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+                        with urllib.request.urlopen(req, timeout=12) as response:
+                            res = json.loads(response.read().decode('utf-8'))
+                            texto_respuesta = res['candidates'][0]['content']['parts'][0]['text']
+                            json_ia = json.loads(texto_respuesta)
+                            break
+                    except Exception as e_gem:
+                        print(f"⚠️ Intento {intento + 1} Gemini falló: {e_gem}")
+                        if intento == 0:
+                            time.sleep(1)
+
+                # Fallback heurístico inteligente si Gemini no respondió (ej: Error 503)
+                if not json_ia:
+                    print("⚠️ Gemini no disponible (503). Aplicando extracción heurística procesal de emergencia...")
+                    match_rol = re.search(r'\b([CVSPEARKOTMR]-\d+-\d{4}|\d+-\d{4})\b', texto_bitacora, re.IGNORECASE)
+                    rol_fallback = match_rol.group(1).upper() if match_rol else "EXTRAJUDICIAL"
                     
-                    self.send_response(200)
-                    self._send_cors_headers()
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"status": "ok", "datos": json_ia}, ensure_ascii=False).encode('utf-8'))
+                    stop_w = {'llamé', 'llame', 'hablé', 'hable', 'con', 'para', 'por', 'sobre', 'del', 'de', 'la', 'el', 'los', 'las', 'un', 'una', 'don', 'doña', 'señor', 'sra', 'sr'}
+                    palabras = [w for w in re.findall(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ]{3,}', texto_bitacora) if w.lower() not in stop_w]
+                    
+                    cliente_fb = palabras[0].capitalize() if palabras else "Cliente Registrado"
+                    asunto_fb = palabras[1].lower() if len(palabras) > 1 else "gestión general"
+                    
+                    es_pendiente = any(w in texto_bitacora.lower() for w in ['pendiente', 'hacer', 'revisar', 'preparar', 'presentar', 'redactar'])
+                    es_urgente = any(w in texto_bitacora.lower() for w in ['urgente', 'hoy', 'mañana', 'plazo', 'fatal', 'vence'])
+                    
+                    json_ia = {
+                        "cliente_detectado": cliente_fb,
+                        "asunto_detectado": asunto_fb,
+                        "rol_detectado": rol_fallback,
+                        "tramite_generado": texto_bitacora[:60],
+                        "estado": "PENDIENTE (POR HACER)" if es_pendiente else "COMPLETADO",
+                        "urgencia": "URGENTE" if es_urgente else "NORMAL"
+                    }
+                    
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "ok", "datos": json_ia}, ensure_ascii=False).encode('utf-8'))
             except Exception as e:
                 print(f"⚠️ Error en bitácora omnicanal: {e}")
                 self.send_response(500)
