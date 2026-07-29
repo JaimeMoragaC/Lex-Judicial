@@ -1,7 +1,13 @@
 // plazosChile.js - Motor de Cálculo Automatizado de Términos Judiciales Chile (CPC & CPP)
 
-// Feriados Legales en Chile (Años 2025 y 2026 para proyección procesal)
-export const FERIADOS_CHILE = [
+import { esFeriado as esFeriadoCalculado, nombreFeriado, listarFeriados } from './feriadosChile.js';
+
+export { nombreFeriado, listarFeriados };
+
+// Lista histórica escrita a mano. Ya no alimenta el cómputo (lo hace
+// feriadosChile.js, que deriva los feriados de la ley para cualquier año); se
+// conserva sólo como referencia para contrastar el calendario de 2025 y 2026.
+export const FERIADOS_HISTORICOS_2025_2026 = [
   // 2025
   '2025-01-01', // Año Nuevo
   '2025-04-18', // Viernes Santo
@@ -39,10 +45,12 @@ export const FERIADOS_CHILE = [
 ];
 
 /**
- * Verifica si una fecha en formato YYYY-MM-DD es feriado legal en Chile
+ * Verifica si una fecha en formato YYYY-MM-DD es feriado legal en Chile.
+ * Los feriados se derivan de la ley para cualquier año (ver feriadosChile.js),
+ * así que ya no hay una fecha a partir de la cual el cómputo se degrade.
  */
 export function esFeriado(fechaStr) {
-  return FERIADOS_CHILE.includes(fechaStr);
+  return esFeriadoCalculado(fechaStr);
 }
 
 /**
@@ -65,6 +73,23 @@ function aFechaLocal(fecha) {
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const dia = String(fecha.getDate()).padStart(2, '0');
   return `${anio}-${mes}-${dia}`;
+}
+
+/**
+ * Valida la entrada antes de computar. Un plazo mal calculado en silencio es
+ * peor que un error en pantalla: acá se prefiere reventar y que se note.
+ */
+function validarEntrada(fechaBase, diasPlazo) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fechaBase || ''))) {
+    throw new Error(`Fecha base inválida: "${fechaBase}". Se espera formato YYYY-MM-DD.`);
+  }
+  const d = new Date(fechaBase + 'T00:00:00');
+  if (Number.isNaN(d.getTime()) || aFechaLocal(d) !== fechaBase) {
+    throw new Error(`La fecha "${fechaBase}" no existe en el calendario.`);
+  }
+  if (!Number.isInteger(diasPlazo) || diasPlazo < 1) {
+    throw new Error(`Plazo inválido: "${diasPlazo}". Debe ser un número entero de días mayor que cero.`);
+  }
 }
 
 /**
@@ -94,6 +119,7 @@ export function formatearFechaEs(fechaStr) {
  * @returns {object} { fechaVencimiento, desglose: Array<{ dia, fecha, diaSemana, estado, observacion }> }
  */
 export function calcularPlazoCPC(fechaNotificacion, diasPlazo, esHaciaAtras = false) {
+  validarEntrada(fechaNotificacion, diasPlazo);
   let diasContados = 0;
   let fechaActual = new Date(fechaNotificacion + 'T00:00:00');
   const desglose = [];
@@ -149,6 +175,7 @@ export function calcularPlazoCPC(fechaNotificacion, diasPlazo, esHaciaAtras = fa
  * Art. 445 Código del Trabajo y Ley 19.880: Excluye sábados, domingos y feriados chilenos.
  */
 export function calcularPlazoLaboralAdmin(fechaNotificacion, diasPlazo, esHaciaAtras = false) {
+  validarEntrada(fechaNotificacion, diasPlazo);
   let diasContados = 0;
   let fechaActual = new Date(fechaNotificacion + 'T00:00:00');
   const desglose = [];
@@ -208,6 +235,7 @@ export function calcularPlazoLaboralAdmin(fechaNotificacion, diasPlazo, esHaciaA
  * @param {boolean} esHaciaAtras - Para casos como "15 días antes de la APJO" (Art. 261 CPP)
  */
 export function calcularPlazoCPP(fechaNotificacion, diasPlazo, esHaciaAtras = false) {
+  validarEntrada(fechaNotificacion, diasPlazo);
   let fechaActual = new Date(fechaNotificacion + 'T00:00:00');
   const desglose = [];
 
