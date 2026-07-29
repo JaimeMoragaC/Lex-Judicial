@@ -1390,6 +1390,95 @@ TEXTO:
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
             return
+
+        # ENDPOINT 10: /generar_escrito_ia (Redactor Forense de Escritos Judiciales)
+        elif parsed_url.path == "/generar_escrito_ia":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode('utf-8'))
+                
+                caso = payload.get("caso", {})
+                tipo_escrito = payload.get("tipo_escrito", "Solicitud Procesal")
+                instruccion = payload.get("instruccion", "")
+                
+                caratula = caso.get("caratula") or caso.get("cliente") or "PARTE ACTORA con PARTE DEMANDADA"
+                tribunal = caso.get("tribunal", "JUZGADO CORRESPONDIENTE")
+                rit = caso.get("rit") or caso.get("rol") or caso.get("id") or "C-2026"
+                materia = caso.get("materia", "Derecho Procesal Chileno")
+
+                prompt = f"""
+Eres un distinguido abogado litigante chileno y redactor judicial forense senior.
+Redacta un ESCRITO JUDICIAL COMPLETO, FORMAL Y RIGUROSO conforme al Código de Procedimiento Civil (CPC) o Código Procesal Penal (CPP) chileno según corresponda.
+
+DATOS DE LA CAUSA:
+- CARÁTULA: {caratula}
+- ROL / RIT: {rit}
+- TRIBUNAL: {tribunal}
+- MATERIA: {materia}
+
+TIPO DE ESCRITO: {tipo_escrito}
+INSTRUCCIÓN ESPECÍFICA DEL ABOGADO:
+{instruccion}
+
+REGLAS DE FORMATO DEL ESCRITO:
+1. Incluye las Sumas oficiales (EN LO PRINCIPAL: ..., EN EL PRIMER OTROSÍ: ...).
+2. Dirígete a la Autoridad Judicial formalmente (S. J. L. de Garantía / Civil / Letras / Trabajo / Ilma. Corte).
+3. Presentación formal del abogado (JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados...).
+4. Fundamentos de hecho y de derecho claros, rigurosos y citando artículos de leyes chilenas si aplica (ej: Art. 152 CPC, Art. 159 CPP, Art. 40 CPC, etc.).
+5. Petitorio formal en mayúsculas (POR TANTO, A S.S. RUEGO / PIDO...).
+6. Devuelve ÚNICAMENTE el texto limpio del escrito formateado en texto plano listo para copiar y pegar a Word u OJV.
+"""
+
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                gemini_payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.2
+                    }
+                }
+                
+                escrito_texto = ""
+                for intento in range(2):
+                    try:
+                        data = json.dumps(gemini_payload).encode('utf-8')
+                        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+                        with urllib.request.urlopen(req, timeout=25) as response:
+                            res = json.loads(response.read().decode('utf-8'))
+                            escrito_texto = res['candidates'][0]['content']['parts'][0]['text']
+                            break
+                    except Exception as e_g:
+                        print(f"⚠️ Intento {intento+1} Redactor IA falló: {e_g}")
+                        if intento == 0:
+                            time.sleep(1)
+
+                if not escrito_texto:
+                    escrito_texto = f"""EN LO PRINCIPAL: {tipo_escrito.upper()}.
+
+S. J. L. ({tribunal.upper()})
+
+JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados "{caratula}", ROL {rit}, a S.S. respetuosamente digo:
+
+Que por este acto vengo en solicitar {instruccion.lower() if instruccion else 'el impulso procesal correspondiente en la presente causa'}.
+
+POR TANTO,
+A S.S. RUEGO acceder a lo solicitado y proveer de conformidad.
+
+ES JUSTICIA."""
+
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "ok", "escrito": escrito_texto}, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                print(f"⚠️ Error generando escrito IA: {e}")
+                self.send_response(500)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+            return
         else:
             self.send_response(404)
             self._send_cors_headers()

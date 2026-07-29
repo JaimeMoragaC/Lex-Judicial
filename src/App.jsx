@@ -13,6 +13,7 @@ import OmniSearch from './components/OmniSearch';
 import RadarPlazos from './components/RadarPlazos';
 import BuscadorTexto from './components/BuscadorTexto';
 import BitacoraOmnicanal from './components/BitacoraOmnicanal';
+import RedactorIA from './components/RedactorIA';
 import { MOCK_CASOS } from './mockData';
 import { CATALOGOS_CAIDOS } from './dataLoader';
 import { LEXCONTROL_API } from './apiBase';
@@ -98,6 +99,10 @@ export default function App() {
         )}
 
         {activeTab === 'bitacora' && <BitacoraOmnicanal />}
+
+        {activeTab === 'redactor' && (
+          <RedactorIA onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />
+        )}
 
         {activeTab === 'radar' && (
           <RadarPlazos
