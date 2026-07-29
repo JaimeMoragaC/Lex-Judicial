@@ -485,6 +485,22 @@ def _normalizar_encabezado(texto):
     return re.sub(r"[^a-z0-9]", "", t.lower())
 
 
+def _primera_columna(row):
+    """Valor de la primera columna de la fila, o None si viene vacía.
+
+    En el Estado Diario del PJUD la primera columna es siempre el identificador
+    de la causa, aunque el encabezado cambie de hoja en hoja y de formato en
+    formato. Es el dato más estable que emite: el nombre varía, la posición no.
+    """
+    if not len(row.index):
+        return None
+    valor = row.iloc[0]
+    if pd.isna(valor):
+        return None
+    texto = str(valor).strip()
+    return texto if texto and texto.lower() not in ("nan", "none") else None
+
+
 def _columna(row, incluye, excluye=()):
     """Devuelve el valor de la primera columna cuyo encabezado normalizado contenga
     alguno de los términos de `incluye` y ninguno de `excluye`.
@@ -546,10 +562,17 @@ def procesar_excel_pjud(file_path):
         if count_rows > 0:
             for idx, row in df.iterrows():
                 # Extraer Rol/RIT según columnas del tribunal
-                # 'ingreso' cubre 'N° Ingreso', 'Número Ingreso' y 'Número de Ingreso';
-                # se excluye 'fecha' para no confundirlo con 'Fecha Ingreso'.
+                # El identificador de la causa SIEMPRE va en la primera columna,
+                # cualquiera sea el nombre que le ponga el PJUD. En las 7 hojas de
+                # los dos formatos que emite aparece con seis encabezados distintos:
+                # 'Rol', 'Rit', 'Rol Interno', 'N° Ingreso', 'Número Ingreso' y
+                # 'Número de Ingreso'. Buscarlo por nombre es perder causas cada vez
+                # que cambien el encabezado; por posición no.
+                # La coincidencia por patrón queda de red de seguridad, por si algún
+                # día reordenan las columnas.
                 rol_val = (
-                    _columna(row, ('rol', 'rit', 'ruc'), excluye=('fecha',))
+                    _primera_columna(row)
+                    or _columna(row, ('rol', 'rit', 'ruc'), excluye=('fecha',))
                     or _columna(row, ('ingreso',), excluye=('fecha',))
                     or 's/n'
                 )
