@@ -28,6 +28,8 @@ import urllib.request
 import shutil
 import gzip
 import sqlite3
+import datetime
+import unicodedata
 
 import catalogos
 
@@ -455,6 +457,58 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename=""):
         "texto_extraido_muestra": texto_completo[:600]
     }
 
+def fecha_del_estado_diario(file_path):
+    """Extrae del nombre del archivo la fecha a la que corresponde el Estado Diario.
+
+    El PJUD usa dos formatos según por dónde llegue el archivo:
+        estadoDiario_8328581__28072026.xls        (adjunto del correo)
+        EstadoDiario8328581-8_22_07_2026.xls      (descarga manual desde la OJV)
+        Movimientos_8328581__29_07_2026.xls       (aviso de movimientos)
+
+    Devuelve un date, o None si no se puede determinar. Sin esto no hay forma de
+    saber si lo que se está mostrando es de hoy o de la semana pasada.
+    """
+    nombre = os.path.basename(file_path)
+    m = re.search(r"(\d{2})[_-]?(\d{2})[_-]?(\d{4})", nombre)
+    if not m:
+        return None
+    dia, mes, anio = (int(g) for g in m.groups())
+    try:
+        return datetime.date(anio, mes, dia)
+    except ValueError:
+        return None
+
+
+def _normalizar_encabezado(texto):
+    """'Número de Ingreso' -> 'numerodeingreso'. Quita tildes, espacios y signos."""
+    t = unicodedata.normalize("NFD", str(texto)).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]", "", t.lower())
+
+
+def _columna(row, incluye, excluye=()):
+    """Devuelve el valor de la primera columna cuyo encabezado normalizado contenga
+    alguno de los términos de `incluye` y ninguno de `excluye`.
+
+    Se resuelve por patrón y no por nombre exacto porque el PJUD manda encabezados
+    distintos según el canal: la descarga manual de la OJV dice 'N° Ingreso', el
+    adjunto del correo dice 'Número Ingreso' en Corte Suprema y 'Número de Ingreso'
+    en Corte de Apelaciones. Con coincidencia exacta las dos Cortes caían a 's/n' y
+    sus causas quedaban registradas sin ROL, o sea invisibles.
+    """
+    for columna in row.index:
+        norm = _normalizar_encabezado(columna)
+        if any(e in norm for e in excluye):
+            continue
+        if any(i in norm for i in incluye):
+            valor = row[columna]
+            if pd.isna(valor):
+                continue
+            texto = str(valor).strip()
+            if texto and texto.lower() not in ("nan", "none"):
+                return texto
+    return None
+
+
 def procesar_excel_pjud(file_path):
     print(f"📊 [MOTOR EXCEL PJUD] Procesando archivo matutino: {file_path}")
     try:
@@ -492,11 +546,26 @@ def procesar_excel_pjud(file_path):
         if count_rows > 0:
             for idx, row in df.iterrows():
                 # Extraer Rol/RIT según columnas del tribunal
-                rol_val = str(row.get('Rol', row.get('Rol Interno', row.get('Rit', row.get('N° Ingreso', 's/n'))))).strip()
-                caratula_val = str(row.get('Caratulado', 'Sin carátula registrada')).strip()
-                trib_val = str(row.get('Tribunal', row.get('Corte', row.get('Ubicación', f"Jurisdicción {sheet}")))).strip()
-                fecha_val = str(row.get('Fecha Ingreso', row.get('Fecha Ubicación', 'Hoy'))).strip()
-                estado_val = str(row.get('Estado', row.get('Tipo Recurso', row.get('Tipo Causa', 'Movimiento reportado en OJV')))).strip()
+                # 'ingreso' cubre 'N° Ingreso', 'Número Ingreso' y 'Número de Ingreso';
+                # se excluye 'fecha' para no confundirlo con 'Fecha Ingreso'.
+                rol_val = (
+                    _columna(row, ('rol', 'rit', 'ruc'), excluye=('fecha',))
+                    or _columna(row, ('ingreso',), excluye=('fecha',))
+                    or 's/n'
+                )
+                caratula_val = _columna(row, ('caratul',)) or 'Sin carátula registrada'
+                trib_val = (
+                    _columna(row, ('tribunal', 'corte'), excluye=('fecha',))
+                    or f"Jurisdicción {sheet}"
+                )
+                fecha_val = _columna(row, ('fechaubicacion', 'fechaingreso')) or 'Sin fecha'
+                # En Corte de Apelaciones el dato procesal está en 'Ubicación'
+                # (Relator, Cuenta, Tabla…): es lo que dice en qué va la causa.
+                estado_val = (
+                    _columna(row, ('estado', 'ubicacion'), excluye=('fecha',))
+                    or _columna(row, ('tiporecurso', 'tipocausa'))
+                    or 'Movimiento reportado en OJV'
+                )
                 
                 # Cruce con disco local
                 match_local = None
@@ -523,11 +592,23 @@ def procesar_excel_pjud(file_path):
                     "pathHermana": match_local["path"] if match_local else None
                 })
                 
+    # La fecha que importa es la DEL ESTADO DIARIO, no la de cuando se leyó el
+    # archivo. Antes se devolvía time.strftime() —la hora actual—, así que un
+    # Estado Diario del 22 aparecía rotulado con la fecha de hoy y no había
+    # forma de notar que el dato estaba viejo.
+    fecha_estado_diario = fecha_del_estado_diario(file_path)
+    antiguedad = None
+    if fecha_estado_diario:
+        antiguedad = (datetime.date.today() - fecha_estado_diario).days
+
     return {
         "status": "ok",
         "archivo_procesado": os.path.basename(file_path),
         "path_completo": file_path,
-        "fecha_sincronizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "fecha_estado_diario": fecha_estado_diario.isoformat() if fecha_estado_diario else None,
+        "antiguedad_dias": antiguedad,
+        "es_de_hoy": antiguedad == 0 if antiguedad is not None else None,
+        "leido_en": time.strftime("%Y-%m-%d %H:%M:%S"),
         "total_movimientos": len(movimientos_dia),
         "desglose_tribunales": stats_jurisdiccion,
         "movimientos": movimientos_dia
