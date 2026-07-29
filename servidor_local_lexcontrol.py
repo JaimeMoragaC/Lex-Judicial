@@ -32,6 +32,7 @@ import sqlite3
 import datetime
 import zipfile
 import io
+import base64
 
 import catalogos
 
@@ -505,6 +506,77 @@ def tipo_de_planilla(nombre_archivo):
     return "otro"
 
 
+MAX_SUBIDA_BYTES = 60 * 1024 * 1024  # 60 MB: un expediente escaneado grande cabe
+
+
+def _nombre_seguro(nombre, por_defecto="documento"):
+    """Reduce lo que venga del payload a un nombre de archivo sin ruta.
+
+    Con `Path(base) / nombre`, un nombre absoluto DESCARTA la base ('/base' /
+    '/etc/passwd' == '/etc/passwd') y un '../' la escapa. Como el servidor acepta
+    peticiones de cualquier origen, eso convertía /subir_documento en escritura
+    arbitraria de archivos disparable desde cualquier página que se visite.
+    """
+    base = os.path.basename(str(nombre or "").replace("\\", "/").strip())
+    base = base.lstrip(".")                                  # nada de ocultos ni '..'
+    base = re.sub(r"[^\w\s.,()\-áéíóúüñÁÉÍÓÚÜÑ]", "_", base)  # sin separadores ni control
+    base = re.sub(r"\s+", " ", base).strip()
+    return base[:180] or por_defecto
+
+
+def _carpeta_existente_equivalente(raiz, carpeta):
+    """Busca una carpeta ya existente que sea "la misma" que `carpeta`.
+
+    Hace falta porque el saneamiento recorta espacios y signos, y 8 de las
+    carpetas de clientes en el disco terminan en espacio ('Adrian '). Sin esta
+    búsqueda, subir un documento de ese cliente crearía una carpeta 'Adrian'
+    nueva al lado de la real y le partiría el expediente en dos.
+    """
+    objetivo = _normalizar_encabezado(carpeta)
+    if not objetivo:
+        return None
+    try:
+        for hijo in raiz.iterdir():
+            if hijo.is_dir() and _normalizar_encabezado(hijo.name) == objetivo:
+                return hijo.name
+    except OSError:
+        pass
+    return None
+
+
+def ruta_segura_de_subida(carpeta_cliente, filename, raiz):
+    """Destino validado para un archivo subido, garantizado dentro de `raiz`.
+
+    Devuelve (ruta, None) o (None, motivo). La comprobación final se hace sobre
+    la ruta ya resuelta: es la única que resiste symlinks y '..' combinados.
+    """
+    carpeta = _nombre_seguro(carpeta_cliente, "Documentos_Subidos")
+    nombre = _nombre_seguro(filename, "documento.pdf")
+
+    # Si el cliente ya tiene carpeta, se usa la que existe con su nombre literal.
+    carpeta = _carpeta_existente_equivalente(raiz, carpeta) or carpeta
+
+    destino_dir = (raiz / carpeta).resolve()
+    raiz_resuelta = raiz.resolve()
+    if raiz_resuelta != destino_dir and raiz_resuelta not in destino_dir.parents:
+        return None, f"La carpeta '{carpeta_cliente}' queda fuera del directorio de expedientes"
+
+    destino = destino_dir / nombre
+    if raiz_resuelta not in destino.resolve().parents:
+        return None, f"El nombre '{filename}' queda fuera del directorio de expedientes"
+
+    # No se sobrescribe un expediente existente en silencio: en un archivo legal
+    # eso es pérdida de prueba. Se versiona el nombre.
+    if destino.exists():
+        tallo, ext = os.path.splitext(nombre)
+        for n in range(2, 1000):
+            candidato = destino_dir / f"{tallo} ({n}){ext}"
+            if not candidato.exists():
+                destino = candidato
+                break
+    return destino, None
+
+
 def _primera_columna(row):
     """Valor de la primera columna de la fila, o None si viene vacía.
 
@@ -555,7 +627,9 @@ def procesar_excel_pjud(file_path):
             xl = pd.ExcelFile(file_path, engine='openpyxl')
         except Exception:
             try:
-                xl = pd.ExcelFile(file_path, engine='xlrd')
+                import xlrd
+                book = xlrd.open_workbook(file_path, ignore_workbook_corruption=True)
+                xl = pd.ExcelFile(book, engine='xlrd')
             except Exception:
                 pass
     movimientos_dia = []
@@ -1574,6 +1648,108 @@ ES JUSTICIA."""
                 self.wfile.write(json.dumps({"status": "ok", "escrito": escrito_texto}, ensure_ascii=False).encode('utf-8'))
             except Exception as e:
                 print(f"⚠️ Error generando escrito IA: {e}")
+                self.send_response(500)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+            return
+
+        # ENDPOINT: /subir_documento (Guardar archivo subido en carpeta del cliente e indexar en SQLite FTS5)
+        elif parsed_url.path == "/subir_documento":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode('utf-8'))
+
+                filename = payload.get("filename", "documento.pdf")
+                content_b64 = payload.get("content_b64", "")
+                carpeta_cliente = payload.get("carpeta_cliente", "Documentos_Subidos")
+
+                if content_length > MAX_SUBIDA_BYTES * 2:  # base64 infla ~4/3
+                    self._responder_json({
+                        "status": "error",
+                        "error": f"El archivo excede el máximo de {MAX_SUBIDA_BYTES // 1048576} MB"
+                    }, 413)
+                    return
+
+                try:
+                    file_bytes = base64.b64decode(content_b64, validate=True)
+                except Exception:
+                    self._responder_json({"status": "error", "error": "El contenido no es base64 válido"}, 400)
+                    return
+
+                if not file_bytes:
+                    self._responder_json({"status": "error", "error": "El archivo llegó vacío"}, 400)
+                    return
+                if len(file_bytes) > MAX_SUBIDA_BYTES:
+                    self._responder_json({
+                        "status": "error",
+                        "error": f"El archivo pesa {len(file_bytes)//1048576} MB y el máximo es {MAX_SUBIDA_BYTES//1048576} MB"
+                    }, 413)
+                    return
+
+                base_casos_dir = Path("/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023")
+                if not base_casos_dir.exists():
+                    # Antes caía a /home/jaime/Descargas ignorando la carpeta del
+                    # cliente y respondía "guardado correctamente": el archivo
+                    # terminaba suelto en Descargas y el índice apuntaba ahí.
+                    # Mejor negarse que archivar un expediente donde no corresponde.
+                    self._responder_json({
+                        "status": "error",
+                        "error": "El disco de expedientes no está conectado. Conéctalo antes de subir documentos.",
+                        "ruta_esperada": str(base_casos_dir)
+                    }, 503)
+                    return
+
+                dest_path, motivo = ruta_segura_de_subida(carpeta_cliente, filename, base_casos_dir)
+                if dest_path is None:
+                    print(f"🚫 [SUBIDA RECHAZADA] {motivo} (filename={filename!r}, carpeta={carpeta_cliente!r})")
+                    self._responder_json({"status": "error", "error": motivo}, 400)
+                    return
+
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(dest_path, "wb") as f_out:
+                    f_out.write(file_bytes)
+                filename = dest_path.name  # puede haberse versionado o saneado
+                carpeta_cliente = dest_path.parent.name
+
+                # Indexar inmediatamente en la base de datos de texto completo SQLite FTS5
+                indexado = False
+                try:
+                    import indexar_pdfs
+                    texto, paginas = indexar_pdfs.extraer_texto(str(dest_path))
+                    if texto:
+                        db_path = BASE_DIR / "data" / "indice_texto.sqlite"
+                        # with cierra la conexión aunque el INSERT reviente: sin esto
+                        # un fallo dejaba la conexión y el lock del WAL colgando.
+                        with sqlite3.connect(db_path) as con_fts:
+                            con_fts.execute("DELETE FROM textos WHERE ruta = ?", (str(dest_path),))
+                            con_fts.execute(
+                                "INSERT INTO textos (ruta, nombre, carpeta, contenido) VALUES (?, ?, ?, ?)",
+                                (str(dest_path), filename, carpeta_cliente, texto)
+                            )
+                            con_fts.execute(
+                                "INSERT OR REPLACE INTO archivos (ruta, nombre, carpeta, tamano, modificado, paginas, indexado)"
+                                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                (str(dest_path), filename, carpeta_cliente, len(file_bytes), time.time(), paginas, time.time())
+                            )
+                        indexado = True
+                except Exception as e_idx:
+                    print(f"⚠️ Aviso indexación al subir: {e_idx}")
+
+                self.send_response(200)
+                self._send_cors_headers()
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "ok",
+                    "message": f"Documento {filename} guardado en la carpeta {carpeta_cliente}"
+                               + (" e indexado." if indexado else " (no se pudo indexar su texto)."),
+                    "path": str(dest_path),
+                    "indexado": indexado
+                }, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
                 self.send_response(500)
                 self._send_cors_headers()
                 self.send_header("Content-Type", "application/json; charset=utf-8")
