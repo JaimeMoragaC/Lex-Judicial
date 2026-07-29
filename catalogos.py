@@ -48,3 +48,19 @@ def cargar_clientes_disco():
 def cargar_causas_pjud():
     """Lista de causas importadas del Excel oficial del PJUD."""
     return cargar(PJUD, {}).get("casos", [])
+
+
+# --- Registro de plazos vigilados -------------------------------------------
+# A diferencia de los catálogos, esto NO se regenera: son plazos que el abogado
+# registró y que se pierden si se borran. Por eso viven en el servidor y no en
+# el localStorage del navegador.
+
+PLAZOS = "plazos"
+
+
+def cargar_plazos():
+    return cargar(PLAZOS, {"plazos": []}).get("plazos", [])
+
+
+def guardar_plazos(plazos):
+    return guardar(PLAZOS, {"plazos": plazos})

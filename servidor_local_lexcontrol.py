@@ -543,6 +543,15 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         self._send_cors_headers()
         self.end_headers()
 
+    def _responder_json(self, cuerpo, codigo=200):
+        datos = json.dumps(cuerpo, ensure_ascii=False).encode("utf-8")
+        self.send_response(codigo)
+        self._send_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(datos)))
+        self.end_headers()
+        self.wfile.write(datos)
+
     def _servir_dataset(self, nombre):
         """Entrega los catálogos pesados de data/ que antes iban compilados en el bundle.
 
@@ -922,6 +931,10 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         elif parsed_url.path.startswith("/data/"):
             self._servir_dataset(parsed_url.path[len("/data/"):])
 
+        # ENDPOINT 11: /plazos (Registro de plazos vigilados por el Radar)
+        elif parsed_url.path == "/plazos":
+            self._responder_json({"plazos": catalogos.cargar_plazos()})
+
         # ENDPOINT 6: /status (Verificación de salud del puente)
         elif parsed_url.path == "/status" or parsed_url.path == "/":
             self.send_response(200)
@@ -942,6 +955,24 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed_url = urllib.parse.urlparse(self.path)
+
+        # Guarda el registro completo de plazos vigilados. Se escribe de forma
+        # atómica: si algo falla a mitad, el registro anterior queda intacto.
+        if parsed_url.path == "/plazos":
+            try:
+                largo = int(self.headers.get("Content-Length", 0))
+                payload = json.loads(self.rfile.read(largo).decode("utf-8"))
+                plazos = payload.get("plazos")
+                if not isinstance(plazos, list):
+                    self._responder_json({"error": "Se esperaba {\"plazos\": [...]}"}, 400)
+                    return
+                catalogos.guardar_plazos(plazos)
+                print(f"⏱️  [RADAR] Registro de plazos guardado: {len(plazos)} vigilados")
+                self._responder_json({"status": "ok", "total": len(plazos)})
+            except Exception as e:
+                self._responder_json({"error": str(e)}, 500)
+            return
+
         if parsed_url.path == "/analizar_documento":
             try:
                 query_params = urllib.parse.parse_qs(parsed_url.query)

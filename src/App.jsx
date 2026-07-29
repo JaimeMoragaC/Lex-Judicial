@@ -10,6 +10,7 @@ import AsistenteProactivo from './components/AsistenteProactivo';
 import SmartDriveSorter from './components/SmartDriveSorter';
 import CasoDetailModal from './components/CasoDetailModal';
 import OmniSearch from './components/OmniSearch';
+import RadarPlazos from './components/RadarPlazos';
 import { MOCK_CASOS } from './mockData';
 import { CATALOGOS_CAIDOS } from './dataLoader';
 import { LEXCONTROL_API } from './apiBase';
@@ -76,6 +77,12 @@ export default function App() {
               setSelectedCasoForMatriz(MOCK_CASOS[0]); // Caso Temuco
               setActiveTab('matriz');
             }} 
+          />
+        )}
+
+        {activeTab === 'radar' && (
+          <RadarPlazos
+            onSelectCaso={(caso) => setSelectedCasoForModal(caso)}
           />
         )}
 
