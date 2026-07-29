@@ -34,6 +34,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
 
   const menuItems = [
     { id: 'dashboard', label: 'Mi Día & Plazos', icon: LayoutDashboard, badge: alerta?.accionables || null, tono: 'badge-red' },
+    { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
     { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
     { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare }
   ];
