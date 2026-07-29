@@ -80,23 +80,50 @@ export function puntuar(expediente, { cliente, asunto }) {
  * Candidatos ordenados de mejor a peor, buscando en las dos poblaciones:
  * las causas judiciales del PJUD y los expedientes extrajudiciales abiertos.
  */
-export function buscarCandidatos({ cliente, asunto, rol }, expedientes, causas) {
+export function buscarCandidatos({ cliente, asunto, rol, tramite }, expedientes, causas) {
   const salida = [];
+  const yaVistos = new Set();
 
   for (const e of expedientes) {
-    const score = puntuar(e, { cliente, asunto });
-    if (score > 0) salida.push({ tipo: 'expediente', score, ref: e });
+    let score = puntuar(e, { cliente, asunto });
+
+    // Búsqueda cruzada adicional por palabras clave si la nota no incluyó el cliente directo
+    if (score === 0 && (asunto || tramite)) {
+      const textoBuscado = `${asunto || ''} ${tramite || ''}`;
+      const pAsuntoExp = parecido(e.asunto, textoBuscado);
+      const pClienteExp = parecido(e.cliente, textoBuscado);
+      if (pAsuntoExp >= 0.4 || pClienteExp >= 0.4) {
+        score = Math.max(pAsuntoExp, pClienteExp) * 0.75;
+      }
+    }
+
+    if (score > 0) {
+      salida.push({ tipo: 'expediente', score, ref: e });
+      yaVistos.add(e.id);
+    }
   }
 
   const rolNorm = normalizar(rol);
   for (const c of causas) {
-    // Un ROL declarado que calza es evidencia dura: gana a cualquier parecido.
     if (rolNorm && rolNorm !== 'extrajudicial' && normalizar(c.rit).includes(rolNorm)) {
       salida.push({ tipo: 'causa', score: 1, ref: c });
       continue;
     }
-    const score = parecido(c.caratula, cliente);
-    if (score >= UMBRAL_CLIENTE) salida.push({ tipo: 'causa', score: score * 0.9, ref: c });
+    let score = parecido(c.caratula, cliente);
+
+    // Búsqueda secundaria por tribunal, ciudad o materia (ej: Calbuco, querella, etc.)
+    if (score < UMBRAL_CLIENTE && (asunto || tramite)) {
+      const textoCausa = `${c.caratula || ''} ${c.tribunal || ''} ${c.materia || ''} ${c.resumenTeoriaCaso || ''}`;
+      const textoNota = `${cliente || ''} ${asunto || ''} ${tramite || ''}`;
+      const pGeneral = parecido(textoCausa, textoNota);
+      if (pGeneral >= 0.35) {
+        score = pGeneral * 0.7;
+      }
+    }
+
+    if (score >= 0.35) {
+      salida.push({ tipo: 'causa', score: score * 0.9, ref: c });
+    }
   }
 
   return salida.sort((a, b) => b.score - a.score).slice(0, 8);

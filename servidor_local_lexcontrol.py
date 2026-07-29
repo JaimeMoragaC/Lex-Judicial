@@ -1296,16 +1296,34 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                     "required": ["cliente_detectado", "asunto_detectado", "rol_detectado", "tramite_generado", "estado", "urgencia"]
                 }
 
+                # Cargar contexto activo de expedientes y causas para que Gemini sepa de qué clientes habla el abogado
+                expedientes_activos = catalogos.cargar_expedientes()
+                causas_activas = catalogos.cargar_causas_pjud()
+                
+                resumen_contexto = []
+                for e in expedientes_activos[:15]:
+                    resumen_contexto.append(f"- Cliente: '{e.get('cliente')}', Asunto: '{e.get('asunto')}', ID: {e.get('id')}")
+                for c in causas_activas[:15]:
+                    resumen_contexto.append(f"- Cliente/Carátula: '{c.get('caratula')}', Tribunal/Materia: '{c.get('tribunal', '')} {c.get('materia', '')}', ROL: {c.get('rit')}")
+                
+                texto_contexto = "\n".join(resumen_contexto) if resumen_contexto else "Sin casos registrados aún."
+
                 prompt = f"""
 Eres un asistente jurídico. Clasifica el siguiente registro ingresado rápidamente por un abogado.
 Extrae el cliente, el asunto concreto, el ROL o causa, y genera un trámite procesal o acción realizada en base a lo escrito.
 Identifica si la gestión está terminada o pendiente.
 
+CONTEXTO DE CASOS Y CLIENTES REGISTRADOS EN EL ESTUDIO:
+{texto_contexto}
+
+REGLA DE ASOCIACIÓN POR CONTEXTO:
+Si el texto del abogado no dice explícitamente el nombre del cliente pero menciona una ciudad, tribunal, materia o asunto que coincide con un caso del contexto arriba listado (ej: 'querella en Calbuco' -> Víctor Garai / querella), ASIGNA a ese cliente y asunto en cliente_detectado y asunto_detectado.
+
 REGLA DE ORO: Si de la lectura se concluye que es una gestión administrativa, una asesoría o un caso extrajudicial sin ROL/RIT aparente, debes asignar "EXTRAJUDICIAL" en el campo rol_detectado.
 
 SOBRE EL CLIENTE: entrega el nombre limpio, sin "don", "doña", "señor" ni abreviaturas de tratamiento. El sistema usa ese nombre para reconocer que dos anotaciones distintas hablan de la misma persona, así que debe escribirse igual siempre.
 
-SOBRE EL ASUNTO: es el objeto de la gestión, no la acción. Un mismo cliente puede tener varios asuntos abiertos a la vez y cada uno es un expediente separado; el asunto es lo que los distingue. Usa el sustantivo del objeto: si el texto dice "llamé a Víctor Garai por la camioneta que le embargaron", el asunto es "camioneta".
+SOBRE EL ASUNTO: es el objeto de la gestión, no la acción. Un mismo cliente puede tener varios asuntos abiertos a la vez y cada uno es un expediente separado; el asunto es lo que los distingue.
 
 TEXTO:
 {texto_bitacora}
