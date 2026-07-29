@@ -485,6 +485,24 @@ def _normalizar_encabezado(texto):
     return re.sub(r"[^a-z0-9]", "", t.lower())
 
 
+def tipo_de_planilla(nombre_archivo):
+    """Distingue los dos correos diarios del PJUD, que NO son lo mismo.
+
+    'estadoDiario_8328581__28072026.xls'  -> lo publicado en el Estado Diario.
+    'Movimientos_8328581__29_07_2026.xls' -> movimientos en las causas propias.
+
+    Confundirlos hace perder resoluciones: el de Movimientos llega más tarde, así
+    que al recorrer la bandeja de lo más nuevo a lo más viejo aparece primero, y
+    si se corta ahí el Estado Diario del día no se llega a leer nunca.
+    """
+    n = _normalizar_encabezado(nombre_archivo)
+    if "estadodiario" in n:
+        return "estado_diario"
+    if "movimiento" in n:
+        return "movimientos"
+    return "otro"
+
+
 def _primera_columna(row):
     """Valor de la primera columna de la fila, o None si viene vacía.
 
@@ -941,6 +959,10 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                 usuario_gmail = query_params.get("usuario", [""])[0]
                 clave_app = query_params.get("clave_app", [""])[0]
                 modo = query_params.get("modo", ["auto"])[0]
+                # El PJUD manda dos planillas distintas cada día. Por defecto se
+                # lee el Estado Diario, que es el que fija los emplazamientos;
+                # con ?tipo=movimientos se pide la otra.
+                tipo_buscado = query_params.get("tipo", ["estado_diario"])[0]
                 
                 # Cargar configuración local de Gmail si no se pasan parámetros
                 if not usuario_gmail or not clave_app:
@@ -983,7 +1005,15 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                                             if part.get("Content-Disposition") is None:
                                                 continue
                                             filename = part.get_filename()
-                                            if filename and any(filename.lower().endswith(ext) for ext in [".xls", ".xlsx"]) and any(k in filename.lower() for k in ['movimiento', 'estadodiario', 'causa', '8328581']):
+                                            es_planilla = filename and any(filename.lower().endswith(ext) for ext in [".xls", ".xlsx"])
+                                            # Sólo se acepta el tipo pedido (por defecto el Estado
+                                            # Diario). Antes entraba cualquier adjunto y, como el
+                                            # correo de Movimientos llega más tarde, se leía ése y
+                                            # el Estado Diario del día quedaba sin abrir.
+                                            if es_planilla and tipo_de_planilla(filename) != tipo_buscado:
+                                                print(f"   ↪ omitido {filename}: es '{tipo_de_planilla(filename)}', se busca '{tipo_buscado}'")
+                                                continue
+                                            if es_planilla and any(k in filename.lower() for k in ['movimiento', 'estadodiario', 'causa', '8328581']):
                                                 clean_fname = filename.replace("/", "_").replace("\\", "_")
                                                 dest_path = os.path.join("/home/jaime/Descargas", f"gmail_pjud_{clean_fname}")
                                                 with open(dest_path, "wb") as f_out:

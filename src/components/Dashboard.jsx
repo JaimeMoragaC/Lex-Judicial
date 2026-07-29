@@ -177,9 +177,16 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz }) {
   const novedadesUnicas = useMemo(() => {
     if (!datosParteDiario || !datosParteDiario.novedades) return [];
     const mapa = new Map();
-    datosParteDiario.novedades.forEach(nov => {
-      // Clave de deduplicación: ROL + Título de la Resolución
-      mapa.set(`${nov.rol}-${nov.titulo}`, nov);
+    datosParteDiario.novedades.forEach((nov, i) => {
+      // La clave incluye tribunal y carátula, no sólo ROL + título. Con la clave
+      // anterior, dos causas que llegaran sin ROL identificable compartían clave
+      // y el Map se quedaba con una sola: se perdían resoluciones en silencio.
+      // Si el ROL no vino, no se deduplica nada (se usa el índice).
+      const sinRol = !nov.rol || /^(s\/n|sin rol)$/i.test(nov.rol.trim());
+      mapa.set(
+        sinRol ? `idx-${i}` : `${nov.rol}|${nov.tribunal}|${nov.caratula}|${nov.titulo}`,
+        nov
+      );
     });
     return Array.from(mapa.values());
   }, [datosParteDiario]);
