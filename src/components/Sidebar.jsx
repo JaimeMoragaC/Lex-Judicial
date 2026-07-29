@@ -12,7 +12,8 @@ import {
   HardDrive,
   Search,
   FileSearch,
-  Download
+  Download,
+  MessageSquare
 } from 'lucide-react';
 
 import { MOCK_STATS } from '../mockData';
@@ -31,6 +32,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   const menuItems = [
     { id: 'dashboard', label: 'Centro de mando', icon: LayoutDashboard },
+    { id: 'bitacora', label: 'Bitácora omnicanal', icon: MessageSquare },
     { id: 'radar', label: 'Radar de plazos', icon: Radar, badge: alerta?.accionables || null, tono: 'badge-red' },
     { id: 'buscador', label: 'Búsqueda en contenido', icon: FileSearch },
     { id: 'proactivo', label: 'Asistente documental', icon: Sparkles },
