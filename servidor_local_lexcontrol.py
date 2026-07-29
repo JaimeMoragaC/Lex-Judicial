@@ -27,6 +27,32 @@ import pandas as pd
 import urllib.request
 import shutil
 
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def cargar_dotenv(ruta=None):
+    """Lee un .env de formato KEY=VALOR y lo vuelca a os.environ.
+
+    Las variables ya presentes en el entorno tienen prioridad, para poder
+    sobrescribir la configuración sin editar el archivo.
+    """
+    ruta = Path(ruta) if ruta else BASE_DIR / ".env"
+    if not ruta.exists():
+        return
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, _, valor = linea.partition("=")
+        clave = clave.strip()
+        valor = valor.strip().strip('"').strip("'")
+        if clave and clave not in os.environ:
+            os.environ[clave] = valor
+
+
+cargar_dotenv()
+
+
 def archivar_pdf_fisicamente(tmp_path, filename, rol, cliente, caratula):
     path_real_disk = "/home/jaime/Descargas/lex-control-casos/src/realDiskData.js"
     local_folders = {}
@@ -89,7 +115,9 @@ def archivar_pdf_fisicamente(tmp_path, filename, rol, cliente, caratula):
 PUERTO = 8888
 HOST = "localhost"
 
-GEMINI_API_KEY = "***REDACTADO-ROTAR-ESTA-KEY***"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if not GEMINI_API_KEY:
+    print("⚠️  GEMINI_API_KEY no definida (revisa el archivo .env). El análisis con IA quedará desactivado.")
 
 def analizar_con_gemini(texto_completo, filename_clean, total_paginas):
     if not GEMINI_API_KEY or len(texto_completo.strip()) < 30:
@@ -907,7 +935,18 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
                 texto_bitacora = payload.get("texto", "")
                 
                 print(f"📥 [BITÁCORA OMNICANAL] Procesando texto: '{texto_bitacora}'")
-                
+
+                if not GEMINI_API_KEY:
+                    self.send_response(503)
+                    self._send_cors_headers()
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "status": "error",
+                        "error": "GEMINI_API_KEY no configurada en el archivo .env del servidor."
+                    }).encode('utf-8'))
+                    return
+
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
                 
                 schema = {

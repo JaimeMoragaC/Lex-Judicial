@@ -1,4 +1,32 @@
+# ==========================================================
+# SECRETOS - nunca versionar
+# ==========================================================
+.env
+.env.*
+!.env.example
+.pjud_config.json
+!.pjud_config.example.json
+pjud_cookies.json
+*.pem
+*.key
+credentials.json
+token.json
+
+# ==========================================================
+# Dependencias y artefactos de build
+# ==========================================================
+node_modules
+dist
+dist-ssr
+*.local
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ==========================================================
 # Logs
+# ==========================================================
 logs
 *.log
 npm-debug.log*
@@ -7,12 +35,22 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# ==========================================================
+# Capturas y volcados del scraper OJV (ruido, se regeneran)
+# ==========================================================
+ojv_*.png
+captcha_*.png
+prueba_*.png
+*_resultado.png
 
-# Editor directories and files
+# ==========================================================
+# Salida de herramientas auxiliares
+# ==========================================================
+graphify-out/
+
+# ==========================================================
+# Editores y sistema
+# ==========================================================
 .vscode/*
 !.vscode/extensions.json
 .idea

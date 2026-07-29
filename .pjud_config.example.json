@@ -1,0 +1,9 @@
+{
+  "rut": "12345678-9",
+  "clave_pjud": "TU_CLAVE_AQUI",
+  "modo_conexion": "clave_unica",
+  "url_portal": "https://oficinajudicialvirtual.pjud.cl/home/",
+  "timeout_segundos": 45,
+  "descarga_automatica_pdf": true,
+  "explicacion_seguridad": "Credenciales de la Oficina Judicial Virtual. Este archivo vive solo en disco local con permisos 600 y esta excluido del control de versiones."
+}
