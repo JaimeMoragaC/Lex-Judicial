@@ -1,32 +1,25 @@
 import pandas as pd
-import json
-import os
 import re
+
+import catalogos
 
 path_causas = "/home/jaime/Descargas/Causas_8328581-8.xlsx"
 path_ed = "/home/jaime/Descargas/EstadoDiario8328581-8_25_07_2026.xls"
-path_real_disk = "/home/jaime/Descargas/lex-control-casos/src/realDiskData.js"
-out_js = "/home/jaime/Descargas/lex-control-casos/src/pjudCausesData.js"
 
 print("="*70)
 print("🚀 MOTOR DE CRUCE RELACIONAL: EXCEL PJUD <-> DISCO DURO FORENSE")
 print("="*70)
 
-# 1. Cargar carpetas locales de realDiskData.js para buscar coincidencias
+# 1. Cargar carpetas locales del catálogo de disco para buscar coincidencias
 local_folders = {}
-if os.path.exists(path_real_disk):
-    try:
-        with open(path_real_disk, "r", encoding="utf-8") as f:
-            content = f.read()
-            json_str = content[content.find("["):content.rfind("]")+1]
-            data_disk = json.loads(json_str)
-            for item in data_disk:
-                fname = item.get("folderName", "").strip().lower()
-                if fname:
-                    local_folders[fname] = item.get("folderName", "")
-        print(f"📁 Cargadas {len(local_folders)} carpetas de clientes del Disco Duro Local para cruce.")
-    except Exception as e:
-        print(f"⚠️ Aviso al leer disco local: {e}")
+try:
+    for item in catalogos.cargar_clientes_disco():
+        fname = item.get("folderName", "").strip().lower()
+        if fname:
+            local_folders[fname] = item.get("folderName", "")
+    print(f"📁 Cargadas {len(local_folders)} carpetas de clientes del Disco Duro Local para cruce.")
+except Exception as e:
+    print(f"⚠️ Aviso al leer disco local: {e}")
 
 # 2. Función inteligente para extraer Cliente y Contraparte
 def extraer_partes(caratula, rol_str):
@@ -144,21 +137,14 @@ for sheet in xl_c.sheet_names:
         })
         id_counter += 1
 
-# 4. Guardar archivo JS importable en React
-js_content = f"""// pjudCausesData.js - Generado automáticamente desde el Excel Oficial de PJUD
-// Total de causas procesadas en las 7 Cortes: {len(casos_procesados)}
-// Causas vinculadas exitosamente al Disco Duro Local: {match_disk_count}
+# 4. Guardar el catálogo que sirve el servidor local a la app React
+destino = catalogos.guardar(catalogos.PJUD, {
+    "totalCausas": len(casos_procesados),
+    "matchDisco": match_disk_count,
+    "casos": casos_procesados,
+})
 
-export const PJUD_CASOS_TOTAL = {len(casos_procesados)};
-export const PJUD_CASOS_MATCH_DISCO = {match_disk_count};
-
-export const PJUD_CASOS = {json.dumps(casos_procesados, indent=2, ensure_ascii=False)};
-"""
-
-with open(out_js, "w", encoding="utf-8") as f_out:
-    f_out.write(js_content)
-
-print(f"✅ GENERACIÓN EXITOSA: {out_js}")
+print(f"✅ GENERACIÓN EXITOSA: {destino}")
 print(f"📊 Total de causas exportadas: {len(casos_procesados)}")
 print(f"🔗 Causas con expediente hermano encontrado en tu Disco Duro Local: {match_disk_count}")
 print("\nDesglose por Jurisdicción:")

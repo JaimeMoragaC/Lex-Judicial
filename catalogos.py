@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Acceso único a los catálogos de datos de LexControl.
+
+Los catálogos pesados (disco duro forense y causas del PJUD) viven en data/*.json
+y los sirve servidor_local_lexcontrol.py por /data/<nombre>. Antes eran archivos
+.js de decenas de miles de líneas que cada script parseaba a mano recortando entre
+el primer '[' y el último ']'; este módulo reemplaza esa maniobra.
+"""
+import json
+from pathlib import Path
+
+DATOS_DIR = Path(__file__).resolve().parent / "data"
+
+DISCO = "realDiskData"
+PJUD = "pjudCausesData"
+
+
+def ruta(nombre):
+    return DATOS_DIR / f"{nombre}.json"
+
+
+def cargar(nombre, por_defecto=None):
+    """Devuelve el catálogo completo, o `por_defecto` si aún no se ha generado."""
+    destino = ruta(nombre)
+    if not destino.is_file():
+        return por_defecto if por_defecto is not None else {}
+    with open(destino, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def guardar(nombre, contenido):
+    """Escribe el catálogo de forma atómica, para no dejarlo a medias si algo falla."""
+    DATOS_DIR.mkdir(parents=True, exist_ok=True)
+    destino = ruta(nombre)
+    temporal = destino.with_suffix(".json.tmp")
+    with open(temporal, "w", encoding="utf-8") as f:
+        json.dump(contenido, f, ensure_ascii=False, separators=(",", ":"))
+    temporal.replace(destino)
+    return destino
+
+
+def cargar_clientes_disco():
+    """Lista de mandantes con sus carpetas físicas. Vacía si falta el catálogo."""
+    return cargar(DISCO, {}).get("clientes", [])
+
+
+def cargar_causas_pjud():
+    """Lista de causas importadas del Excel oficial del PJUD."""
+    return cargar(PJUD, {}).get("casos", [])

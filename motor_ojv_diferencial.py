@@ -21,6 +21,8 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 
+import catalogos
+
 # INTENTO DE IMPORTACIÓN DE PLAYWRIGHT PARA NAVEGACIÓN WEB EN VIVO
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -32,7 +34,6 @@ except ImportError:
 DISCO_CASOS_RAIZ = Path("/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023")
 ARCHIVO_COOKIES = Path("/home/jaime/Descargas/lex-control-casos/pjud_cookies.json")
 PARTE_DIARIO_OUT = Path("/home/jaime/Descargas/lex-control-casos/src/parteDiarioData.js")
-REAL_DISK_DATA_PATH = Path("/home/jaime/Descargas/lex-control-casos/src/realDiskData.js")
 CONFIG_PJUD_PATH = Path("/home/jaime/Descargas/lex-control-casos/.pjud_config.json")
 LOG_WORKER = Path("/home/jaime/Descargas/lex-control-casos/worker_ojv.log")
 
@@ -84,21 +85,15 @@ class MotorDiferencialOJV:
 
     def cargar_causas_reales_disco(self):
         registrar_log("Cargando catálogo de mandantes reales desde disco duro...")
-        if not REAL_DISK_DATA_PATH.exists():
-            registrar_log("Error: No se encontró realDiskData.js.")
+        if not catalogos.ruta(catalogos.DISCO).exists():
+            registrar_log("Error: no existe data/realDiskData.json. Genéralo con generar_db_disco_real.py.")
             return False
-            
+
         try:
-            with open(REAL_DISK_DATA_PATH, "r", encoding="utf-8") as f:
-                texto = f.read()
-            start_idx = texto.find("[")
-            end_idx = texto.rfind("]")
-            if start_idx != -1 and end_idx != -1:
-                json_str = texto[start_idx : end_idx + 1]
-                self.datos_reales_estudio = json.loads(json_str)
-                total_c = sum(len(cli.get("causas", [])) for cli in self.datos_reales_estudio)
-                registrar_log(f"✅ Catálogo cargado: {len(self.datos_reales_estudio)} mandantes y {total_c} expedientes físicos.")
-                return True
+            self.datos_reales_estudio = catalogos.cargar_clientes_disco()
+            total_c = sum(len(cli.get("causas", [])) for cli in self.datos_reales_estudio)
+            registrar_log(f"✅ Catálogo cargado: {len(self.datos_reales_estudio)} mandantes y {total_c} expedientes físicos.")
+            return True
         except Exception as e:
             registrar_log(f"Error parseando catálogo real de causas: {e}")
             return False

@@ -26,8 +26,12 @@ import fitz
 import pandas as pd
 import urllib.request
 import shutil
+import gzip
+
+import catalogos
 
 BASE_DIR = Path(__file__).resolve().parent
+DATOS_DIR = catalogos.DATOS_DIR
 
 
 def cargar_dotenv(ruta=None):
@@ -54,20 +58,14 @@ cargar_dotenv()
 
 
 def archivar_pdf_fisicamente(tmp_path, filename, rol, cliente, caratula):
-    path_real_disk = "/home/jaime/Descargas/lex-control-casos/src/realDiskData.js"
     local_folders = {}
-    if os.path.exists(path_real_disk):
-        try:
-            with open(path_real_disk, "r", encoding="utf-8") as f:
-                content = f.read()
-                json_str = content[content.find("["):content.rfind("]")+1]
-                data_disk = json.loads(json_str)
-                for item in data_disk:
-                    fname = item.get("folderName", "").strip().lower()
-                    if fname:
-                        local_folders[fname] = item.get("path", "")
-        except Exception as e:
-            print(f"Error leyendo disco local: {e}")
+    try:
+        for item in catalogos.cargar_clientes_disco():
+            fname = item.get("folderName", "").strip().lower()
+            if fname:
+                local_folders[fname] = item.get("path", "")
+    except Exception as e:
+        print(f"Error leyendo disco local: {e}")
 
     target_path = None
     c_lower = str(cliente).lower().strip()
@@ -112,8 +110,8 @@ def archivar_pdf_fisicamente(tmp_path, filename, rol, cliente, caratula):
     return None
 
 
-PUERTO = 8888
-HOST = "localhost"
+PUERTO = int(os.environ.get("LEXCONTROL_PORT", "8888"))
+HOST = os.environ.get("LEXCONTROL_HOST", "localhost")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if not GEMINI_API_KEY:
@@ -456,9 +454,6 @@ def extraer_metadatos_forenses_pdf(filepath_or_bytes, filename=""):
         "texto_extraido_muestra": texto_completo[:600]
     }
 
-PUERTO = 8888
-HOST = "localhost"
-
 def procesar_excel_pjud(file_path):
     print(f"📊 [MOTOR EXCEL PJUD] Procesando archivo matutino: {file_path}")
     try:
@@ -547,6 +542,61 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self._send_cors_headers()
         self.end_headers()
+
+    def _servir_dataset(self, nombre):
+        """Entrega los catálogos pesados de data/ que antes iban compilados en el bundle.
+
+        Comprime con gzip si el navegador lo acepta (los ~5 MB de catálogo bajan a
+        ~450 KB) y responde 304 cuando el ETag del cliente sigue vigente.
+        """
+        # Solo nombres simples: corta cualquier intento de salir de data/
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", nombre or ""):
+            self.send_response(400)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Nombre de dataset invalido"}).encode("utf-8"))
+            return
+
+        ruta = DATOS_DIR / f"{nombre}.json"
+        if not ruta.is_file():
+            self.send_response(404)
+            self._send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            disponibles = sorted(p.stem for p in DATOS_DIR.glob("*.json")) if DATOS_DIR.is_dir() else []
+            self.wfile.write(json.dumps({
+                "error": f"No existe el dataset '{nombre}'",
+                "disponibles": disponibles,
+                "pista": "Regenera los catalogos con generar_db_disco_real.py e importar_excel_pjud.py",
+            }, ensure_ascii=False).encode("utf-8"))
+            return
+
+        st = ruta.stat()
+        etag = f'"{int(st.st_mtime)}-{st.st_size}"'
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self._send_cors_headers()
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return
+
+        cuerpo = ruta.read_bytes()
+        comprimir = "gzip" in (self.headers.get("Accept-Encoding") or "")
+        if comprimir:
+            cuerpo = gzip.compress(cuerpo, compresslevel=6)
+
+        self.send_response(200)
+        self._send_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        if comprimir:
+            self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.send_header("ETag", etag)
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(cuerpo)
+        print(f"📚 [CATALOGO] {nombre}: {st.st_size / 1048576:.1f} MB -> {len(cuerpo) / 1024:.0f} KB {'(gzip)' if comprimir else ''}")
 
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
@@ -868,13 +918,22 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(res, ensure_ascii=False).encode('utf-8'))
 
+        # ENDPOINT 10: /data/<dataset> (Sirve los catálogos pesados fuera del bundle)
+        elif parsed_url.path.startswith("/data/"):
+            self._servir_dataset(parsed_url.path[len("/data/"):])
+
         # ENDPOINT 6: /status (Verificación de salud del puente)
         elif parsed_url.path == "/status" or parsed_url.path == "/":
             self.send_response(200)
             self._send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(b'{"status": "activo", "motor": "LexControl File Launcher v2.2 (Opcion A)", "puerto": 8888}')
+            self.wfile.write(json.dumps({
+                "status": "activo",
+                "motor": "LexControl File Launcher v2.2 (Opcion A)",
+                "puerto": PUERTO,
+                "datasets": sorted(p.stem for p in DATOS_DIR.glob("*.json")) if DATOS_DIR.is_dir() else [],
+            }).encode("utf-8"))
 
         else:
             self.send_response(404)
