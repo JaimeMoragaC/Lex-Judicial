@@ -418,6 +418,9 @@ button {
 
 .sidebar-nav-title { padding: 0 var(--space-3) var(--space-2); }
 
+/* Separación entre grupos del menú, sin línea: el aire ya agrupa. */
+.sidebar-nav-grupo { padding-top: var(--space-4); }
+
 .sidebar-link {
   display: flex;
   align-items: center;

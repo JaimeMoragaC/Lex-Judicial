@@ -33,14 +33,24 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
       .catch(() => setAlerta(null));
   }, []);
 
+  // Toda sección que App.jsx sepa renderizar tiene que tener entrada acá. Cinco
+  // habían quedado sin la suya (radar, proactivo, buscador, calculadora, matriz):
+  // el código seguía en App.jsx pero no había forma de llegar a ellas.
   const menuItems = [
     { id: 'dashboard', label: 'Mi Día & Plazos', icon: LayoutDashboard, badge: alerta?.accionables || null, tono: 'badge-red' },
-    { id: 'redactor', label: 'Redactor & Copiloto IA', icon: Sparkles },
+    { id: 'radar', label: 'Radar de Plazos', icon: Radar, badge: alerta?.accionables || null, tono: 'badge-red' },
     { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
-    { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null },
-    { id: 'clientes', label: 'Directorio de Clientes', icon: Users },
-    { id: 'smartdrive', label: 'Subida & Organizador de Documentos', icon: UploadCloud },
-    { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare }
+    { id: 'calculadora', label: 'Cómputo de Términos', icon: Calculator },
+
+    { id: 'proactivo', label: 'Subir & Analizar Documento', icon: UploadCloud, grupo: 'Documentos' },
+    { id: 'smartdrive', label: 'Explorador del Disco', icon: HardDrive, grupo: 'Documentos' },
+    { id: 'buscador', label: 'Buscar en el Contenido', icon: FileSearch, grupo: 'Documentos' },
+    { id: 'redactor', label: 'Redactor & Copiloto IA', icon: Sparkles, grupo: 'Documentos' },
+
+    { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null, grupo: 'Expedientes' },
+    { id: 'matriz', label: 'Matriz Probatoria', icon: Scale, grupo: 'Expedientes' },
+    { id: 'clientes', label: 'Directorio de Clientes', icon: Users, grupo: 'Expedientes' },
+    { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare, grupo: 'Expedientes' }
   ];
 
   return (
@@ -76,13 +86,16 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
       </div>
 
       <nav className="sidebar-nav" aria-label="Módulos del estudio">
-        <p className="eyebrow sidebar-nav-title">Módulos</p>
-        {menuItems.map((item) => {
+        <p className="eyebrow sidebar-nav-title">Plazos</p>
+        {menuItems.map((item, i) => {
           const Icon = item.icon;
           const activo = activeTab === item.id;
+          // Encabezado cuando arranca un grupo distinto al del ítem anterior.
+          const grupoNuevo = item.grupo && item.grupo !== menuItems[i - 1]?.grupo;
           return (
+            <React.Fragment key={item.id}>
+            {grupoNuevo && <p className="eyebrow sidebar-nav-title sidebar-nav-grupo">{item.grupo}</p>}
             <button
-              key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`sidebar-link${activo ? ' is-active' : ''}`}
               aria-current={activo ? 'page' : undefined}
@@ -95,6 +108,7 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
                 <span className={`badge ${item.tono || ''}`}>{item.badge}</span>
               ) : null}
             </button>
+            </React.Fragment>
           );
         })}
       </nav>
