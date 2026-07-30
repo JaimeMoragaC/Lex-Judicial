@@ -44,7 +44,7 @@ import { MOCK_CASOS } from '../mockData';
 import { cargarPlazos, guardarPlazos, normalizarFechaIso, hoyLocal } from '../utils/radarPlazos.js';
 
 function extraerCiudad(caso) {
-  if (!caso) return 'Temuco';
+  if (!caso) return 'Sin ciudad asignada';
   if (caso.ciudad) return caso.ciudad;
   const trib = (caso.tribunal || '').toLowerCase();
   if (trib.includes('temuco')) return 'Temuco';
@@ -58,7 +58,19 @@ function extraerCiudad(caso) {
   if (trib.includes('collipulli')) return 'Collipulli';
   if (trib.includes('puerto montt')) return 'Puerto Montt';
   if (trib.includes('valdivia')) return 'Valdivia';
-  return caso.jurisdiccion || 'Temuco';
+  if (caso.jurisdiccion) return caso.jurisdiccion;
+
+  const m = (caso.tribunal || '').match(/(?:de|en)\s+([A-ZÁÉÍÓÚÑa-záréíóúñ\s]+)$/i);
+  if (m && m[1]) return m[1].trim();
+
+  return caso.tribunal || 'Sin ciudad asignada';
+}
+
+function extraerCliente(caso) {
+  if (!caso) return 'Sin cliente asignado';
+  if (caso.cliente) return caso.cliente;
+  if (caso.caratula) return caso.caratula;
+  return 'Sin cliente asignado';
 }
 
 export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectCaso }) {
@@ -544,8 +556,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             casoId: caso.id || null,
             casoRit: caso.rit || caso.id || 'RIT Desconocido',
             rit: caso.rit || caso.id || 'RIT Desconocido',
-            caratula: caso.caratula || caso.cliente || 'Víctor Garai',
-            cliente: caso.cliente || caso.caratula || 'Víctor Garai',
+            caratula: caso.caratula || caso.cliente || 'Carátula sin registrar',
+            cliente: caso.cliente || caso.caratula || 'Sin cliente asignado',
             tribunal: caso.tribunal || 'Juzgado de Letras',
             actuacion: tramiteLimpio,
             descripcion: tramiteLimpio,
@@ -952,7 +964,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               <div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Cliente / Patrocinado</div>
                 <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  👤 {caso.cliente || caso.caratula || 'Víctor Garai'}
+                  👤 {extraerCliente(caso)}
                 </div>
               </div>
             </div>

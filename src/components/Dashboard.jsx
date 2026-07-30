@@ -137,8 +137,8 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         const est = clasificar(p, hoy);
         lista.push({
           id: p.id || `plazo-${idx}`,
-          casoRit: p.casoRit || p.rit || p.rol || 'RIT O-934-2023',
-          caratula: p.caratula || p.cliente || 'Víctor Garai',
+          casoRit: p.casoRit || p.rit || p.rol || 'Sin ROL',
+          caratula: p.caratula || p.cliente || 'Carátula no especificada',
           descripcion: p.actuacion || p.descripcion || p.asunto || 'Trámite Procesal Pendiente',
           responsable: 'Jaime Moraga C.',
           fechaVencimiento: fIso,
@@ -164,11 +164,11 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         const ultGestion = (exp.gestiones && exp.gestiones[0]) ? exp.gestiones[0].fecha : '2026-06-01';
         lista.push({
           id: exp.id,
-          rit: exp.ritVinculado || exp.id || 'RIT O-934-2023',
-          caratula: exp.asunto || 'Gestión Extrajudicial',
-          cliente: exp.cliente || 'Víctor Garai',
+          rit: exp.ritVinculado || exp.id || 'Sin ROL',
+          caratula: exp.asunto || exp.caratula || 'Gestión Extrajudicial',
+          cliente: exp.cliente || exp.caratula || 'Cliente no asignado',
           diasInactivo: 45,
-          tribunal: exp.tipo === 'judicial' ? 'Juzgado de Garantía de Calbuco' : 'Gestión Extrajudicial',
+          tribunal: exp.tipo === 'judicial' ? (exp.tribunal || 'Juzgado de Letras') : 'Gestión Extrajudicial',
           ultimaResolucion: exp.gestiones && exp.gestiones[0] ? exp.gestiones[0].tramite : 'Registro inicial en bitácora',
           fechaUltimaResolucion: ultGestion
         });
@@ -203,12 +203,12 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
       });
     }
 
-    // Si no existe un objeto formal, construirlo dinámicamente con sus gestiones
+    // Si no existe un objeto formal, construirlo dinámicamente con sus gestiones reales
     const casoFinal = casoEncontrado || {
       id: plazo.casoId || plazo.casoRit || plazo.rit || 'C-1',
       rit: plazo.casoRit || plazo.rit || 'RIT Desconocido',
-      caratula: plazo.caratula || plazo.cliente || 'Víctor Garai / Calbuco',
-      cliente: plazo.cliente || plazo.caratula || 'Víctor Garai',
+      caratula: plazo.caratula || plazo.cliente || 'Carátula no especificada',
+      cliente: plazo.cliente || plazo.caratula || 'Cliente no asignado',
       tribunal: plazo.tribunal || 'Juzgado de Letras',
       materia: 'Civil',
       etapa: 'Tramitación',
