@@ -149,10 +149,6 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
       });
     }
 
-    if (lista.length === 0) {
-      return MOCK_PLAZOS_FATALES;
-    }
-
     return lista;
   }, [plazosReales]);
 

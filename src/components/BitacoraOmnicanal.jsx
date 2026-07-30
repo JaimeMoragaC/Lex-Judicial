@@ -108,6 +108,7 @@ export default function BitacoraOmnicanal() {
       cliente: propuesta.cliente,
       asunto: propuesta.asunto,
       cuaderno: 'Bitácora Omnicanal',
+      origen: `Registro Rápido - Cliente: ${propuesta.cliente || 'No detectado'}`,
       timestamp: new Date().toISOString()
     };
 
@@ -121,6 +122,7 @@ export default function BitacoraOmnicanal() {
           expedientes
         );
         nuevo.gestiones = [gestion];
+        localStorage.setItem(`lexcontrol_gestiones_${nuevo.id}`, JSON.stringify(nuevo.gestiones));
         siguientes.push(nuevo);
         destino = { id: nuevo.id, etiqueta: `${nuevo.cliente}${nuevo.asunto ? ` — ${nuevo.asunto}` : ''}`, nuevo: true };
       } else if (eleccion.ref.tipo === 'causa') {
@@ -132,11 +134,19 @@ export default function BitacoraOmnicanal() {
           exp.ritVinculado = causa.rit;
           siguientes.push(exp);
         }
-        exp.gestiones = [gestion, ...(exp.gestiones || [])];
+        const key = `lexcontrol_gestiones_${exp.id || exp.ritVinculado}`;
+        const savedGestiones = localStorage.getItem(key);
+        let actualGest = savedGestiones ? JSON.parse(savedGestiones) : (exp.gestiones || []);
+        exp.gestiones = [gestion, ...actualGest];
+        localStorage.setItem(key, JSON.stringify(exp.gestiones));
         destino = { id: causa.rit, etiqueta: causa.caratula, nuevo: false };
       } else {
         const exp = siguientes.find((x) => x.id === eleccion.ref.ref.id);
-        exp.gestiones = [gestion, ...(exp.gestiones || [])];
+        const key = `lexcontrol_gestiones_${exp.id}`;
+        const savedGestiones = localStorage.getItem(key);
+        let actualGest = savedGestiones ? JSON.parse(savedGestiones) : (exp.gestiones || []);
+        exp.gestiones = [gestion, ...actualGest];
+        localStorage.setItem(key, JSON.stringify(exp.gestiones));
         destino = {
           id: exp.id,
           etiqueta: `${exp.cliente}${exp.asunto ? ` — ${exp.asunto}` : ''}`,
@@ -146,6 +156,7 @@ export default function BitacoraOmnicanal() {
       }
 
       await guardarExpedientes(siguientes);
+      window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
       setExpedientes(siguientes);
       setAviso({
         id: destino.id,

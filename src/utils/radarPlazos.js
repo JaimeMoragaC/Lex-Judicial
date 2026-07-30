@@ -175,7 +175,17 @@ export function recomputar(plazo) {
 
 // --- Persistencia y Recolección Unificada ------------------------------------
 
-export function obtenerGestionesGlobalesLocalStorage() {
+/**
+ * Recolecta las notas y tareas con fecha que hay en el navegador.
+ *
+ * IMPORTANTE: esto NO son plazos fatales. Son recordatorios. Un plazo fatal nace
+ * de una actuación procesal con su fecha de notificación y un régimen de cómputo;
+ * lo calcula plazosChile.js y vive en el registro del servidor. Estas entradas
+ * sólo tienen la fecha en que se escribió la nota, con dias:0, así que meterlas
+ * en el semáforo de fatales hacía que cada anotación apareciera venciendo hoy y
+ * en rojo. Van en su propia lista.
+ */
+export function obtenerAgendaLocalStorage() {
   const plazosExtraidos = [];
   const hoy = hoyLocal();
 
@@ -191,7 +201,8 @@ export function obtenerGestionesGlobalesLocalStorage() {
           if (Array.isArray(gestiones)) {
             gestiones.forEach((g, idx) => {
               const fIso = normalizarFechaIso(g.fechaIso || g.fecha);
-              const esRealizado = g.estado === 'REALIZADO' || g.estado === 'TERMINADO' || g.estado === 'FALLADO / ARCHIVADO';
+              const estadoNorm = (g.estado || '').trim().toUpperCase();
+              const esRealizado = estadoNorm.includes('REALIZAD') || estadoNorm.includes('COMPLETAD') || estadoNorm.includes('TERMINAD') || estadoNorm.includes('FALLADO') || estadoNorm.includes('ARCHIVADO');
               
               if (fIso && !esRealizado) {
                 const fechaFinal = fIso || hoy;
@@ -232,7 +243,9 @@ export function obtenerGestionesGlobalesLocalStorage() {
           if (Array.isArray(tareas)) {
             tareas.forEach((t, idx) => {
               const fIso = normalizarFechaIso(t.fecha);
-              if (fIso) {
+              const estadoNorm = (t.estado || '').trim().toUpperCase();
+              const esRealizado = t.completada === true || estadoNorm.includes('REALIZAD') || estadoNorm.includes('COMPLETAD') || estadoNorm.includes('TERMINAD') || estadoNorm.includes('FALLADO') || estadoNorm.includes('ARCHIVADO');
+              if (fIso && !esRealizado) {
                 const estadoSemaforo = clasificar({ fechaVencimiento: fIso }, hoy);
                 plazosExtraidos.push({
                   id: `ls-tarea-${t.id || idx}`,
@@ -267,34 +280,41 @@ export function obtenerGestionesGlobalesLocalStorage() {
   return plazosExtraidos;
 }
 
+/**
+ * Plazos fatales: sólo los calculados con el motor procesal y guardados en el
+ * servidor. Se había quitado este fetch por creer que data/plazos.json era data
+ * de prueba; no lo es, es el registro que se llena desde la Calculadora con
+ * "Vigilar en el radar". Sin él el semáforo mostraba únicamente notas.
+ */
 export async function cargarPlazos() {
-  let plazosServidor = [];
-  try {
-    const res = await fetch(`${LEXCONTROL_API}/plazos`);
-    if (res.ok) {
-      const datos = await res.json();
-      plazosServidor = (datos.plazos || []).map(recomputar);
-    }
-  } catch (e) {}
+  const res = await fetch(`${LEXCONTROL_API}/plazos`);
+  if (!res.ok) throw new Error(`El servidor respondió HTTP ${res.status}`);
+  const datos = await res.json();
+  return (datos.plazos || []).map(recomputar);
+}
 
-  const plazosLS = obtenerGestionesGlobalesLocalStorage();
+/**
+ * Agenda: notas y tareas con fecha. Cada una se marca con el expediente al que
+ * dice pertenecer y si ese expediente se pudo resolver, porque muchas claves de
+ * localStorage vienen de la Bitácora antigua y apuntan a identificadores que
+ * nunca fueron causas ('EXTRAJUDICIAL', 's/n', roles inventados por la IA).
+ */
+export async function cargarAgenda(causas = [], expedientes = []) {
+  const ritsConocidos = new Set(causas.map((c) => String(c.rit || '').toUpperCase()));
+  const idsConocidos = new Set(expedientes.map((e) => String(e.id || '').toUpperCase()));
+  const huerfano = /^(extrajudicial|s\/n|sin rol|undefined|null|)$/i;
 
-  // DEDUPLICAR Y UNIFICAR
-  const mapa = new Map();
-  [...plazosLS, ...plazosServidor].forEach(p => {
-    const fNorm = normalizarFechaIso(p.fechaVencimiento || p.vencimiento || p.fechaBase);
-    const clave = `${p.rit || p.casoRit}-${p.actuacion || p.descripcion}-${fNorm}`;
-    if (!mapa.has(clave)) {
-      mapa.set(clave, {
-        ...p,
-        fechaVencimiento: fNorm,
-        vencimiento: fNorm,
-        clasificacion: clasificar({ fechaVencimiento: fNorm }, hoyLocal())
-      });
-    }
+  return obtenerAgendaLocalStorage().map((g) => {
+    const ref = String(g.casoRit || '').toUpperCase();
+    const resuelto = ritsConocidos.has(ref) || idsConocidos.has(ref);
+    return {
+      ...g,
+      origen: 'agenda',
+      expedienteResuelto: resuelto,
+      // Huérfana: no hay expediente al que pertenezca, ni por nombre ni por forma.
+      huerfana: !resuelto && huerfano.test(ref.trim())
+    };
   });
-
-  return Array.from(mapa.values());
 }
 
 export async function guardarPlazos(plazos) {

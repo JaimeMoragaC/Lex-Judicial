@@ -93,6 +93,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
     }
     setTareasList(updated);
     localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
+    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
     setShowTareaModal(false);
   };
 
@@ -101,6 +102,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
     updated[index].completada = !updated[index].completada;
     setTareasList(updated);
     localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
+    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
   };
 
   const handleDeleteTarea = (index) => {
@@ -108,6 +110,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
     const updated = tareasList.filter((_, idx) => idx !== index);
     setTareasList(updated);
     localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
+    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
   };
 
   const tareasFiltradas = tareasList.filter(t => {

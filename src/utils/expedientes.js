@@ -116,12 +116,12 @@ export function buscarCandidatos({ cliente, asunto, rol, tramite }, expedientes,
       const textoCausa = `${c.caratula || ''} ${c.tribunal || ''} ${c.materia || ''} ${c.resumenTeoriaCaso || ''}`;
       const textoNota = `${cliente || ''} ${asunto || ''} ${tramite || ''}`;
       const pGeneral = parecido(textoCausa, textoNota);
-      if (pGeneral >= 0.35) {
+      if (pGeneral >= 0.60) {
         score = pGeneral * 0.7;
       }
     }
 
-    if (score >= 0.35) {
+    if (score >= 0.50) {
       salida.push({ tipo: 'causa', score: score * 0.9, ref: c });
     }
   }

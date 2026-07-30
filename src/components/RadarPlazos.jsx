@@ -13,10 +13,12 @@ import {
   buscarProcedimiento,
   hoyLocal,
   REGIMENES,
-  ETIQUETA_ESTADO
+  ETIQUETA_ESTADO,
+  cargarAgenda
 } from '../utils/radarPlazos.js';
 import { formatearFechaEs } from '../utils/plazosChile.js';
 import { MOCK_CASOS } from '../mockData';
+import { cargarExpedientes } from '../utils/expedientes.js';
 
 const FORM_VACIO = {
   casoId: '',
@@ -37,11 +39,22 @@ export default function RadarPlazos({ onSelectCaso }) {
   const hoy = hoyLocal();
   const procedimientos = useMemo(() => procedimientosDisponibles(), []);
 
+  const [agenda, setAgenda] = useState([]);
+
   useEffect(() => {
     cargarPlazos()
       .then((p) => { setPlazos(p); setError(null); })
       .catch((e) => setError(e.message))
       .finally(() => setCargando(false));
+
+    // La agenda se carga aparte: son recordatorios, no plazos fatales, y se
+    // necesitan las causas y los expedientes para saber cuáles quedaron
+    // huérfanas de la Bitácora antigua.
+    cargarExpedientes()
+      .catch(() => [])
+      .then((exps) => cargarAgenda(MOCK_CASOS, exps || []))
+      .then(setAgenda)
+      .catch(() => setAgenda([]));
   }, []);
 
   const persistir = async (siguientes) => {
@@ -340,6 +353,55 @@ export default function RadarPlazos({ onSelectCaso }) {
           </div>
         )}
       </div>
+
+      {agenda.length > 0 && (
+        <div className="card card-static" style={{ marginTop: 'var(--space-6)' }}>
+          <div className="card-header">
+            <span className="card-title">Recordatorios de agenda</span>
+            <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+              {agenda.length} · no son plazos fatales
+            </span>
+          </div>
+          <div className="card-pad">
+            <p className="muted" style={{ fontSize: 'var(--text-xs)', marginBottom: 'var(--space-4)' }}>
+              Notas y tareas con fecha. No pasaron por el motor de cómputo procesal, así que
+              su fecha es la que se escribió, no un vencimiento calculado.
+            </p>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr><th>Fecha</th><th>Expediente</th><th>Gestión</th></tr>
+                </thead>
+                <tbody>
+                  {agenda.slice(0, 40).map((g) => (
+                    <tr key={g.id}>
+                      <td className="mono">{g.fechaVencimiento}</td>
+                      <td>
+                        {g.huerfana ? (
+                          <span className="badge badge-yellow" title="Guardada por la Bitácora antigua bajo un identificador que no es una causa">
+                            sin expediente
+                          </span>
+                        ) : (
+                          <span className={g.expedienteResuelto ? 'mono' : 'mono muted'}>{g.casoRit}</span>
+                        )}
+                      </td>
+                      <td className="truncate">{g.actuacion}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {agenda.filter((g) => g.huerfana).length > 0 && (
+              <p className="aviso-inline" style={{ marginTop: 'var(--space-3)' }}>
+                <AlertCircle size={12} />
+                {agenda.filter((g) => g.huerfana).length} quedaron sin expediente porque la
+                Bitácora antigua las guardó bajo un identificador inventado. Vuelve a registrarlas
+                desde la Bitácora para asignarles uno.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
