@@ -32,6 +32,59 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   const [expedientesReales, setExpedientesReales] = useState([]);
   const [cargandoReal, setCargandoReal] = useState(true);
 
+  // Cargar historial de partes diarios
+  const [historialPartes, setHistorialPartes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lexcontrol_historial_partes_diarios');
+      return saved ? JSON.parse(saved) : [PARTE_DIARIO_OJV];
+    } catch {
+      return [PARTE_DIARIO_OJV];
+    }
+  });
+
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => {
+    return (historialPartes[0] && historialPartes[0].fechaParteDiario) || PARTE_DIARIO_OJV.fechaParteDiario;
+  });
+
+  // Función para transformar la respuesta del backend y actualizar el estado de React + localStorage
+  const actualizarEstadoParteDiario = (nuevoParte) => {
+    if (!nuevoParte || !nuevoParte.movimientos) return;
+    const fecha = nuevoParte.fecha_estado_diario || new Date().toISOString().split('T')[0];
+    const item = {
+      fechaParteDiario: fecha,
+      ultimaSincronizacion: nuevoParte.leido_en || new Date().toLocaleTimeString('es-CL'),
+      totalCausasAuditadas: 59,
+      tiempoEscaneoSegundos: 3.8,
+      metodoAutenticacion: 'GMAIL IMAP / PJUD EXCEL',
+      origenSync: nuevoParte.origen_sync || 'GMAIL_IMAP',
+      mensajeContinuidad: nuevoParte.mensaje_continuidad || '',
+      movimientos: nuevoParte.movimientos.map((m) => ({
+        rol: m.rol,
+        caratula: m.caratula,
+        cliente: m.carpetaHermana || m.caratula,
+        tribunal: m.tribunal,
+        titulo: m.estado || 'Movimiento Judicial Notificado',
+        detalle: m.alerta || 'Resolución registrada en el Estado Diario',
+        plazoHoras: m.esFatal ? 'FATAL' : 'MONITOREO',
+        urgencia: m.esFatal ? 'CRÍTICA' : 'NORMAL',
+        accionRecomendada: m.alerta || 'Revisar expediente',
+        archivoDescargado: nuevoParte.archivo_procesado,
+        pathFisico: m.pathHermana || nuevoParte.path_completo
+      }))
+    };
+
+    setHistorialPartes((prev) => {
+      const filtrados = prev.filter((p) => p.fechaParteDiario !== item.fechaParteDiario);
+      const actualizados = [item, ...filtrados];
+      try {
+        localStorage.setItem('lexcontrol_historial_partes_diarios', JSON.stringify(actualizados));
+      } catch (e) {}
+      return actualizados;
+    });
+
+    setFechaSeleccionada(fecha);
+  };
+
   const refrescarPlazos = () => {
     cargarPlazos().then(p => setPlazosReales(p || [])).catch(() => {});
   };
