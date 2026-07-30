@@ -116,6 +116,25 @@ export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectC
     return isTerminado ? 'TERMINADO / CANCELADO' : 'VIGENTE';
   });
 
+  // Estado de Edición de Datos Maestros de la Causa
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [overrides, setOverrides] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`lexcontrol_overrides_${caso.id || caso.rit}`);
+      if (stored) return JSON.parse(stored);
+    } catch(e) {}
+    return {};
+  });
+
+  // El objeto caso visible será la mezcla entre el original y los overrides
+  const displayCaso = { ...caso, ...overrides };
+
+  const handleSaveInfo = () => {
+    setIsEditingInfo(false);
+    localStorage.setItem(`lexcontrol_overrides_${caso.id || caso.rit}`, JSON.stringify(overrides));
+    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+  };
+
   // Diccionario de autocompletado dinámico
   const [diccionarioTramites, setDiccionarioTramites] = useState(() => {
     try {
@@ -948,44 +967,79 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
           </div>
           {/* Fila 2: Carátula Principal */}
-          <div style={{ marginBottom: '16px' }}>
-            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px' }}>
-              Carátula Judicial / Causa
-            </span>
-            <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginTop: '4px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
-              ⚖️ {caso.caratula || caso.cliente || 'Carátula no especificada'}
-            </h2>
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '300px' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px' }}>
+                Carátula Judicial / Causa
+              </span>
+              {isEditingInfo ? (
+                <input 
+                  type="text" 
+                  value={overrides.caratula !== undefined ? overrides.caratula : (caso.caratula || '')}
+                  onChange={(e) => setOverrides({...overrides, caratula: e.target.value})}
+                  className="input-field"
+                  style={{ width: '100%', fontSize: '1.4rem', marginTop: '4px', fontWeight: 'bold' }}
+                  placeholder="Ej: MORAGA/PEREZ"
+                />
+              ) : (
+                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginTop: '4px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
+                  ⚖️ {displayCaso.caratula || displayCaso.cliente || 'Carátula no especificada'}
+                </h2>
+              )}
+            </div>
+            
+            {isEditingInfo ? (
+              <button onClick={handleSaveInfo} className="btn-primary" style={{ padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <CheckCircle2 size={16} /> Guardar
+              </button>
+            ) : (
+              <button onClick={() => setIsEditingInfo(true)} className="btn-secondary" style={{ padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Edit3 size={16} /> Editar
+              </button>
+            )}
           </div>
 
           {/* Fila 3: Ficha con Cliente, Ciudad y Tribunal */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '14px 18px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <User size={20} color="var(--accent-gold)" />
-              <div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <User size={20} color="var(--accent-gold)" style={{ marginTop: '2px' }} />
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Cliente / Patrocinado</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  👤 {extraerCliente(caso)}
-                </div>
+                {isEditingInfo ? (
+                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.cliente !== undefined ? overrides.cliente : (caso.cliente || '')} onChange={(e) => setOverrides({...overrides, cliente: e.target.value})} placeholder="Nombre del cliente" />
+                ) : (
+                  <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', marginTop: '2px' }}>
+                    👤 {extraerCliente(displayCaso)}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MapPin size={20} color="var(--accent-cyan)" />
-              <div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <MapPin size={20} color="var(--accent-cyan)" style={{ marginTop: '2px' }} />
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Ciudad / Jurisdicción</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                  📍 {extraerCiudad(caso)}
-                </div>
+                {isEditingInfo ? (
+                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.ciudad !== undefined ? overrides.ciudad : (caso.ciudad || extraerCiudad(caso))} onChange={(e) => setOverrides({...overrides, ciudad: e.target.value})} placeholder="Ej: Concepción" />
+                ) : (
+                  <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', marginTop: '2px' }}>
+                    📍 {extraerCiudad(displayCaso)}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Gavel size={20} color="var(--accent-purple)" />
-              <div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <Gavel size={20} color="var(--accent-purple)" style={{ marginTop: '2px' }} />
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Tribunal / Corte</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>
-                  🏛️ {caso.tribunal || 'Juzgado de Letras'}
-                </div>
+                {isEditingInfo ? (
+                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.tribunal !== undefined ? overrides.tribunal : (caso.tribunal || '')} onChange={(e) => setOverrides({...overrides, tribunal: e.target.value})} placeholder="Ej: 1° Juzgado Civil" />
+                ) : (
+                  <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', marginTop: '2px' }}>
+                    🏛️ {displayCaso.tribunal || 'Juzgado de Letras'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
