@@ -23,7 +23,7 @@ import {
 import { MOCK_PLAZOS_FATALES, MOCK_AUDIENCIAS_HOY_SEMANA, MOCK_CASOS } from '../mockData';
 import { PARTE_DIARIO_OJV } from '../parteDiarioData';
 import { LEXCONTROL_API } from '../apiBase';
-import { cargarPlazos, normalizarFechaIso, hoyLocal, clasificar } from '../utils/radarPlazos.js';
+import { cargarPlazos, cargarAgenda, normalizarFechaIso, hoyLocal, clasificar } from '../utils/radarPlazos.js';
 import { cargarExpedientes } from '../utils/expedientes.js';
 
 export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavigateToRedactor, theme, toggleTheme }) {
@@ -85,6 +85,8 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     setFechaSeleccionada(fecha);
   };
 
+  const [agendaReal, setAgendaReal] = useState([]);
+
   const refrescarPlazos = () => {
     cargarPlazos().then(p => setPlazosReales(p || [])).catch(() => {});
   };
@@ -98,6 +100,9 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     ]).then(([plazosData, expData, syncData]) => {
       setPlazosReales(plazosData || []);
       setExpedientesReales(expData || []);
+      // El semáforo del Dashboard mostraba (0) porque sólo miraba los plazos
+      // fatales calculados, y las gestiones pendientes viven en la agenda.
+      cargarAgenda(MOCK_CASOS, expData || []).then(setAgendaReal).catch(() => setAgendaReal([]));
       if (syncData && syncData.status === 'ok') {
         actualizarEstadoParteDiario(syncData);
       }
@@ -131,6 +136,26 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     const lista = [];
     const hoy = hoyLocal();
 
+    // Gestiones pendientes con fecha vencida o de hoy. No son plazos fatales
+    // -su fecha es la que se escribió, no un cómputo- pero si vencen hoy hay
+    // que verlas acá, no en una lista secundaria.
+    agendaReal.forEach((g, idx) => {
+      const est = clasificar(g, hoy);
+      if (!['VENCIDO', 'HOY', 'CRITICO', 'URGENTE'].includes(est)) return;
+      lista.push({
+        id: g.id || `agenda-${idx}`,
+        casoRit: g.casoRit || g.rit || 'Sin expediente',
+        caratula: g.caratula || g.cliente || 'Carátula no especificada',
+        descripcion: g.actuacion || g.descripcion || 'Gestión pendiente',
+        responsable: 'Jaime Moraga C.',
+        fechaVencimiento: normalizarFechaIso(g.fechaVencimiento),
+        horasRestantes: normalizarFechaIso(g.fechaVencimiento) === hoy ? 0 : 24,
+        prioridad: est === 'HOY' || est === 'VENCIDO' ? 'CRITICA' : 'ALTA',
+        estadoSemaforo: est,
+        esTarea: true
+      });
+    });
+
     if (plazosReales.length > 0) {
       plazosReales.forEach((p, idx) => {
         const fIso = normalizarFechaIso(p.fechaVencimiento || p.vencimiento || p.fechaBase);
@@ -150,7 +175,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     }
 
     return lista;
-  }, [plazosReales]);
+  }, [plazosReales, agendaReal]);
 
   // COMBINAR EXPEDIENTES REALES CON MOCK PARA EL RADAR INACTIVO
   const causasInactivas = useMemo(() => {
