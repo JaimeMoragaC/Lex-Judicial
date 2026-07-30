@@ -23,7 +23,7 @@ import {
 import { MOCK_PLAZOS_FATALES, MOCK_AUDIENCIAS_HOY_SEMANA, MOCK_CASOS } from '../mockData';
 import { PARTE_DIARIO_OJV } from '../parteDiarioData';
 import { LEXCONTROL_API } from '../apiBase';
-import { cargarPlazos } from '../utils/radarPlazos.js';
+import { cargarPlazos, normalizarFechaIso, hoyLocal, clasificar } from '../utils/radarPlazos.js';
 import { cargarExpedientes } from '../utils/expedientes.js';
 
 export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavigateToRedactor, theme, toggleTheme }) {
@@ -32,57 +32,8 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   const [expedientesReales, setExpedientesReales] = useState([]);
   const [cargandoReal, setCargandoReal] = useState(true);
 
-  // Cargar historial de partes diarios
-  const [historialPartes, setHistorialPartes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('lexcontrol_historial_partes_diarios');
-      return saved ? JSON.parse(saved) : [PARTE_DIARIO_OJV];
-    } catch {
-      return [PARTE_DIARIO_OJV];
-    }
-  });
-
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => {
-    return (historialPartes[0] && historialPartes[0].fechaParteDiario) || PARTE_DIARIO_OJV.fechaParteDiario;
-  });
-
-  // Función para transformar la respuesta del backend y actualizar el estado de React + localStorage
-  const actualizarEstadoParteDiario = (nuevoParte) => {
-    if (!nuevoParte || !nuevoParte.movimientos) return;
-    const fecha = nuevoParte.fecha_estado_diario || new Date().toISOString().split('T')[0];
-    const item = {
-      fechaParteDiario: fecha,
-      ultimaSincronizacion: nuevoParte.leido_en || new Date().toLocaleTimeString('es-CL'),
-      totalCausasAuditadas: 59,
-      tiempoEscaneoSegundos: 3.8,
-      metodoAutenticacion: 'GMAIL IMAP / PJUD EXCEL',
-      origenSync: nuevoParte.origen_sync || 'GMAIL_IMAP',
-      mensajeContinuidad: nuevoParte.mensaje_continuidad || '',
-      movimientos: nuevoParte.movimientos.map((m) => ({
-        rol: m.rol,
-        caratula: m.caratula,
-        cliente: m.carpetaHermana || m.caratula,
-        tribunal: m.tribunal,
-        titulo: m.estado || 'Movimiento Judicial Notificado',
-        detalle: m.alerta || 'Resolución registrada en el Estado Diario',
-        plazoHoras: m.esFatal ? 'FATAL' : 'MONITOREO',
-        urgencia: m.esFatal ? 'CRÍTICA' : 'NORMAL',
-        accionRecomendada: m.alerta || 'Revisar expediente',
-        archivoDescargado: nuevoParte.archivo_procesado,
-        pathFisico: m.pathHermana || nuevoParte.path_completo
-      }))
-    };
-
-    setHistorialPartes((prev) => {
-      const filtrados = prev.filter((p) => p.fechaParteDiario !== item.fechaParteDiario);
-      const actualizados = [item, ...filtrados];
-      try {
-        localStorage.setItem('lexcontrol_historial_partes_diarios', JSON.stringify(actualizados));
-      } catch (e) {}
-      return actualizados;
-    });
-
-    setFechaSeleccionada(fecha);
+  const refrescarPlazos = () => {
+    cargarPlazos().then(p => setPlazosReales(p || [])).catch(() => {});
   };
 
   // Cargar datos REALES desde el backend Python al montar
@@ -99,6 +50,9 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
       }
       setCargandoReal(false);
     });
+
+    window.addEventListener('lexcontrol_plazos_updated', refrescarPlazos);
+    return () => window.removeEventListener('lexcontrol_plazos_updated', refrescarPlazos);
   }, []);
 
   const datosParteDiario = useMemo(() => {
@@ -121,19 +75,32 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
 
   // COMBINAR PLAZOS REALES DEL SERVIDOR CON VENCIMIENTOS
   const plazosCombinados = useMemo(() => {
+    const lista = [];
+    const hoy = hoyLocal();
+
     if (plazosReales.length > 0) {
-      return plazosReales.map((p, idx) => ({
-        id: p.id || `plazo-${idx}`,
-        casoRit: p.casoRit || p.rol || 'RIT O-934-2023',
-        caratula: p.caratula || p.cliente || 'Víctor Garai / Calbuco',
-        descripcion: p.descripcion || p.asunto || 'Trámite Procesal Pendiente',
-        responsable: p.responsable || 'Jaime Moraga C.',
-        fechaVencimiento: p.fechaVencimiento || p.vencimiento || '2026-07-31',
-        horasRestantes: p.horasRestantes || 24,
-        prioridad: p.clasificacion === 'VENCIDO' || p.horasRestantes <= 24 ? 'CRITICA' : 'ALTA'
-      }));
+      plazosReales.forEach((p, idx) => {
+        const fIso = normalizarFechaIso(p.fechaVencimiento || p.vencimiento || p.fechaBase);
+        const est = clasificar(p, hoy);
+        lista.push({
+          id: p.id || `plazo-${idx}`,
+          casoRit: p.casoRit || p.rit || p.rol || 'RIT O-934-2023',
+          caratula: p.caratula || p.cliente || 'Víctor Garai',
+          descripcion: p.actuacion || p.descripcion || p.asunto || 'Trámite Procesal Pendiente',
+          responsable: 'Jaime Moraga C.',
+          fechaVencimiento: fIso,
+          horasRestantes: fIso === hoy ? 0 : 24,
+          prioridad: est === 'HOY' || est === 'VENCIDO' || est === 'CRITICO' ? 'CRITICA' : 'ALTA',
+          estadoSemaforo: est
+        });
+      });
     }
-    return MOCK_PLAZOS_FATALES;
+
+    if (lista.length === 0) {
+      return MOCK_PLAZOS_FATALES;
+    }
+
+    return lista;
   }, [plazosReales]);
 
   // COMBINAR EXPEDIENTES REALES CON MOCK PARA EL RADAR INACTIVO

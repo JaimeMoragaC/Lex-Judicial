@@ -31,12 +31,34 @@ export function hoyLocal() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+export function normalizarFechaIso(f) {
+  if (!f) return '';
+  const s = String(f).trim();
+  if (s.includes('T')) return s.split('T')[0];
+  if (s.includes('-')) {
+    const parts = s.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return s;
+}
+
 /** ¿Es hábil este día bajo el régimen indicado? */
 function esHabil(fechaStr, regimen) {
+  const fNorm = normalizarFechaIso(fechaStr);
   if (regimen === 'CPP') return true; // días corridos
-  if (regimen === 'CPC') return !esInhabilCPC(fechaStr);
-  const dia = new Date(fechaStr + 'T12:00:00').getDay();
-  return dia !== 0 && dia !== 6 && !esFeriado(fechaStr) && !esDomingo(fechaStr);
+  if (regimen === 'CPC') return !esInhabilCPC(fNorm);
+  const dia = new Date(fNorm + 'T12:00:00').getDay();
+  return dia !== 0 && dia !== 6 && !esFeriado(fNorm) && !esDomingo(fNorm);
 }
 
 /**
@@ -45,10 +67,12 @@ function esHabil(fechaStr, regimen) {
  * viernes, no son "3 días" sino 1 día hábil de trabajo.
  */
 export function habilesRestantes(fechaVencimiento, regimen, desde = hoyLocal()) {
-  if (fechaVencimiento < desde) return -1;
+  const fVenc = normalizarFechaIso(fechaVencimiento);
+  const fDesde = normalizarFechaIso(desde);
+  if (!fVenc || fVenc < fDesde) return -1;
   let cuenta = 0;
-  const cursor = new Date(desde + 'T00:00:00');
-  const limite = new Date(fechaVencimiento + 'T00:00:00');
+  const cursor = new Date(fDesde + 'T00:00:00');
+  const limite = new Date(fVenc + 'T00:00:00');
   while (cursor < limite) {
     cursor.setDate(cursor.getDate() + 1);
     const f = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
@@ -59,9 +83,12 @@ export function habilesRestantes(fechaVencimiento, regimen, desde = hoyLocal()) 
 
 /** Semáforo. El corte está en días hábiles, que es como se trabaja. */
 export function clasificar(plazo, desde = hoyLocal()) {
-  if (plazo.fechaVencimiento < desde) return 'VENCIDO';
-  if (plazo.fechaVencimiento === desde) return 'HOY';
-  const h = habilesRestantes(plazo.fechaVencimiento, plazo.regimen, desde);
+  const fVenc = normalizarFechaIso(plazo.fechaVencimiento || plazo.vencimiento || plazo.fecha);
+  const fDesde = normalizarFechaIso(desde);
+  if (!fVenc) return 'AL_DIA';
+  if (fVenc < fDesde) return 'VENCIDO';
+  if (fVenc === fDesde) return 'HOY';
+  const h = habilesRestantes(fVenc, plazo.regimen, fDesde);
   if (h <= 2) return 'CRITICO';
   if (h <= 5) return 'URGENTE';
   if (h <= 10) return 'PROXIMO';

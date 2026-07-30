@@ -40,6 +40,7 @@ import {
 import { REAL_DISK_DATA } from '../realDiskData';
 import { findDiscoFolder } from '../utils/folderMatcher';
 import { MOCK_CASOS } from '../mockData';
+import { cargarPlazos, guardarPlazos, normalizarFechaIso, hoyLocal } from '../utils/radarPlazos.js';
 
 export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectCaso }) {
   const [activeTab, setActiveTab] = useState('resumen');
@@ -479,22 +480,22 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
     setShowGestionModal(true);
   };
 
-  const handleSaveGestionSubmit = (e) => {
+  const handleSaveGestionSubmit = async (e) => {
     try {
       e.preventDefault();
       if (!gestionForm.tramite.trim()) return alert("Debe ingresar la descripción de la gestión o trámite.");
       
       let updated = [...(customGestiones || [])];
       
-      // Convertir fecha de YYYY-MM-DD a DD/MM/YYYY para almacenamiento coherente
       let fechaFinal = gestionForm.fecha;
+      let fechaIso = normalizarFechaIso(fechaFinal) || hoyLocal();
       if (fechaFinal && fechaFinal.includes('-')) {
         const parts = fechaFinal.split('-');
         if (parts.length === 3) {
           fechaFinal = `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
       }
-      const gestionToSave = { ...gestionForm, fecha: fechaFinal };
+      const gestionToSave = { ...gestionForm, fecha: fechaFinal, fechaIso };
 
       if (editingGestionIdx !== null) {
         updated[editingGestionIdx] = gestionToSave;
@@ -514,6 +515,38 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       if (caso) {
         caso.gestiones = updated;
         localStorage.setItem(`lexcontrol_gestiones_${caso.id || caso.rit}`, JSON.stringify(updated));
+
+        // 🔗 REGISTRAR PLAZO EN EL RADAR Y SEMÁFORO DE PLAZOS FATALES
+        try {
+          const plazosExistentes = await cargarPlazos().catch(() => []);
+          const plazoId = `plazo-gestion-${caso.id || caso.rit}-${Date.now()}`;
+          const nuevoPlazo = {
+            id: plazoId,
+            casoId: caso.id || null,
+            casoRit: caso.rit || caso.id || 'RIT Desconocido',
+            rit: caso.rit || caso.id || 'RIT Desconocido',
+            caratula: caso.caratula || caso.cliente || 'Víctor Garai',
+            cliente: caso.cliente || caso.caratula || 'Víctor Garai',
+            tribunal: caso.tribunal || 'Juzgado de Letras',
+            actuacion: tramiteLimpio,
+            descripcion: tramiteLimpio,
+            asunto: tramiteLimpio,
+            regimen: caso.materia === 'Penal' ? 'CPP' : 'CPC',
+            dias: 0,
+            esHaciaAtras: false,
+            fechaBase: fechaIso,
+            fechaVencimiento: fechaIso,
+            vencimiento: fechaIso,
+            clasificacion: fechaIso === hoyLocal() ? 'HOY' : (fechaIso < hoyLocal() ? 'VENCIDO' : 'CRITICO'),
+            notas: gestionForm.estado || 'Ingresado manualmente en expediente',
+            creadoEn: new Date().toISOString()
+          };
+          const plazosActualizados = [nuevoPlazo, ...plazosExistentes.filter(p => p.id !== plazoId)];
+          await guardarPlazos(plazosActualizados);
+          window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+        } catch (ePlz) {
+          console.warn("⚠️ No se pudo sincronizar el plazo fatal:", ePlz);
+        }
       }
       setShowGestionModal(false);
     } catch (err) {
