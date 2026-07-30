@@ -1467,16 +1467,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         onChange={e => setGestionForm({ ...gestionForm, estado: e.target.value })}
                         style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       >
-                        <option value="PENDIENTE (POR HACER)">PENDIENTE (POR HACER)</option>
-                        <option value="URGENTE">URGENTE</option>
-                        <option value="PRESENTADO">PRESENTADO</option>
-                        <option value="PROVEIDO">PROVEIDO</option>
-                        <option value="RESUELTO">RESUELTO</option>
-                        <option value="EN TRAMITE">EN TRAMITE</option>
-                        <option value="REALIZADA">REALIZADA</option>
-                        <option value="NOTIFICADO">NOTIFICADO</option>
-                        <option value="ACREDITADO">ACREDITADO</option>
-                        <option value="RECHAZADO">RECHAZADO</option>
+                        <option value="PENDIENTE">PENDIENTE</option>
+                        <option value="REALIZADO">REALIZADO</option>
                       </select>
                     </div>
                   </div>
