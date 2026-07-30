@@ -182,6 +182,42 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     return lista;
   }, [expedientesReales]);
 
+  const handleAbrirCasoDesdePlazo = (plazo) => {
+    if (!onNavigateToCaso) return;
+    const ritBusqueda = (plazo.casoRit || plazo.rit || plazo.casoId || '').toLowerCase().trim();
+    const caratulaBusqueda = (plazo.caratula || plazo.cliente || '').toLowerCase().trim();
+
+    // Buscar en expedientes reales
+    let casoEncontrado = (expedientesReales || []).find(e => {
+      const r = (e.ritVinculado || e.id || e.rit || '').toLowerCase();
+      const c = (e.cliente || e.asunto || '').toLowerCase();
+      return (ritBusqueda && r.includes(ritBusqueda)) || (caratulaBusqueda && c.includes(caratulaBusqueda));
+    });
+
+    // Buscar en MOCK_CASOS
+    if (!casoEncontrado) {
+      casoEncontrado = MOCK_CASOS.find(c => {
+        const r = (c.rit || c.id || '').toLowerCase();
+        const car = (c.caratula || c.cliente || '').toLowerCase();
+        return (ritBusqueda && r.includes(ritBusqueda)) || (caratulaBusqueda && car.includes(caratulaBusqueda));
+      });
+    }
+
+    // Si no existe un objeto formal, construirlo dinámicamente con sus gestiones
+    const casoFinal = casoEncontrado || {
+      id: plazo.casoId || plazo.casoRit || plazo.rit || 'C-1',
+      rit: plazo.casoRit || plazo.rit || 'RIT Desconocido',
+      caratula: plazo.caratula || plazo.cliente || 'Víctor Garai / Calbuco',
+      cliente: plazo.cliente || plazo.caratula || 'Víctor Garai',
+      tribunal: plazo.tribunal || 'Juzgado de Letras',
+      materia: 'Civil',
+      etapa: 'Tramitación',
+      gestiones: []
+    };
+
+    onNavigateToCaso(casoFinal);
+  };
+
   const verEnNavegador = (pathFisico, e) => {
     e.stopPropagation();
     if (!pathFisico) return;
@@ -218,10 +254,10 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
               className="btn-secondary"
               onClick={toggleTheme}
               title="Cambiar entre modo claro y oscuro"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px' }}
             >
-              {theme === 'light' ? <Moon size={18} color="var(--accent)" /> : <Sun size={18} color="var(--accent)" />}
-              <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+              {theme === 'dark' ? <Sun size={16} color="#fbbf24" /> : <Moon size={16} color="#6366f1" />}
+              <span style={{ fontSize: '13px' }}>{theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}</span>
             </button>
           )}
           <button className="btn-secondary" onClick={() => onNavigateToMatriz && onNavigateToMatriz()}>
@@ -291,18 +327,22 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
           </div>
           <div className="card-pad stack" style={{ gap: 'var(--space-3)' }}>
             {plazosCombinados.map((plazo) => {
-              const isCritical = plazo.prioridad === 'CRITICA';
+              const isCritical = plazo.prioridad === 'CRITICA' || plazo.estadoSemaforo === 'HOY' || plazo.estadoSemaforo === 'VENCIDO';
               return (
                 <div
                   key={plazo.id}
+                  onClick={() => handleAbrirCasoDesdePlazo(plazo)}
+                  title="Haz clic para abrir la ficha completa de este expediente"
                   style={{
                     padding: '12px 14px',
                     borderRadius: 'var(--radius-md)',
                     background: isCritical ? 'rgba(207, 95, 87, 0.08)' : 'var(--bg-secondary)',
                     border: '1px solid var(--border-color)',
-                    borderLeft: isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)'
+                    borderLeft: isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
-                  className="row"
+                  className="row card-hover-click"
                 >
                   <div style={{ flex: 1 }}>
                     <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px' }}>
@@ -322,6 +362,9 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                     <span style={{ fontSize: '1.2rem', fontWeight: '800', color: isCritical ? 'var(--danger)' : 'var(--warn)', fontFamily: 'monospace' }}>
                       {plazo.horasRestantes}h
                     </span>
+                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '2px', fontWeight: '600' }}>
+                      📂 Abrir Ficha →
+                    </div>
                   </div>
                 </div>
               );
