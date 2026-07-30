@@ -552,38 +552,10 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       if (caso) {
         caso.gestiones = updated;
         localStorage.setItem(`lexcontrol_gestiones_${caso.id || caso.rit}`, JSON.stringify(updated));
-
-        // 🔗 REGISTRAR PLAZO EN EL RADAR Y SEMÁFORO DE PLAZOS FATALES
-        try {
-          const plazosExistentes = await cargarPlazos().catch(() => []);
-          const plazoId = `plazo-gestion-${caso.id || caso.rit}-${Date.now()}`;
-          const nuevoPlazo = {
-            id: plazoId,
-            casoId: caso.id || null,
-            casoRit: caso.rit || caso.id || 'RIT Desconocido',
-            rit: caso.rit || caso.id || 'RIT Desconocido',
-            caratula: caso.caratula || caso.cliente || 'Carátula sin registrar',
-            cliente: caso.cliente || caso.caratula || 'Sin cliente asignado',
-            tribunal: caso.tribunal || 'Juzgado de Letras',
-            actuacion: tramiteLimpio,
-            descripcion: tramiteLimpio,
-            asunto: tramiteLimpio,
-            regimen: caso.materia === 'Penal' ? 'CPP' : 'CPC',
-            dias: 0,
-            esHaciaAtras: false,
-            fechaBase: fechaIso,
-            fechaVencimiento: fechaIso,
-            vencimiento: fechaIso,
-            clasificacion: fechaIso === hoyLocal() ? 'HOY' : (fechaIso < hoyLocal() ? 'VENCIDO' : 'CRITICO'),
-            notas: gestionForm.estado || 'Ingresado manualmente en expediente',
-            creadoEn: new Date().toISOString()
-          };
-          const plazosActualizados = [nuevoPlazo, ...plazosExistentes.filter(p => p.id !== plazoId)];
-          await guardarPlazos(plazosActualizados);
-          window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
-        } catch (ePlz) {
-          console.warn("⚠️ No se pudo sincronizar el plazo fatal:", ePlz);
-        }
+        
+        // Notificamos globalmente para que el Dashboard y el Radar recolecten
+        // las gestiones actualizadas automáticamente sin generar duplicados.
+        window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
       }
       setShowGestionModal(false);
     } catch (err) {

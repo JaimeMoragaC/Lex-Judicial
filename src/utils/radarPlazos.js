@@ -191,9 +191,9 @@ export function obtenerGestionesGlobalesLocalStorage() {
           if (Array.isArray(gestiones)) {
             gestiones.forEach((g, idx) => {
               const fIso = normalizarFechaIso(g.fechaIso || g.fecha);
-              const esPendiente = !g.estado || g.estado.includes('PENDIENTE') || g.estado.includes('URGENTE') || g.estado.includes('PLAZO') || g.estado.includes('FATAL');
+              const esRealizado = g.estado === 'REALIZADO' || g.estado === 'TERMINADO' || g.estado === 'FALLADO / ARCHIVADO';
               
-              if (fIso || esPendiente) {
+              if (fIso && !esRealizado) {
                 const fechaFinal = fIso || hoy;
                 const estadoSemaforo = clasificar({ fechaVencimiento: fechaFinal }, hoy);
                 
