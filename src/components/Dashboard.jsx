@@ -141,7 +141,13 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     // que verlas acá, no en una lista secundaria.
     agendaReal.forEach((g, idx) => {
       const est = clasificar(g, hoy);
-      if (!['VENCIDO', 'HOY', 'CRITICO', 'URGENTE'].includes(est)) return;
+      // Sólo lo que vence HOY o más adelante. Deliberadamente NO se incluye
+      // VENCIDO para las gestiones: la Bitácora antigua no guardaba fecha de
+      // vencimiento, sólo la fecha en que se escribió la nota, así que toda nota
+      // de días anteriores aparecía como "vencida" y llenaba el semáforo de
+      // apuntes que nunca fueron plazos. Un plazo fatal calculado sí conserva su
+      // VENCIDO, porque ahí la fecha es un vencimiento de verdad.
+      if (!['HOY', 'CRITICO', 'URGENTE'].includes(est)) return;
       lista.push({
         id: g.id || `agenda-${idx}`,
         casoRit: g.casoRit || g.rit || 'Sin expediente',

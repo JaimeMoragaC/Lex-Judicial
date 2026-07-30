@@ -96,14 +96,18 @@ export default function RadarPlazos({ onSelectCaso }) {
   // es de qué tipo es cada cosa, porque un plazo fatal y un recordatorio no
   // tienen la misma consecuencia.
   const ES_URGENTE = new Set(['VENCIDO', 'HOY', 'CRITICO', 'URGENTE']);
+  // Para las gestiones se excluye VENCIDO: su fecha es la de redacción de la
+  // nota, no un vencimiento, así que "vencida" no significa nada. Las de días
+  // pasados quedan en la lista de recordatorios del pie.
+  const AGENDA_URGENTE = new Set(['HOY', 'CRITICO', 'URGENTE']);
 
   const agendaUrgente = useMemo(
-    () => agenda.filter((g) => ES_URGENTE.has(clasificar(g, hoy))),
+    () => agenda.filter((g) => AGENDA_URGENTE.has(clasificar(g, hoy))),
     [agenda, hoy]
   );
 
   const agendaResto = useMemo(
-    () => agenda.filter((g) => !ES_URGENTE.has(clasificar(g, hoy))),
+    () => agenda.filter((g) => !AGENDA_URGENTE.has(clasificar(g, hoy))),
     [agenda, hoy]
   );
 
