@@ -35,12 +35,31 @@ import {
   Copy,
   MessageCircle,
   MessageSquare,
-  BookOpen
+  BookOpen,
+  MapPin
 } from 'lucide-react';
 import { REAL_DISK_DATA } from '../realDiskData';
 import { findDiscoFolder } from '../utils/folderMatcher';
 import { MOCK_CASOS } from '../mockData';
 import { cargarPlazos, guardarPlazos, normalizarFechaIso, hoyLocal } from '../utils/radarPlazos.js';
+
+function extraerCiudad(caso) {
+  if (!caso) return 'Temuco';
+  if (caso.ciudad) return caso.ciudad;
+  const trib = (caso.tribunal || '').toLowerCase();
+  if (trib.includes('temuco')) return 'Temuco';
+  if (trib.includes('pichilemu')) return 'Pichilemu';
+  if (trib.includes('villarrica')) return 'Villarrica';
+  if (trib.includes('pucón') || trib.includes('pucon')) return 'Pucón';
+  if (trib.includes('concepción') || trib.includes('concepcion')) return 'Concepción';
+  if (trib.includes('santiago')) return 'Santiago';
+  if (trib.includes('calbuco')) return 'Calbuco';
+  if (trib.includes('castro')) return 'Castro';
+  if (trib.includes('collipulli')) return 'Collipulli';
+  if (trib.includes('puerto montt')) return 'Puerto Montt';
+  if (trib.includes('valdivia')) return 'Valdivia';
+  return caso.jurisdiccion || 'Temuco';
+}
 
 export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectCaso }) {
   const [activeTab, setActiveTab] = useState('resumen');
@@ -916,16 +935,47 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           </div>
 
           </div>
-          {/* Fila 2: Título Principal (Carátula) */}
-          <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
-            {caso.caratula}
-          </h2>
+          {/* Fila 2: Carátula Principal */}
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px' }}>
+              Carátula Judicial / Causa
+            </span>
+            <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginTop: '4px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
+              ⚖️ {caso.caratula || caso.cliente || 'Carátula no especificada'}
+            </h2>
+          </div>
 
-          {/* Fila 3: Tribunal */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.95rem', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '8px', display: 'inline-flex' }}>
-            <span style={{ fontSize: '1.1rem' }}></span>
-            <strong>Tribunal / Magistratura:</strong> 
-            <span style={{ color: 'var(--text-primary)' }}>{caso.tribunal}</span>
+          {/* Fila 3: Ficha con Cliente, Ciudad y Tribunal */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '14px 18px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <User size={20} color="var(--accent-gold)" />
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Cliente / Patrocinado</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  👤 {caso.cliente || caso.caratula || 'Víctor Garai'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MapPin size={20} color="var(--accent-cyan)" />
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Ciudad / Jurisdicción</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  📍 {extraerCiudad(caso)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Gavel size={20} color="var(--accent-purple)" />
+              <div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Tribunal / Corte</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  🏛️ {caso.tribunal || 'Juzgado de Letras'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
