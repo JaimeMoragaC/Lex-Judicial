@@ -173,15 +173,128 @@ export function recomputar(plazo) {
   }
 }
 
-// --- Persistencia en el servidor --------------------------------------------
-// Deliberadamente NO es localStorage: un registro de plazos fatales no puede
-// desaparecer porque el navegador limpió datos del sitio.
+// --- Persistencia y Recolección Unificada ------------------------------------
+
+export function obtenerGestionesGlobalesLocalStorage() {
+  const plazosExtraidos = [];
+  const hoy = hoyLocal();
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+
+      // 1. Revisar gestiones de casos (lexcontrol_gestiones_*)
+      if (key && key.startsWith('lexcontrol_gestiones_')) {
+        const casoRit = key.replace('lexcontrol_gestiones_', '');
+        try {
+          const gestiones = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(gestiones)) {
+            gestiones.forEach((g, idx) => {
+              const fIso = normalizarFechaIso(g.fechaIso || g.fecha);
+              const esPendiente = !g.estado || g.estado.includes('PENDIENTE') || g.estado.includes('URGENTE') || g.estado.includes('PLAZO') || g.estado.includes('FATAL');
+              
+              if (fIso || esPendiente) {
+                const fechaFinal = fIso || hoy;
+                const estadoSemaforo = clasificar({ fechaVencimiento: fechaFinal }, hoy);
+                
+                plazosExtraidos.push({
+                  id: `ls-gestion-${casoRit}-${idx}-${fechaFinal}`,
+                  casoRit: casoRit,
+                  rit: casoRit,
+                  caratula: g.caratula || `Expediente ${casoRit}`,
+                  cliente: g.cliente || `Expediente ${casoRit}`,
+                  tribunal: g.tribunal || 'Juzgado de Letras',
+                  actuacion: g.tramite || g.actuacion || 'Gestión Pendiente',
+                  descripcion: g.tramite || g.actuacion || 'Gestión Pendiente',
+                  asunto: g.tramite || g.actuacion || 'Gestión Pendiente',
+                  regimen: 'CPC',
+                  dias: 0,
+                  esHaciaAtras: false,
+                  fechaBase: fechaFinal,
+                  fechaVencimiento: fechaFinal,
+                  vencimiento: fechaFinal,
+                  clasificacion: estadoSemaforo,
+                  estadoSemaforo: estadoSemaforo,
+                  horasRestantes: fechaFinal === hoy ? 0 : 24,
+                  prioridad: estadoSemaforo === 'HOY' || estadoSemaforo === 'VENCIDO' || estadoSemaforo === 'CRITICO' ? 'CRITICA' : 'ALTA',
+                  notas: g.estado || 'Ingresado en expediente'
+                });
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // 2. Revisar tareas globales (lexcontrol_tareas_globales)
+      if (key === 'lexcontrol_tareas_globales') {
+        try {
+          const tareas = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(tareas)) {
+            tareas.forEach((t, idx) => {
+              const fIso = normalizarFechaIso(t.fecha);
+              if (fIso) {
+                const estadoSemaforo = clasificar({ fechaVencimiento: fIso }, hoy);
+                plazosExtraidos.push({
+                  id: `ls-tarea-${t.id || idx}`,
+                  casoRit: t.casoRit || 'AGENDA GLOBAL',
+                  rit: t.casoRit || 'AGENDA GLOBAL',
+                  caratula: t.caratula || 'Tarea General',
+                  cliente: t.cliente || 'Estudio Jurídico',
+                  tribunal: 'Agenda Local',
+                  actuacion: t.titulo || t.descripcion || 'Tarea Pendiente',
+                  descripcion: t.titulo || t.descripcion || 'Tarea Pendiente',
+                  asunto: t.titulo || t.descripcion || 'Tarea Pendiente',
+                  regimen: 'CPC',
+                  dias: 0,
+                  esHaciaAtras: false,
+                  fechaBase: fIso,
+                  fechaVencimiento: fIso,
+                  vencimiento: fIso,
+                  clasificacion: estadoSemaforo,
+                  estadoSemaforo: estadoSemaforo,
+                  horasRestantes: fIso === hoy ? 0 : 24,
+                  prioridad: estadoSemaforo === 'HOY' || estadoSemaforo === 'VENCIDO' ? 'CRITICA' : 'ALTA',
+                  notas: t.notas || ''
+                });
+              }
+            });
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  return plazosExtraidos;
+}
 
 export async function cargarPlazos() {
-  const res = await fetch(`${LEXCONTROL_API}/plazos`);
-  if (!res.ok) throw new Error(`El servidor respondió HTTP ${res.status}`);
-  const datos = await res.json();
-  return (datos.plazos || []).map(recomputar);
+  let plazosServidor = [];
+  try {
+    const res = await fetch(`${LEXCONTROL_API}/plazos`);
+    if (res.ok) {
+      const datos = await res.json();
+      plazosServidor = (datos.plazos || []).map(recomputar);
+    }
+  } catch (e) {}
+
+  const plazosLS = obtenerGestionesGlobalesLocalStorage();
+
+  // DEDUPLICAR Y UNIFICAR
+  const mapa = new Map();
+  [...plazosLS, ...plazosServidor].forEach(p => {
+    const fNorm = normalizarFechaIso(p.fechaVencimiento || p.vencimiento || p.fechaBase);
+    const clave = `${p.rit || p.casoRit}-${p.actuacion || p.descripcion}-${fNorm}`;
+    if (!mapa.has(clave)) {
+      mapa.set(clave, {
+        ...p,
+        fechaVencimiento: fNorm,
+        vencimiento: fNorm,
+        clasificacion: clasificar({ fechaVencimiento: fNorm }, hoyLocal())
+      });
+    }
+  });
+
+  return Array.from(mapa.values());
 }
 
 export async function guardarPlazos(plazos) {
