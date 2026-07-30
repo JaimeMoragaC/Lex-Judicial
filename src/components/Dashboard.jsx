@@ -184,23 +184,34 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
 
   const handleAbrirCasoDesdePlazo = (plazo) => {
     if (!onNavigateToCaso) return;
-    const ritBusqueda = (plazo.casoRit || plazo.rit || plazo.casoId || '').toLowerCase().trim();
-    const caratulaBusqueda = (plazo.caratula || plazo.cliente || '').toLowerCase().trim();
-
-    // Buscar en expedientes reales
-    let casoEncontrado = (expedientesReales || []).find(e => {
-      const r = (e.ritVinculado || e.id || e.rit || '').toLowerCase();
-      const c = (e.cliente || e.asunto || '').toLowerCase();
-      return (ritBusqueda && r.includes(ritBusqueda)) || (caratulaBusqueda && c.includes(caratulaBusqueda));
-    });
-
-    // Buscar en MOCK_CASOS
+    // Primero buscar por ID o RIT exacto
+    const idBusqueda = plazo.casoId || plazo.casoRit || plazo.rit;
+    let casoEncontrado = (expedientesReales || []).find(e => e.id === idBusqueda || e.ritVinculado === idBusqueda);
     if (!casoEncontrado) {
-      casoEncontrado = MOCK_CASOS.find(c => {
-        const r = (c.rit || c.id || '').toLowerCase();
-        const car = (c.caratula || c.cliente || '').toLowerCase();
-        return (ritBusqueda && r.includes(ritBusqueda)) || (caratulaBusqueda && car.includes(caratulaBusqueda));
+      casoEncontrado = MOCK_CASOS.find(c => c.id === idBusqueda || c.rit === idBusqueda);
+    }
+
+    // Si no, buscar con precaución por aproximación (evitando default strings)
+    if (!casoEncontrado) {
+      const ritBusqueda = (plazo.casoRit || plazo.rit || '').toLowerCase().trim();
+      const caratulaBusqueda = (plazo.caratula || plazo.cliente || '').toLowerCase().trim();
+      
+      const esRitValido = ritBusqueda && !ritBusqueda.includes('sin rol') && !ritBusqueda.includes('desconocido');
+      const esCaratulaValida = caratulaBusqueda && !caratulaBusqueda.includes('no especific') && !caratulaBusqueda.includes('no asignad');
+
+      casoEncontrado = (expedientesReales || []).find(e => {
+        const r = (e.ritVinculado || e.id || e.rit || '').toLowerCase();
+        const c = (e.cliente || e.asunto || e.caratula || '').toLowerCase();
+        return (esRitValido && r.includes(ritBusqueda)) || (esCaratulaValida && c.includes(caratulaBusqueda));
       });
+
+      if (!casoEncontrado) {
+        casoEncontrado = MOCK_CASOS.find(c => {
+          const r = (c.rit || c.id || '').toLowerCase();
+          const car = (c.caratula || c.cliente || '').toLowerCase();
+          return (esRitValido && r.includes(ritBusqueda)) || (esCaratulaValida && car.includes(caratulaBusqueda));
+        });
+      }
     }
 
     // Si no existe un objeto formal, construirlo dinámicamente con sus gestiones reales

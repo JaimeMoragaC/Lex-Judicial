@@ -457,20 +457,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         }
       } catch (e) {}
     }
-    const defaultList = caso.gestiones && caso.gestiones.length > 0 ? caso.gestiones : (
-      caso.id === 'caso-temuco-1869' || (caso.rit && caso.rit.includes('1869')) ? [
-        { fecha: "26/07/2026", tramite: "Certificación de cumplimiento probatorio y citación a 2º llamado confesional", folio: "Folio 52", cuaderno: "Principal", origen: "3º Juzgado Civil de Temuco", estado: "RESUELTO" },
-        { fecha: "10/07/2026", tramite: "Audiencia telemática Zoom - Exhibición y ratificación de comprobantes de pago MACH y Servipag", folio: "Folio 48", cuaderno: "Prueba", origen: "Receptor Judicial / Tribunal", estado: "REALIZADA" },
-        { fecha: "15/06/2026", tramite: "Escrito de Defensa y Demanda Reconvencional por infracción Art. 24 Nº3 Ley 18.101 (No entrega de recibos)", folio: "Folio 24", cuaderno: "Reconvención", origen: "Jaime Moraga C.", estado: "PROVEIDO" },
-        { fecha: "06/05/2026", tramite: "Pago íntegro de renta de abril ($690.000) vía MACH previa notificación judicial", folio: "Anexo 1", cuaderno: "Comprobantes", origen: "Servipag / MACH", estado: "ACREDITADO" },
-        { fecha: "24/04/2026", tramite: "Ingreso de Demanda Principal por terminación de contrato de arriendo y emplazamiento", folio: "Folio 1", cuaderno: "Principal", origen: "Parte Actora", estado: "NOTIFICADO" }
-      ] : [
-        { fecha: "Última Actuación", tramite: `Estado Procesal en ${caso.tribunal}: ${caso.etapa}`, folio: "Último Folio", cuaderno: "Principal", origen: "PJUD Estado Diario", estado: caso.estadoPlazo === "TERMINADO" ? "FALLADO / ARCHIVADO" : "EN TRAMITE" },
-        { fecha: "Gestión Intermedia", tramite: `Providencia judicial / Tramitación ordinaria de la causa en ${caso.materia}`, folio: "Folio en curso", cuaderno: "Principal", origen: caso.tribunal, estado: "PROVEIDO" },
-        { fecha: caso.fechaIngreso || "Fecha de Ingreso", tramite: `Ingreso de demanda / querella a distribución procesal ROL ${caso.rit}`, folio: "Folio 1", cuaderno: "Principal", origen: "Corte / Distribución", estado: "INGRESADO" }
-      ]
-    );
-    setCustomGestiones(defaultList);
+    setCustomGestiones(caso.gestiones || []);
   }, [caso]);
 
   const handleOpenAddGestion = () => {
