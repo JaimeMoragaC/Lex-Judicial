@@ -91,16 +91,33 @@ export default function RadarPlazos({ onSelectCaso }) {
 
   const eliminar = (id) => persistir(plazos.filter((p) => p.id !== id));
 
-  const stats = useMemo(() => resumen(plazos, hoy), [plazos, hoy]);
+  // Lo urgente se muestra junto, venga de donde venga: esconder una tarea que
+  // vence hoy en una lista secundaria es peor que mezclarla. Lo que NO se pierde
+  // es de qué tipo es cada cosa, porque un plazo fatal y un recordatorio no
+  // tienen la misma consecuencia.
+  const ES_URGENTE = new Set(['VENCIDO', 'HOY', 'CRITICO', 'URGENTE']);
+
+  const agendaUrgente = useMemo(
+    () => agenda.filter((g) => ES_URGENTE.has(clasificar(g, hoy))),
+    [agenda, hoy]
+  );
+
+  const agendaResto = useMemo(
+    () => agenda.filter((g) => !ES_URGENTE.has(clasificar(g, hoy))),
+    [agenda, hoy]
+  );
+
+  const stats = useMemo(
+    () => resumen([...plazos, ...agendaUrgente], hoy),
+    [plazos, agendaUrgente, hoy]
+  );
 
   const visibles = useMemo(() => {
-    const ordenados = ordenarPorUrgencia(plazos, hoy);
-    if (filtro === 'TODOS') return ordenados;
-    return ordenados.filter((p) => {
-      const estado = clasificar(p, hoy);
-      return estado !== 'AL_DIA' && estado !== 'PROXIMO';
-    });
-  }, [plazos, filtro, hoy]);
+    const todo = [...plazos, ...agendaUrgente];
+    const ordenados = ordenarPorUrgencia(todo, hoy);
+    if (filtro === 'TODOS') return ordenarPorUrgencia([...plazos, ...agenda], hoy);
+    return ordenados.filter((p) => ES_URGENTE.has(clasificar(p, hoy)));
+  }, [plazos, agenda, agendaUrgente, filtro, hoy]);
 
   const procSeleccionado = form.procedimientoId ? buscarProcedimiento(form.procedimientoId) : null;
 
@@ -283,6 +300,7 @@ export default function RadarPlazos({ onSelectCaso }) {
               <thead>
                 <tr>
                   <th>Estado</th>
+                  <th>Tipo</th>
                   <th>Causa</th>
                   <th>Actuación</th>
                   <th>Vence</th>
@@ -298,6 +316,19 @@ export default function RadarPlazos({ onSelectCaso }) {
                     <tr key={p.id} className={`sem sem-${estado}`}>
                       <td>
                         <span className={`badge chip-${estado}`}>{ETIQUETA_ESTADO[estado]}</span>
+                      </td>
+                      <td>
+                        {/* Un plazo fatal se calculó bajo una regla procesal; una
+                            tarea sólo tiene la fecha que se le puso. */}
+                        {p.origen === 'agenda' ? (
+                          <span className="badge" title="Recordatorio propio: la fecha es la que escribiste, no un cómputo procesal">
+                            Tarea
+                          </span>
+                        ) : (
+                          <span className="badge badge-gold" title={p.normativa || 'Calculado con el motor procesal'}>
+                            Plazo fatal
+                          </span>
+                        )}
                       </td>
                       <td>
                         <button
@@ -336,6 +367,7 @@ export default function RadarPlazos({ onSelectCaso }) {
                         </strong>
                       </td>
                       <td style={{ textAlign: 'right' }}>
+                        {p.origen === 'agenda' ? null : (
                         <button
                           className="btn-ghost btn-sm"
                           onClick={() => eliminar(p.id)}
@@ -344,6 +376,7 @@ export default function RadarPlazos({ onSelectCaso }) {
                         >
                           <Trash2 size={14} />
                         </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -354,12 +387,12 @@ export default function RadarPlazos({ onSelectCaso }) {
         )}
       </div>
 
-      {agenda.length > 0 && (
+      {agendaResto.length > 0 && (
         <div className="card card-static" style={{ marginTop: 'var(--space-6)' }}>
           <div className="card-header">
             <span className="card-title">Recordatorios de agenda</span>
             <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-              {agenda.length} · no son plazos fatales
+              {agendaResto.length} · sin urgencia inmediata
             </span>
           </div>
           <div className="card-pad">
@@ -373,7 +406,7 @@ export default function RadarPlazos({ onSelectCaso }) {
                   <tr><th>Fecha</th><th>Expediente</th><th>Gestión</th></tr>
                 </thead>
                 <tbody>
-                  {agenda.slice(0, 40).map((g) => (
+                  {agendaResto.slice(0, 40).map((g) => (
                     <tr key={g.id}>
                       <td className="mono">{g.fechaVencimiento}</td>
                       <td>
@@ -391,10 +424,10 @@ export default function RadarPlazos({ onSelectCaso }) {
                 </tbody>
               </table>
             </div>
-            {agenda.filter((g) => g.huerfana).length > 0 && (
+            {agendaResto.filter((g) => g.huerfana).length > 0 && (
               <p className="aviso-inline" style={{ marginTop: 'var(--space-3)' }}>
                 <AlertCircle size={12} />
-                {agenda.filter((g) => g.huerfana).length} quedaron sin expediente porque la
+                {agendaResto.filter((g) => g.huerfana).length} quedaron sin expediente porque la
                 Bitácora antigua las guardó bajo un identificador inventado. Vuelve a registrarlas
                 desde la Bitácora para asignarles uno.
               </p>
