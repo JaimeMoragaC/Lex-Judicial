@@ -299,12 +299,63 @@ export async function cargarPlazos() {
  * localStorage vienen de la Bitácora antigua y apuntan a identificadores que
  * nunca fueron causas ('EXTRAJUDICIAL', 's/n', roles inventados por la IA).
  */
+/**
+ * Gestiones guardadas dentro de los expedientes del servidor.
+ *
+ * La Bitácora dejó de escribir en localStorage y pasó a guardar cada gestión
+ * dentro de su expediente en data/expedientes.json. Sin leer de acá, todo lo
+ * anotado desde ese cambio quedaba invisible en el semáforo.
+ */
+function gestionesDeExpedientes(expedientes) {
+  const salida = [];
+  for (const exp of expedientes) {
+    for (const [idx, g] of (exp.gestiones || []).entries()) {
+      const fIso = normalizarFechaIso(g.fechaIso || g.fecha);
+      const estado = (g.estado || '').trim().toUpperCase();
+      const realizada = ['REALIZAD', 'COMPLETAD', 'TERMINAD', 'FALLADO', 'ARCHIVADO']
+        .some((w) => estado.includes(w));
+      if (!fIso || realizada) continue;
+
+      salida.push({
+        id: `exp-${exp.id}-${idx}-${fIso}`,
+        casoRit: exp.ritVinculado || exp.id,
+        rit: exp.ritVinculado || exp.id,
+        caratula: exp.cliente || 'Sin carátula',
+        asunto: exp.asunto || '',
+        cliente: exp.cliente || '',
+        tribunal: exp.tribunal || '',
+        actuacion: g.tramite || g.actuacion || 'Gestión pendiente',
+        descripcion: g.tramite || g.actuacion || 'Gestión pendiente',
+        regimen: 'CPC',
+        dias: 0,
+        esHaciaAtras: false,
+        fechaBase: fIso,
+        fechaVencimiento: fIso,
+        vencimiento: fIso,
+        notas: g.estado || ''
+      });
+    }
+  }
+  return salida;
+}
+
 export async function cargarAgenda(causas = [], expedientes = []) {
   const ritsConocidos = new Set(causas.map((c) => String(c.rit || '').toUpperCase()));
   const idsConocidos = new Set(expedientes.map((e) => String(e.id || '').toUpperCase()));
   const huerfano = /^(extrajudicial|s\/n|sin rol|undefined|null|)$/i;
 
-  return obtenerAgendaLocalStorage().map((g) => {
+  // Las dos fuentes: el registro del servidor (Bitácora actual) y los restos en
+  // localStorage (Bitácora antigua). Se deduplica por expediente, texto y fecha.
+  const crudas = [...gestionesDeExpedientes(expedientes), ...obtenerAgendaLocalStorage()];
+  const vistas = new Set();
+  const unicas = crudas.filter((g) => {
+    const clave = `${g.casoRit}|${g.actuacion}|${g.fechaVencimiento}`;
+    if (vistas.has(clave)) return false;
+    vistas.add(clave);
+    return true;
+  });
+
+  return unicas.map((g) => {
     const ref = String(g.casoRit || '').toUpperCase();
     const resuelto = ritsConocidos.has(ref) || idsConocidos.has(ref);
     return {
