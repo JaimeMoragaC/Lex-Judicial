@@ -50,6 +50,15 @@ export default function App() {
     localStorage.setItem('lexcontrol_theme', theme);
   }, [theme]);
 
+  // Limpiar cualquier gestión huérfana de pjud-caso- (bug previo)
+  React.useEffect(() => {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('lexcontrol_gestiones_pjud-caso-') || k.startsWith('lexcontrol_vigencia_pjud-caso-')) {
+        localStorage.removeItem(k);
+      }
+    });
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
