@@ -134,7 +134,7 @@ function naturalezaDeGestion(g) {
  * lo más urgente que existe. Por eso entra desde URGENTE (5 días hábiles) y
  * conserva su VENCIDO.
  */
-const ACCIONABLES_FATAL = new Set(['VENCIDO', 'HOY', 'CRITICO', 'URGENTE']);
+const ACCIONABLES_FATAL = new Set(['HOY']);
 /**
  * Un trámite con fecha propia entra SÓLO el día de su fecha.
  *
@@ -633,7 +633,7 @@ export function resumen(plazos, desde = hoyLocal()) {
   return {
     ...conteo,
     total: plazos.length,
-    accionables: conteo.VENCIDO + conteo.HOY + conteo.CRITICO + conteo.URGENTE
+    accionables: conteo.HOY
   };
 }
 

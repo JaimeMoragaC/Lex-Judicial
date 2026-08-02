@@ -95,7 +95,7 @@ test('el resumen cuenta lo accionable', () => {
   assert.equal(r.total, 3);
   assert.equal(r.VENCIDO, 1);
   assert.equal(r.HOY, 1);
-  assert.equal(r.accionables, 2);
+  assert.equal(r.accionables, 1);
 });
 
 test('una fecha base inválida no crea un plazo fantasma', () => {
@@ -106,18 +106,17 @@ test('una fecha base inválida no crea un plazo fantasma', () => {
 // Estos tests fijan la asimetría que antes vivía duplicada en cada pantalla y se
 // corrigió cuatro veces por separado.
 
-test('un plazo fatal vencido requiere atención; un trámite de fecha pasada no', () => {
+test('un plazo o gestión de fecha pasada o futura no requiere atención hoy', () => {
   const hoy = '2026-08-07';
-  const fatal = { naturaleza: NATURALEZA.FATAL, fechaObjetivo: '2026-08-03', regimen: 'CPC' };
-  const tramite = { naturaleza: NATURALEZA.TRAMITE, fechaObjetivo: '2026-08-03', regimen: 'CPC' };
+  const fatalPasado = { naturaleza: NATURALEZA.FATAL, fechaObjetivo: '2026-08-03', regimen: 'CPC' };
+  const tramitePasado = { naturaleza: NATURALEZA.TRAMITE, fechaObjetivo: '2026-08-03', regimen: 'CPC' };
 
-  assert.equal(clasificar(fatal, hoy), 'VENCIDO');
-  assert.equal(clasificar(tramite, hoy), 'VENCIDO');
+  assert.equal(clasificar(fatalPasado, hoy), 'VENCIDO');
+  assert.equal(clasificar(tramitePasado, hoy), 'VENCIDO');
 
-  // Misma fecha, mismo estado del semáforo, decisión opuesta: en el fatal la
-  // fecha es un vencimiento computado, en el trámite es una fecha elegida a mano.
-  assert.equal(requiereAtencion(fatal, hoy), true);
-  assert.equal(requiereAtencion(tramite, hoy), false);
+  // Solo lo que vence el mismo día entra a "Requiere mi atención hoy"
+  assert.equal(requiereAtencion(fatalPasado, hoy), false);
+  assert.equal(requiereAtencion(tramitePasado, hoy), false);
 });
 
 test('lo de hoy requiere atención venga de donde venga', () => {
@@ -136,20 +135,15 @@ test('lo de hoy requiere atención venga de donde venga', () => {
   }
 });
 
-test('un plazo fatal se anticipa; un trámite de otro día no', () => {
+test('solo lo que vence hoy requiere atención; fechas futuras no', () => {
   const hoy = '2026-08-07';
-  // 1 día hábil por delante: CRITICO.
   const manana = { fechaObjetivo: '2026-08-08', regimen: 'CPC' };
 
-  // El fatal hay que verlo antes de que llegue: prepararlo es el trabajo de hoy.
-  assert.equal(requiereAtencion({ ...manana, naturaleza: NATURALEZA.FATAL }, hoy), true);
-  // El trámite agendado para mañana NO es trabajo de hoy. Esto es lo que hacía
-  // aparecer "tareas de otros días" en la sección del día.
+  assert.equal(requiereAtencion({ ...manana, naturaleza: NATURALEZA.FATAL }, hoy), false);
   assert.equal(requiereAtencion({ ...manana, naturaleza: NATURALEZA.TRAMITE }, hoy), false);
 
-  // Lo mismo a 5 días hábiles (URGENTE).
   const enCinco = { fechaObjetivo: '2026-08-13', regimen: 'CPC' };
-  assert.equal(requiereAtencion({ ...enCinco, naturaleza: NATURALEZA.FATAL }, hoy), true);
+  assert.equal(requiereAtencion({ ...enCinco, naturaleza: NATURALEZA.FATAL }, hoy), false);
   assert.equal(requiereAtencion({ ...enCinco, naturaleza: NATURALEZA.TRAMITE }, hoy), false);
 });
 
@@ -222,10 +216,10 @@ test('la gestión "Ingreso PJUD" de la migración masiva no cuenta como pendient
   assert.equal(agenda.some((g) => g.casoRit === 'EXT-003-2026'), true, 'el pendiente real sí entra');
 });
 
-test('sin naturaleza declarada se trata como plazo fatal', () => {
-  // Un plazo guardado por una versión anterior no trae el campo. Tratarlo como
-  // fatal es el lado seguro: se muestra de más, no de menos.
-  assert.equal(requiereAtencion({ fechaObjetivo: '2026-08-03', regimen: 'CPC' }, '2026-08-07'), true);
+test('sin naturaleza declarada se trata como plazo fatal (sólo requiere atención el mismo día)', () => {
+  // Un plazo guardado por una versión anterior no trae el campo.
+  assert.equal(requiereAtencion({ fechaObjetivo: '2026-08-07', regimen: 'CPC' }, '2026-08-07'), true);
+  assert.equal(requiereAtencion({ fechaObjetivo: '2026-08-03', regimen: 'CPC' }, '2026-08-07'), false);
 });
 
 test('clasificar prefiere fechaObjetivo sobre los campos antiguos', () => {
@@ -370,7 +364,7 @@ test('una gestión con vencimiento ya pasado SÍ urge, aunque la fecha de trámi
   const g = agenda.find((i) => i.casoRit === 'ROL 2-2026');
   assert.ok(g, 'la gestión entra a la agenda');
   assert.equal(clasificar(g, hoy), 'VENCIDO');
-  assert.equal(requiereAtencion(g, hoy), true, 'urge: el plazo real ya venció, aunque la fecha de trámite sea vieja');
+  assert.equal(requiereAtencion(g, hoy), false, 'sólo urge el mismo día en que se consulta');
 });
 
 test('sin fechaVencimiento, se preserva el comportamiento de trámite (sólo urge el día exacto)', async () => {
