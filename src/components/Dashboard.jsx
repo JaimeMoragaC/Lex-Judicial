@@ -24,7 +24,7 @@ import { MOCK_PLAZOS_FATALES, MOCK_CASOS } from '../mockData';
 import { PJUD_CASOS } from '../pjudCausesData';
 import { PARTE_DIARIO_OJV } from '../parteDiarioData';
 import { LEXCONTROL_API } from '../apiBase';
-import { cargarAtencion, hoyLocal, audienciasProximas } from '../utils/radarPlazos.js';
+import { cargarAtencion, hoyLocal, audienciasProximas, ordenarPendientes } from '../utils/radarPlazos.js';
 
 /** Ventana de la tarjeta "Audiencias próximas": hoy + este tanto de días. */
 const DIAS_AUDIENCIAS = 30;
@@ -54,9 +54,10 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   // Lo que requiere atención hoy, ya clasificado y ordenado por radarPlazos.js.
   // El Dashboard no arma esta lista ni decide qué entra: sólo la pinta.
   const [atencion, setAtencion] = useState([]);
-  // Pendientes de bitácora: trabajo sin fecha de vencimiento, que sigue abierto
-  // hasta marcarse REALIZADO. Va en su propia tarjeta porque no son plazos.
+  // Pendientes de bitácora: trabajo sin fecha de vencimiento o con vencimiento abierto.
   const [pendientes, setPendientes] = useState([]);
+  const [ordenPendientes, setOrdenPendientes] = useState('creacion_asc');
+  const pendientesOrdenados = useMemo(() => ordenarPendientes(pendientes, ordenPendientes), [pendientes, ordenPendientes]);
   const [expedientesReales, setExpedientesReales] = useState([]);
   const [cargandoReal, setCargandoReal] = useState(true);
   // Sólo audiencias con fecha Y hora fijada por el tribunal -no cualquier
@@ -548,15 +549,35 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
           y lo que ordena es la antigüedad. */}
       {pendientes.length > 0 && (
         <div className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
-          <div className="card-header row" style={{ justifyContent: 'space-between' }}>
+          <div className="card-header row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
             <div className="row" style={{ gap: 'var(--space-2)' }}>
               <Flame size={20} color="var(--warn)" />
               <span className="card-title">Pendientes de bitácora ({pendientes.length})</span>
             </div>
-            <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>sin vencimiento · lo más antiguo primero</span>
+            <div className="row" style={{ gap: 'var(--space-2)' }}>
+              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>Ordenar por:</span>
+              <select
+                value={ordenPendientes}
+                onChange={(e) => setOrdenPendientes(e.target.value)}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="creacion_asc">Creación (más antigua primero)</option>
+                <option value="creacion_desc">Creación (más reciente primero)</option>
+                <option value="vencimiento_asc">Vencimiento (más próximo primero)</option>
+                <option value="vencimiento_desc">Vencimiento (más lejano primero)</option>
+              </select>
+            </div>
           </div>
           <div className="card-pad stack" style={{ gap: 'var(--space-2)' }}>
-            {pendientes.slice(0, 12).map((g) => (
+            {pendientesOrdenados.slice(0, 12).map((g) => (
               <div
                 key={g.id}
                 onClick={() => handleAbrirCasoDesdePlazo(g)}
@@ -572,7 +593,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                 }}
               >
                 <div style={{ flex: 1 }}>
-                  <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px' }}>
+                  <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px', flexWrap: 'wrap' }}>
                     <span className="mono" style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>{g.casoRit}</span>
                     {(g.notas || '').toUpperCase().includes('EN ESPERA') && (
                       <span
@@ -589,11 +610,17 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{g.titulo}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: '500' }}>{g.titulo}</div>
+                  <div className="row" style={{ gap: 'var(--space-4)', marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <span>🗓️ <strong>Creada:</strong> {g.fechaCreacion || g.fechaMostrada || 'Sin fecha'}</span>
+                    <span>⏰ <strong>Vencimiento:</strong> {g.fechaVencimiento ? g.fechaVencimiento : 'Sin vencimiento'}</span>
+                  </div>
                 </div>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: '700', fontFamily: 'monospace', color: g.diasPendiente >= 30 ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                  {g.etiquetaTiempo}
-                </span>
+                <div style={{ textAlign: 'right', minWidth: '90px' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: '700', fontFamily: 'monospace', color: g.diasPendiente >= 30 ? 'var(--danger)' : 'var(--text-secondary)' }}>
+                    {g.etiquetaTiempo}
+                  </span>
+                </div>
               </div>
             ))}
             {pendientes.length > 12 && (

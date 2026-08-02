@@ -720,11 +720,44 @@ function decorar(item, desde) {
     // La fecha ya viene resuelta: ninguna pantalla vuelve a decidir cuál de los
     // campos de fecha es el que corresponde leer.
     fechaMostrada: item.fechaObjetivo,
+    fechaCreacion: item.fechaTramite || item.fechaCreacion || item.fecha || item.fechaObjetivo || null,
+    fechaVencimiento: item.fechaVencimiento || item.vencimiento || null,
     casoRit: item.casoRit || item.rit || item.rol || 'Sin ROL',
     titulo: item.actuacion || item.descripcion || item.asunto || 'Trámite procesal pendiente',
     caratulaMostrada: item.caratula || item.cliente || 'Carátula no especificada',
     requiereAtencion: requiereAtencion(item, desde)
   };
+}
+
+/** Ordena la lista de pendientes de bitácora por fecha de creación o de vencimiento. */
+export function ordenarPendientes(pendientes = [], criterio = 'creacion_asc') {
+  const normalizar = (val) => (val ? normalizarFechaIso(val) || '' : '');
+  return [...pendientes].sort((a, b) => {
+    const fcA = normalizar(a.fechaCreacion);
+    const fcB = normalizar(b.fechaCreacion);
+    const fvA = normalizar(a.fechaVencimiento);
+    const fvB = normalizar(b.fechaVencimiento);
+
+    if (criterio === 'creacion_asc') {
+      return fcA.localeCompare(fcB);
+    }
+    if (criterio === 'creacion_desc') {
+      return fcB.localeCompare(fcA);
+    }
+    if (criterio === 'vencimiento_asc') {
+      if (!fvA && !fvB) return fcA.localeCompare(fcB);
+      if (!fvA) return 1;
+      if (!fvB) return -1;
+      return fvA.localeCompare(fvB);
+    }
+    if (criterio === 'vencimiento_desc') {
+      if (!fvA && !fvB) return fcB.localeCompare(fcA);
+      if (!fvA) return 1;
+      if (!fvB) return -1;
+      return fvB.localeCompare(fvA);
+    }
+    return 0;
+  });
 }
 
 /**
