@@ -1,0 +1,162 @@
+{
+  "generado_en": "2026-07-31T14:37:44.531763",
+  "total_pruebas": 6,
+  "pasaron_waf": 6,
+  "bloqueados": 0,
+  "indeterminados": 0,
+  "veredicto": "✅ CONFIRMADO: El WAF F5 NO bloquea requests HTTP directos cuando se usan cookies de sesión legítimas. La teoría de cómo Chateau envió 38.477 escritos es VIABLE.",
+  "resultados": [
+    {
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 5031,
+      "headers_respuesta": {
+        "Set-Cookie": "TS03f870c8029=08a336eaa2ab2800e5b544fac337d474b624fa04ba636f07866bc0442efd1984b603d3d9ce9942b2aec132af6170e698; Max-Age=30; Path=/, TS03f870c8078=08a336eaa2ab2000bfee6e0220385f45876b4ace1f18ae5fd8432f273aebaf637877643f99cdfe370848b6d64918300160d6308e8ca1d16f6cfc1a593fda0361f4ecf25a1db519fbec2290dae951481c6a8a414efed875e03fbc3666e4f05f22f1b07449e709b59bd30a9fc9fa9b95bad18b3f501feb6c887c243391138da5b5828bb850e6cb0e32e9c564d5fe5a3abd15cb6c99a9fce18f6e4862056558ee86c63c42edb31eff009ec7865a686a497e2f09ff7c52fae27be58de5b7812b42d7375f51072a321606711bc875a9c7d0fe328ed156836846eefb01628bb7d8004ddbbde7c6f0727a0e9c21480afbe735689b23f3b5eeadd23c324d02d3394393f48d3d96520c1b6dfe65297d2143236e116b338fbfb0fcb1c6e7af0508d17bcceb5d27d65ec11086cfe4ec06c8950a367d58ba72bb3d0269698fbb4d27da75047318b9b1d9747118dde1109b4f1825f25c867d89641c8a272ce44a9a8170a2c873; Max-Age=30; Path=/, TSa2ac8a0a027=08a336eaa2ab20006c7e74dd7f8e437a1e4ffbdc746c08aecbc44f81fc1ec0be0b62102d3525125908fc326380113000fc9c1ad4b67ae9c826cbbb5360650a6917c789244f250a967aed58c7ed2181cd5de12dd7126827a323c8d67b7fbda85e; Path=/",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, must-revalidate, no-cache, max-age=0",
+        "Content-Type": "text/html",
+        "Content-Length": "5031",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'rol'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<!DOCTYPE html>\r\n<html><head>\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Expires\" content=\"-1\"/>\r\n<meta http-equiv=\"CacheControl\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\r\n<link rel=\"shortcut icon\" href=\"data:;base64,iVBORw0KGgo=\"/>\r\n\r\n<script type=\"text/javascript\">\r\n(function(){\r\nwindow[\"bobcmn\"] = \"10111110101010200000005200000005200000006200000001203f870c820000009620000000020000000230000000030000002fhttps%3a%2f%2foficinajudicialvirtual.pjud.cl%2f300000006/TSPD/300000008TSPD_10130000000cTSPD_101_DID300000005https30000010008a336eaa2ab2000891909a2c9b2a1fe2807183f0b32b17caf477a7ae786a1f79cae7a4ebe9979ee081bec0d7b0a50001d51df71550084853735ed2665ad5f741cf3a720c35616a749cc2b5a31e1b6826a3fc6a44cf1d61e74d3d228239288c61a52c7531ff284972047528643635cf0d401142e88cbcb0b9820a33c60b9e409300000002TS200000000200000000\";\r\n\r\nwindow[\"failureConfig\"] = \"524f6f70732e2e2e2e736f6d657468696e672077656e742077726f6e672e2e2e2e20796f757220737570706f72742069642069733a2025444f534c372e6368616c6c656e67652e737570706f72745f6964252e143131323234383237323431323936393733393032062f545350442f171801\";window.sWvc=!!window.sWvc;try{(function(){(function(){})();var b=26;try{var aa,pa,ra=c(851)?0:1,sa=c(971)?0:1,ta=c(268)?1:0,ua=c(204)?1:0;for(var va=(c(109),0);va<pa;++va)ra+=(c(360),2),sa+=(c(911),2),ta+=(c(375),2),ua+=(c(692),3);aa=ra+sa+ta+ua;window.Aa===aa&&(window.Aa=++aa)}catch(a){window.Aa=aa}var e=!0;function xa(a){var d=18;a&&(document[f",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/"
+    },
+    {
+      "status_code": 302,
+      "content_type": "text/html; charset=UTF-8",
+      "content_length": 38196,
+      "headers_respuesta": {
+        "Date": "Fri, 31 Jul 2026 18:37:35 GMT",
+        "X-Frame-Options": "SAMEORIGIN, SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "Expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Location": "https://oficinajudicialvirtual.pjud.cl/loginN.php?noclaveu=1",
+        "Content-Security-Policy": "frame-ancestors *.pjud.cl causas.3ta.cl causas.1ta.cl;",
+        "X-Content-Type-Options": "nosniff",
+        "Strict-Transport-Security": "max-age=31536000",
+        "Referrer-Policy": "no-referrer-when-downgrade",
+        "Permissions-Policy": "geolocation=self",
+        "Connection": "close",
+        "Content-Type": "text/html; charset=UTF-8",
+        "Set-Cookie": "TS01262d1d=01b485afe51f48f16314279b1ba302c0f2965995b69335cdcd7fac16219f44ae92cd513f008884bdd9e27d5c0e9901af874164b97230a55e9b8f7ad966bb1507812ac26232; Path=/; Domain=.oficinajudicialvirtual.pjud.cl, TSa2ac8a0a027=08a336eaa2ab2000a3a2469dda720394f6dc149b85d52a5e105fad03967ed7121d3931ccd3f6acc308bb193e16113000514e6a3339a2ff9087d6ccdf5fba7cf8949d083a8bc36836cd1f5cae3a4d184cf5a43815b64e2b972c86965c94a2c33b; Path=/",
+        "Transfer-Encoding": "chunked"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'oficina judicial'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<script>console.log(0);</script><!DOCTYPE html>\r\n<html lang=\"es\">\r\n    <head>\r\n    \t<meta http-equiv=\"Content-Language\" content=\"es\">\r\n        <meta charset=\"utf-8\">\r\n        <!-- \r\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n         -->\r\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\r\n        <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\r\n\r\n        <title>Oficina Judicial Virtual</title>\r\n\t\t<!--\r\n\t\t\r\n\t\tvmoficinajudicialvirtual06\t\t\r\n\t\t-->\r\n\t\t\r\n\t\t<link rel=\"icon\" type=\"image/x-icon\" href=\"imgN/favicon-2.png\">\r\n\t\t<!--[if IE]><link rel=\"shortcut icon\" href=\"imgN/favicon-1.png\"><![endif]-->\r\n\t\t\r\n        <!--\tCSS\t\t-->\r\n\r\n        <link rel=\"stylesheet\" type=\"text/css\" href=\"js/jquery-toast/jquery.toast.css\" media=\"screen\" />\n\n<!--toaster-->\n<link href=\"toastr.css\" rel=\"stylesheet\"/>\n\n\n\n<!-- bootstrapSelect -->\n<link rel=\"stylesheet\" type=\"text/css\" href=\"assets/bootstrap-select-1.13.14/css/bootstrap-select.css?ver=1.2\" media=\"screen\" />\n\n\n<!-- Custom CSS -->\n<link rel=\"stylesheet\" href=\"cssN/main.css?v=2.1\">\n\n<link href=\"css/bootstrap-toggle.min.css\" rel=\"stylesheet\">\n\n<!-- Bootstrap CSS -->\n<link href=\"assets/bootstarp/css/bootstrap.css\" rel=\"stylesheet\">\n\n<!-- Font Awesome -->   \n<script src=\"js/970412fb91.js\" crossorigin=\"anonymous\"></script>\n\n  \n\n<!-- JqueryUI -->\n<link rel=\"stylesheet\" type=\"text/css\" href=\"js/jqueryUi/jquery-ui.css?ver=2\" media=\"screen\" />\n<link r",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/indexN.php"
+    },
+    {
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 5028,
+      "headers_respuesta": {
+        "Set-Cookie": "TS03f870c8029=08a336eaa2ab2800337842889425d495043c378e7217554cb2bc8046ead43ed6a6a9eba00efc1447d082e68cf14a7826; Max-Age=30; Path=/, TS03f870c8078=08a336eaa2ab2000accb6a4658b25f6b50149192055a9e008e623401548c28ebee72bf1cb953b1e30883e1fa3818480135e533fffb534615925c21a97c58f67f3b741f5aaace17654c4f75b6481261864aaeeebfcaa1ecfc364e53692f369c44fc298a25506190ee003f1805251357c7d39de041c7d45605416c0858881c4e9e8b8afa06e3d97b27365b59397b3ee009686f3c80502bf414f3ebdc271957cc3a07a9ad48c26ead772d08ef012cdaf68d733485fcbe211ae58419c6e8b2ab0d8e0aaaaf76aa30d33b820285b0842552269389266c3fccd38a9b371305cf2763899375c367506fa36bf9143a70e83b69d5988eec2e422abc5ad7ddd407343be202f9116bc23dd6f7c43e387da5b3bb0eee3dcd215ea4ab0de065b8a208df8133095d4bff6f28bbe3ca43003622e5c1da79f8c6777dc1f1a1bd8e4825348fa9d39a55ed1e41f404fc203744e8558397ef0951515f08a016a251876eba06d3e81d76bdd9b326f72928dbb5b20f07c989fa78e5f33febab2c685d; Max-Age=30; Path=/, TSa2ac8a0a027=08a336eaa2ab2000d2ba9b67465a01db53fb653c438104719d9495cc915159d2e138fb150d5e8557087c94a069113000b5f675ddce69326691c6ae5dff88c713cc7688f51e8a448759b510564cdbfd0cd4a9cd4e814444de9930b8caa10758f8; Path=/",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, must-revalidate, no-cache, max-age=0",
+        "Content-Type": "text/html",
+        "Content-Length": "5028",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'rol'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<!DOCTYPE html>\r\n<html><head>\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Expires\" content=\"-1\"/>\r\n<meta http-equiv=\"CacheControl\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\r\n<link rel=\"shortcut icon\" href=\"data:;base64,iVBORw0KGgo=\"/>\r\n\r\n<script type=\"text/javascript\">\r\n(function(){\r\nwindow[\"bobcmn\"] = \"10111110101010200000005200000005200000006200000001203f870c820000009620000000020000000230000000030000002fhttps%3a%2f%2foficinajudicialvirtual.pjud.cl%2f300000006/TSPD/300000008TSPD_10130000000cTSPD_101_DID300000005https30000010008a336eaa2ab2000aad5747ca4241dda016b8fd27925f6f3f3a693eeeae72289b15dfbdbe82db3220806869d6e0a5000779333ab2d3ef3ddac9a17e39697b704531ff355844026489e42ee4491006b0fa80770bd93bd6c76a70fc10be4ef457953ee08ccccb9a6210894d46d1460637e77347e53167af841d23235ababbd45c3300000002TS200000000200000000\";\r\n\r\nwindow[\"failureConfig\"] = \"524f6f70732e2e2e2e736f6d657468696e672077656e742077726f6e672e2e2e2e20796f757220737570706f72742069642069733a2025444f534c372e6368616c6c656e67652e737570706f72745f6964252e1338303638323835323438303330393539383230062f545350442f171801\";window.sWvc=!!window.sWvc;try{(function(){(function(){})();var b=26;try{var aa,pa,ra=c(851)?0:1,sa=c(971)?0:1,ta=c(268)?1:0,ua=c(204)?1:0;for(var va=(c(109),0);va<pa;++va)ra+=(c(360),2),sa+=(c(911),2),ta+=(c(375),2),ua+=(c(692),3);aa=ra+sa+ta+ua;window.Aa===aa&&(window.Aa=++aa)}catch(a){window.Aa=aa}var e=!0;function xa(a){var d=18;a&&(document[f(d",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/ADIR_871/mis_causas.php"
+    },
+    {
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 5028,
+      "headers_respuesta": {
+        "Set-Cookie": "TS03f870c8029=08a336eaa2ab2800e687f2961b1d97c00fccc9f9a57d9202b6540e31a9c0880d121f74dd8172a5c3efc9c95de1254dc3; Max-Age=30; Path=/, TS03f870c8078=08a336eaa2ab200030d9a6646c99d1f188efb108c68de53b592a898244782df71c19580ba0a2f1e9082f1af59a184801741ed028596859d72a1040e0895e96204344761865e71fa4bdeefe9159f6ce68d444356174f285e5259b5aa241b0a96ef79a50dc9185b5ba9511bde7edae0b48455a19ec8aa1c0f9321d45b3279fabbbb1e257c5f42202b3144a019a162845762613114ce3717990e697ff78213856ba7c080fe9d0de20c5741324f3ae8df60624c7a676e2f643bcf766ab3d77ba62df11b8c60f855ed34ff841bd918e2ca2630b602caa76656086543ae4e110b4770533faf9c7737e30558fa0bb90f3194eea1bc59464c41fe8ec1acc1cbb1d0db9069c0fb6b4157ed4cdb7af905baddac46c4f5bedd85c42999339f81ad43ef58863e4f1ae884f588b8c56ea5718c00558b8655d0be89d86713f90900e82d9f66ce499f9f455dee1d1778f395116e0aff5eac34a9f85f27056d70e90a102ec2a8aab6149afd4cab6cd0166c775f8404d4d9dee9d477633a133b7; Max-Age=30; Path=/, TSa2ac8a0a027=08a336eaa2ab200014f90b3bcaf95ac97e94fde910d0caf22e17a68463e74e0d1497bab8986e464408698c9acd113000555e5bb8c5ca05ce6e7fc27608ee2ed9bb9292a1aa94960b05c55b7b255c5634529b6e55b57ce940992fdebabad7a049; Path=/",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, must-revalidate, no-cache, max-age=0",
+        "Content-Type": "text/html",
+        "Content-Length": "5028",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'rol'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<!DOCTYPE html>\r\n<html><head>\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Expires\" content=\"-1\"/>\r\n<meta http-equiv=\"CacheControl\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\r\n<link rel=\"shortcut icon\" href=\"data:;base64,iVBORw0KGgo=\"/>\r\n\r\n<script type=\"text/javascript\">\r\n(function(){\r\nwindow[\"bobcmn\"] = \"10111110101010200000005200000005200000006200000001203f870c820000009620000000020000000230000000030000002fhttps%3a%2f%2foficinajudicialvirtual.pjud.cl%2f300000006/TSPD/300000008TSPD_10130000000cTSPD_101_DID300000005https30000010008a336eaa2ab2000bc33f60e9825edb4dda4de888d193a9a75c4a31359bab58233c772c6de344ad6089441f4b60a5000078edbc7ffca37f77528e174c05bd0b0e4a82ace2d76367d5b06cef3e558c884ba3f27cbcfb16e7ecf2c2a2d82f4c0ba7f13d1d21d5632575e2cb73cae10e37918dcf631e2a8af30949deb27f923966e300000002TS200000000200000000\";\r\n\r\nwindow[\"failureConfig\"] = \"524f6f70732e2e2e2e736f6d657468696e672077656e742077726f6e672e2e2e2e20796f757220737570706f72742069642069733a2025444f534c372e6368616c6c656e67652e737570706f72745f6964252e1338303638323835323438303330393730363932062f545350442f171801\";window.sWvc=!!window.sWvc;try{(function(){(function(){})();var b=26;try{var aa,pa,ra=c(851)?0:1,sa=c(971)?0:1,ta=c(268)?1:0,ua=c(204)?1:0;for(var va=(c(109),0);va<pa;++va)ra+=(c(360),2),sa+=(c(911),2),ta+=(c(375),2),ua+=(c(692),3);aa=ra+sa+ta+ua;window.Aa===aa&&(window.Aa=++aa)}catch(a){window.Aa=aa}var e=!0;function xa(a){var d=18;a&&(document[f(d",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/ADIR_871/estado_diario.php"
+    },
+    {
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 5028,
+      "headers_respuesta": {
+        "Set-Cookie": "TS03f870c8029=08a336eaa2ab2800d2c847605ee04a74730ac3a6d55ec3327a4a69e005193591a08b9db8834ded98e62e5a07f3124a4e; Max-Age=30; Path=/, TS03f870c8078=08a336eaa2ab200094128ea2eb89b6d36d92b93c0061357ca713a8a7bf0c0606fb92994b767290b608647771dc1848014864ebecc349a942925c21a97c58f67fb76de1aef319a75c257b86c5d2f9a5cec05f711920a044bc5bd010fd22ea72dd0e33e0bf956cade428710393451a62af5fe2af7df22a8a2fe82871c623c2531863c6e414df52c59bd4766a74d9acd37301a8f69d884fb1c227398ca2d91e8d9bf3fbe87a296677e26694360cc7742665c0aebc9cb422117ff02ede0ce5dccec3f4f7ea17fdbe4abf4423dbfd6ecdf630f68463ab908b3a17776ee0588ca0ec1eaab90193c42f37e0ab61204c8ef590c969b9e133d5b80060f3b7ca3023fd69994c7c1b44c133067a9a3878c418f18b476e4b61b9efba5bda517db5cda0a4c9514e9744406889bc273b6f8cb314a5745949387de8db69e14be7bb337aa0c1fb0dd952b01316747f90e852fd4fdc19a89a6ce712bc07f4bd80a85a6bcf75cc5c4d989d288f422fba80ca221a08a55bc5cbfdc4619b6d4bb0a9; Max-Age=30; Path=/, TSa2ac8a0a027=08a336eaa2ab2000a3ff55ba764ab632b5747868cbac82505792ce04948489e660efda7d2106649008a284dbf5113000f31af1837a6a4085fb77646e7f3ea0dae3d66e9d1960974ed4b101daec3c176d8e4effa44f43e3b0fb087cdfabce247e; Path=/",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, must-revalidate, no-cache, max-age=0",
+        "Content-Type": "text/html",
+        "Content-Length": "5028",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'rol'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<!DOCTYPE html>\r\n<html><head>\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Expires\" content=\"-1\"/>\r\n<meta http-equiv=\"CacheControl\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\r\n<link rel=\"shortcut icon\" href=\"data:;base64,iVBORw0KGgo=\"/>\r\n\r\n<script type=\"text/javascript\">\r\n(function(){\r\nwindow[\"bobcmn\"] = \"10111110101010200000005200000005200000006200000001203f870c820000009620000000020000000230000000030000002fhttps%3a%2f%2foficinajudicialvirtual.pjud.cl%2f300000006/TSPD/300000008TSPD_10130000000cTSPD_101_DID300000005https30000010008a336eaa2ab2000a394c3888ad548e206926a16db34c082f60fd51141b84c1c9431ae35ed3f5a4b08c9e06bc00a500030840ac25a336cd221a1bf1a6877b8412c4b138dcaa55d74307c2f68c93f883e0b580a18d777eca26e6ec95ab16ab835195ea6dc32b5f92a3acf60347a5ae3fe80efe72e39c3d2ea3df82099f813444b300000002TS200000000200000000\";\r\n\r\nwindow[\"failureConfig\"] = \"524f6f70732e2e2e2e736f6d657468696e672077656e742077726f6e672e2e2e2e20796f757220737570706f72742069642069733a2025444f534c372e6368616c6c656e67652e737570706f72745f6964252e1338303638323835323438303330393738373932062f545350442f171801\";window.sWvc=!!window.sWvc;try{(function(){(function(){})();var b=26;try{var aa,pa,ra=c(851)?0:1,sa=c(971)?0:1,ta=c(268)?1:0,ua=c(204)?1:0;for(var va=(c(109),0);va<pa;++va)ra+=(c(360),2),sa+=(c(911),2),ta+=(c(375),2),ua+=(c(692),3);aa=ra+sa+ta+ua;window.Aa===aa&&(window.Aa=++aa)}catch(a){window.Aa=aa}var e=!0;function xa(a){var d=18;a&&(document[f(d",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/ADIR_871/escritorio.php"
+    },
+    {
+      "status_code": 200,
+      "content_type": "text/html",
+      "content_length": 5028,
+      "headers_respuesta": {
+        "Set-Cookie": "TS03f870c8029=08a336eaa2ab280047da085829c75c2140cc6da604a793b9ebc03db375a6671ac7d5cf32d93ae710e7e04c88a926a268; Max-Age=30; Path=/, TS03f870c8078=08a336eaa2ab200047816411b502d898d2900c56c0c3ea0c8b5b524158dab3a975a0eaae91eed8fb08b303efe51848017d9512ba2aca060fc7e90456448b783cac62958a25d0f063748e6bbba7c8c4d92e04ef350522419dc7e753dee90c2f0dc7fe3a6a322003ec9869a4b776b413e4f1bac3700fe066e2f7b7ed38851d8702a1b3383eb5e1168ba151c1eac65a05c1a296f3ff19f1f5486ee8245035990283853283a7f1253a694a3052ceba8cdd9452e9bf3af932cca54e6692774465725e5817e72293ad693955a55515e4c292bff67af0cdf0b8757e4dcc9323f2bb817262fa65d8a87e5a851e7033af47fddc48e1daca2680a791380b586c3875c8ae7c3faba186725fdc08424e38694a9dc691c77cc2ebb51e2e874d0b4a63f17b774e42a4a9e7791352419d2effb9c39050bc77c9aed980b90a6b57005baa4b851841fdaa925d28252da3d4a1f2c537f98b9af31241415fcd42a365bde21adaa2f5aa15491023ec5047a894c966e260b0a55ae3fd9e8a88015069; Max-Age=30; Path=/, TSa2ac8a0a027=08a336eaa2ab20003b94050f2686ac66a5b1b073d96735aeb619e6057c5c6ec86e63aa6d99880c5e0880441220113000d10b3a0d07c28fdffcec2610ef4ae2ef6c3089115f703ea642a367ce21fcbb9a3df6f7a2cf5cc63bc863000f34bcf0d6; Path=/",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, must-revalidate, no-cache, max-age=0",
+        "Content-Type": "text/html",
+        "Content-Length": "5028",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-XSS-Protection": "1; mode=block",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "indicadores_bloqueo": [],
+      "indicadores_exito": [
+        "Contenido PJUD: 'rol'"
+      ],
+      "bloqueado": false,
+      "datos_reales": true,
+      "body_preview": "<!DOCTYPE html>\r\n<html><head>\r\n<meta http-equiv=\"Pragma\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Expires\" content=\"-1\"/>\r\n<meta http-equiv=\"CacheControl\" content=\"no-cache\"/>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>\r\n<link rel=\"shortcut icon\" href=\"data:;base64,iVBORw0KGgo=\"/>\r\n\r\n<script type=\"text/javascript\">\r\n(function(){\r\nwindow[\"bobcmn\"] = \"10111110101010200000005200000005200000006200000001203f870c820000009620000000020000000230000000030000002fhttps%3a%2f%2foficinajudicialvirtual.pjud.cl%2f300000006/TSPD/300000008TSPD_10130000000cTSPD_101_DID300000005https30000010008a336eaa2ab20002c5c407cd5dec9e09689960286c1876824efee0efe7b1abe4c7a089f05c61969083ccef9ef0a50000d6c5024ea9a88618fed969f96df0725653d1419aca1b2a58ef7532a963071faf0c63cda4271fff6003c50cb5e244fc274e33f7ad0b0c004606042da273001bf110bb73429a82b354f1662147d2fb7ac300000002TS200000000200000000\";\r\n\r\nwindow[\"failureConfig\"] = \"524f6f70732e2e2e2e736f6d657468696e672077656e742077726f6e672e2e2e2e20796f757220737570706f72742069642069733a2025444f534c372e6368616c6c656e67652e737570706f72745f6964252e1338303638323835323438303330393839343438062f545350442f171801\";window.sWvc=!!window.sWvc;try{(function(){(function(){})();var b=26;try{var aa,pa,ra=c(851)?0:1,sa=c(971)?0:1,ta=c(268)?1:0,ua=c(204)?1:0;for(var va=(c(109),0);va<pa;++va)ra+=(c(360),2),sa+=(c(911),2),ta+=(c(375),2),ua+=(c(692),3);aa=ra+sa+ta+ua;window.Aa===aa&&(window.Aa=++aa)}catch(a){window.Aa=aa}var e=!0;function xa(a){var d=18;a&&(document[f(d",
+      "metodo": "GET",
+      "url": "https://oficinajudicialvirtual.pjud.cl/ADIR_871/ingreso_escrito.php"
+    }
+  ]
+}

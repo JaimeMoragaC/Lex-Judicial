@@ -10,6 +10,7 @@ import {
   nombreFeriado
 } from '../utils/plazosChile';
 import { MOCK_CASOS } from '../mockData';
+import { PJUD_CASOS } from '../pjudCausesData';
 import { cargarPlazos, guardarPlazos, computarPlazo, hoyLocal } from '../utils/radarPlazos.js';
 
 const CUERPOS_LEGALES = {
@@ -108,7 +109,7 @@ Generado por LexControl.`;
   const agendarEnRadar = async () => {
     if (!resultado || !procSeleccionado) return;
     try {
-      const caso = MOCK_CASOS.find((c) => c.id === casoVinculado);
+      const caso = [...MOCK_CASOS, ...PJUD_CASOS].find((c) => c.id === casoVinculado);
       const nuevo = computarPlazo({
         casoId: caso?.id || null,
         rit: caso?.rit,
@@ -262,7 +263,7 @@ Generado por LexControl.`;
                 onChange={(e) => setCasoVinculado(e.target.value)}
               >
                 <option value="">Sin causa asociada</option>
-                {MOCK_CASOS.slice(0, 400).map((c) => (
+                {[...MOCK_CASOS, ...PJUD_CASOS].slice(0, 400).map((c) => (
                   <option key={c.id} value={c.id}>{c.rit} — {(c.caratula || '').slice(0, 55)}</option>
                 ))}
               </select>

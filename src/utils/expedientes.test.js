@@ -11,8 +11,47 @@ import {
   puntuar,
   buscarCandidatos,
   siguienteCorrelativo,
-  crearExpediente
+  crearExpediente,
+  ritUtilizable,
+  claveDeCaso,
+  expedienteDeCaso
 } from './expedientes.js';
+
+// --- El ROL vacío del Excel --------------------------------------------------
+// 318 de las 1.557 causas del Excel oficial traen el rit literal "ROL ", sin
+// número. Usarlo como identificador hacía que las 318 colapsaran en un mismo
+// expediente y las gestiones de un cliente terminaran en la carpeta de otro.
+
+test('un ROL sin dígitos no sirve para identificar', () => {
+  assert.equal(ritUtilizable('ROL 302-2025'), true);
+  assert.equal(ritUtilizable('C-1869-2026'), true);
+  assert.equal(ritUtilizable('ROL '), false, 'el valor real del Excel en 318 causas');
+  assert.equal(ritUtilizable('ROL'), false);
+  assert.equal(ritUtilizable(''), false);
+  assert.equal(ritUtilizable(null), false);
+});
+
+test('sin ROL utilizable la clave cae al id interno, que sí es único', () => {
+  assert.equal(claveDeCaso({ id: 'pjud-caso-1225', rit: 'ROL ' }), 'pjud-caso-1225');
+  assert.equal(claveDeCaso({ id: 'pjud-caso-137', rit: 'ROL 302-2025' }), 'ROL 302-2025');
+});
+
+test('dos causas distintas con el mismo ROL vacío NO comparten expediente', () => {
+  // Caso real: GARAI/CAMPOS y MINISTERIO PUBLICO CALBUCO, ambas con rit "ROL ".
+  const garai = { id: 'pjud-caso-1225', rit: 'ROL ', caratula: 'GARAI/CAMPOS' };
+  const calbuco = { id: 'pjud-caso-1241', rit: 'ROL ', caratula: 'MINISTERIO PUBLICO CALBUCO' };
+
+  const expedientes = [
+    { id: 'pjud-caso-1225', cliente: 'GARAI/CAMPOS', gestiones: [{ tramite: 'querella Calbuco' }] }
+  ];
+
+  assert.ok(expedienteDeCaso(garai, expedientes), 'la causa de Garai encuentra su expediente');
+  assert.equal(
+    expedienteDeCaso(calbuco, expedientes),
+    null,
+    'la otra causa NO debe caer en el expediente de Garai'
+  );
+});
 
 test('la normalización descarta tratamientos y tildes', () => {
   assert.equal(normalizar('don Víctor Garai'), 'victor garai');

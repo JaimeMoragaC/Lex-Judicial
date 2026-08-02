@@ -50,6 +50,23 @@ def cargar_causas_pjud():
     return cargar(PJUD, {}).get("casos", [])
 
 
+def guardar_causas_pjud(causas):
+    """Reescribe el catálogo de causas PJUD completo.
+
+    Conserva `matchDisco` del archivo actual -no lo recalcula esta función- y
+    recalcula `totalCausas` a partir de la lista que se está guardando. Nota:
+    si una causa borrada acá sigue reportándose activa en un futuro Excel/
+    Estado Diario, el sync (procesar_excel_pjud) la puede volver a crear -no
+    hay todavía una lista de "descartadas a propósito" que el sync respete-.
+    """
+    actual = cargar(PJUD, {"matchDisco": 0})
+    return guardar(PJUD, {
+        "totalCausas": len(causas),
+        "matchDisco": actual.get("matchDisco", 0),
+        "casos": causas
+    })
+
+
 # --- Registro de plazos vigilados -------------------------------------------
 # A diferencia de los catálogos, esto NO se regenera: son plazos que el abogado
 # registró y que se pierden si se borran. Por eso viven en el servidor y no en
@@ -80,3 +97,35 @@ def cargar_expedientes():
 
 def guardar_expedientes(expedientes):
     return guardar(EXPEDIENTES, {"expedientes": expedientes})
+
+
+# Tareas de la agenda. Vivían SÓLO en el localStorage del navegador, escritas a
+# mano desde AgendaPlazos.jsx: ninguna otra parte del sistema podía crear una, y
+# limpiar los datos del sitio las borraba sin rastro. Con el registro acá, una
+# tarea es un dato del estudio y no un detalle interno de una pantalla.
+
+TAREAS = "tareas"
+
+
+def cargar_tareas():
+    return cargar(TAREAS, {"tareas": []}).get("tareas", [])
+
+
+def guardar_tareas(tareas):
+    return guardar(TAREAS, {"tareas": tareas})
+
+
+# Documentos que el Vigilante ya analizó pero todavía no se archivaron: esperan
+# confirmación del abogado (bandeja "Documentos por Revisar"). Antes el Vigilante
+# archivaba y vinculaba a un expediente en el mismo gesto de detectar el archivo,
+# sin ocasión de corregir un dato mal extraído antes de que quedara escrito.
+
+DOCUMENTOS_PENDIENTES = "documentos_pendientes"
+
+
+def cargar_documentos_pendientes():
+    return cargar(DOCUMENTOS_PENDIENTES, {"documentos": []}).get("documentos", [])
+
+
+def guardar_documentos_pendientes(documentos):
+    return guardar(DOCUMENTOS_PENDIENTES, {"documentos": documentos})

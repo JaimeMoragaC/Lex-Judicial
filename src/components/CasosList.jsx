@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, FolderGit2, Scale, FolderOpen } from 'lucide-react';
+import { Search, FolderGit2, Scale, FolderOpen, Trash2 } from 'lucide-react';
 
 import { MOCK_CASOS } from '../mockData';
 import { findDiscoFolder } from '../utils/folderMatcher';
+import { cargarExpedientes, cargarCausasPjud, eliminarExpediente } from '../utils/expedientes';
+import { normalizarFechaIso } from '../utils/radarPlazos.js';
 
 const FILTROS = {
   vigencia: [
@@ -74,41 +76,73 @@ const CIUDADES_TRIBUNAL = [
   ['valdivia', 'Valdivia']
 ];
 
-function leerLocalStorage(clave, porDefecto = null) {
-  try {
-    const bruto = localStorage.getItem(clave);
-    return bruto ? JSON.parse(bruto) : porDefecto;
-  } catch {
-    return porDefecto;
-  }
-}
-
-export default function CasosList({ onSelectCaso, onOpenMatriz }) {
+export default function CasosList({ onSelectCaso, onOpenMatriz, onOpenCrearExpediente }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtros, setFiltros] = useState({
     vigencia: 'TODAS', ciudad: 'TODAS', tribunal: 'TODAS', materia: 'TODAS', etapa: 'TODAS'
   });
   const [extrajudiciales, setExtrajudiciales] = useState([]);
+  const [causasPjud, setCausasPjud] = useState([]);
+
+  const handleEliminarExpedienteCaso = async (caso) => {
+    const ident = caso.rit || caso.rol || caso.caratula || 'este expediente';
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el expediente "${ident}"?`)) {
+      return;
+    }
+    try {
+      await eliminarExpediente(caso.id || caso.rit);
+      reloadExpedientes();
+    } catch (e) {
+      alert(`Ocurrió un error al eliminar el expediente: ${e.message}`);
+    }
+  };
+
+  const reloadExpedientes = () => {
+    cargarExpedientes().then((expList) => {
+      setExtrajudiciales((expList || []).map((e) => ({
+        id: e.id,
+        rit: e.rit || e.ritVinculado || e.id,
+        rol: e.rit || e.ritVinculado || e.id,
+        ruc: e.ruc || '',
+        caratula: e.caratula || `Asesoría — ${e.cliente || e.asunto}`,
+        cliente: e.cliente || 'Sin cliente',
+        contraparte: e.contraparte || 'En Reserva',
+        abogadoContraparte: e.abogadoContraparte || 'No registrado',
+        materia: e.materia || e.tipo || 'Extrajudicial',
+        tribunal: e.tribunal || 'Gestión interna',
+        numeroTribunal: e.numeroTribunal || '',
+        ciudad: e.ciudad || 'Temuco',
+        fechaInicio: e.creadoEn ? e.creadoEn.split('T')[0] : '2026',
+        estadoPlazo: 'VIGENTE',
+        etapa: e.etapa || 'Asesoría activa',
+        gestiones: e.gestiones || []
+      })));
+    });
+    // PJUD_CASOS (import estático) se lee una sola vez al cargar la página -no
+    // se entera de borrados sin recargar-. cargarCausasPjud() sí refleja el
+    // estado real de data/pjudCausesData.json en cada recarga de esta lista,
+    // así "Eliminar Expediente" hace desaparecer la fila de verdad.
+    cargarCausasPjud().then(setCausasPjud);
+  };
 
   useEffect(() => {
-    const mapa = leerLocalStorage('lexcontrol_extrajudicial_mapping');
-    if (!mapa) return;
-    setExtrajudiciales(Object.entries(mapa).map(([cliente, id]) => ({
-      id, rit: id, rol: id, nuc: 'N/A',
-      caratula: `Asesoría extrajudicial — ${cliente}`,
-      cliente, materia: 'Extrajudicial',
-      tribunal: 'Gestión interna', ciudad: 'Gestión interna',
-      fechaInicio: id.split('-')[2] || '2026',
-      estadoPlazo: 'VIGENTE', etapa: 'Asesoría activa',
-      demandante: cliente, demandado: 'N/A', proximaAudiencia: '',
-      resumenTeoriaCaso: 'Carpeta de gestión extrajudicial generada automáticamente.'
-    })));
+    reloadExpedientes();
+
+    const handleUpdate = () => reloadExpedientes();
+    window.addEventListener('lexcontrol_expedientes_updated', handleUpdate);
+    return () => window.removeEventListener('lexcontrol_expedientes_updated', handleUpdate);
   }, []);
 
   // Se lee localStorage una vez por causa y no en cada tecla: antes el filtro
   // hacía 1.557 lecturas sincrónicas por cada carácter escrito.
   const causas = useMemo(() => {
-    return [...MOCK_CASOS, ...extrajudiciales].map((caso) => {
+    const clavesExtrajudiciales = new Set(
+      extrajudiciales.flatMap((e) => [e.id, e.rit].filter(Boolean).map(String))
+    );
+    const causasPjudSinEspejo = causasPjud.filter(
+      (c) => !clavesExtrajudiciales.has(String(c.id)) && !clavesExtrajudiciales.has(String(c.rit))
+    );
+    return [...MOCK_CASOS, ...causasPjudSinEspejo, ...extrajudiciales].map((caso) => {
       const clave = caso.id || caso.rit;
       const etapa = (caso.etapa || '').toLowerCase();
 
@@ -118,15 +152,41 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
         : caso.estadoPlazo === 'TERMINADO'
           || etapa.includes('fallada') || etapa.includes('terminad') || etapa.includes('archiv');
 
+      // Antes esto leía `lexcontrol_gestiones_${clave}` de localStorage -un
+      // resabio de cuando las gestiones vivían sólo en el navegador-. Desde que
+      // el servidor es la fuente de verdad (guardarGestionesDeCaso), esa clave
+      // ya nunca se escribe, así que "última gestión" siempre caía al texto
+      // genérico de relleno, por real que fuera la bitácora del expediente. Se
+      // lee directo de caso.gestiones, que sí trae lo real.
       let ultimaGestion = caso.estadoPlazo === 'URGENTE' ? caso.resumenTeoriaCaso : 'Trámite inicial registrado';
       let fechaGestion = caso.fechaIngreso || '—';
-      const gestiones = leerLocalStorage(`lexcontrol_gestiones_${clave}`, []);
-      if (gestiones?.length) {
-        const ordenadas = [...gestiones].sort(
-          (a, b) => new Date(b.fecha.split('/').reverse().join('-')) - new Date(a.fecha.split('/').reverse().join('-'))
-        );
-        ultimaGestion = ordenadas[0].titulo || ordenadas[0].tramite;
-        fechaGestion = ordenadas[0].fecha;
+      let proximaGestion = null;
+
+      // "Ingreso PJUD" es un registro de auditoría de la migración masiva
+      // ("esta causa se importó tal día"), no una gestión real -mismo criterio
+      // que gestionesDeExpedientes() en radarPlazos.js-.
+      const gestionesReales = (caso.gestiones || []).filter((g) => g.tipo !== 'Ingreso PJUD');
+
+      if (gestionesReales.length) {
+        const conFecha = gestionesReales.map((g) => ({ g, fIso: normalizarFechaIso(g.fechaIso || g.fecha) }));
+        const ordenadas = [...conFecha].sort((a, b) => (b.fIso || '').localeCompare(a.fIso || ''));
+        const ultima = ordenadas[0].g;
+        ultimaGestion = ultima.tramite || ultima.actuacion || ultima.titulo || 'Gestión registrada';
+        fechaGestion = ultima.fecha || ultima.fechaIso || '—';
+
+        // La próxima gestión es la pendiente (no realizada) con el vencimiento
+        // real más próximo -mismo criterio que "requiere mi atención hoy":
+        // fechaVencimiento manda sobre la fecha de trámite, porque es el plazo
+        // que de verdad importa, no cuándo se anotó-.
+        const pendientes = gestionesReales
+          .filter((g) => !String(g.estado || '').toUpperCase().includes('REALIZAD'))
+          .map((g) => ({ g, fObjetivo: normalizarFechaIso(g.fechaVencimiento) || normalizarFechaIso(g.fechaIso || g.fecha) }))
+          .filter((x) => x.fObjetivo)
+          .sort((a, b) => a.fObjetivo.localeCompare(b.fObjetivo));
+        if (pendientes.length) {
+          const p = pendientes[0].g;
+          proximaGestion = `${p.tramite || p.actuacion || 'Gestión pendiente'} (${p.fechaVencimiento || p.fecha || p.fechaIso})`;
+        }
       }
 
       const tribunal = (caso.tribunal || '').toLowerCase();
@@ -138,12 +198,13 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
         finalizado,
         ultimaGestion,
         fechaGestion,
+        proximaGestion,
         ciudad,
         tieneCarpeta: findDiscoFolder(caso) !== null,
         blancoTexto: `${caso.tribunal || ''} ${caso.caratula || ''} ${caso.cliente || ''} ${caso.resumenTeoriaCaso || ''}`.toLowerCase()
       };
     });
-  }, [extrajudiciales]);
+  }, [extrajudiciales, causasPjud]);
 
   const visibles = useMemo(() => {
     const q = busqueda.toLowerCase().trim();
@@ -188,9 +249,16 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
           <h1>Expedientes</h1>
           <p>Directorio de causas penales, civiles, laborales y arbitrajes del estudio.</p>
         </div>
-        {/* Las causas entran por importar_excel_pjud.py; el alta manual no está hecha. */}
-        <button className="btn-primary" disabled title="El alta manual de causas aún no está implementada">
-          <FolderGit2 size={15} /> Ingresar causa
+        <button 
+          className="btn-primary" 
+          onClick={() => {
+            if (onOpenCrearExpediente) onOpenCrearExpediente();
+            else window.dispatchEvent(new CustomEvent('lexcontrol_open_crear_expediente'));
+          }}
+          title="Ingresar un nuevo expediente judicial o extrajudicial"
+        >
+          <FolderGit2 size={16} />
+          <span>Nuevo Expediente</span>
         </button>
       </div>
 
@@ -251,10 +319,10 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
                   </td>
                 </tr>
               ) : (
-                visibles.map(({ caso, clave, ultimaGestion, fechaGestion, ciudad, tieneCarpeta }) => {
+                visibles.map(({ caso, clave, ultimaGestion, fechaGestion, proximaGestion, ciudad, tieneCarpeta }) => {
                   const urgente = caso.estadoPlazo === 'URGENTE';
                   const atencion = caso.estadoPlazo === 'ATENCION';
-                  const proxima = caso.plazoDescripcion || caso.proximaAudiencia || 'Sin gestiones pendientes';
+                  const proxima = proximaGestion || caso.plazoDescripcion || caso.proximaAudiencia || 'Sin gestiones pendientes';
                   const estado = urgente ? 'VENCIDO' : atencion ? 'URGENTE' : '';
 
                   return (
@@ -296,7 +364,7 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
                           {proxima}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button
                           className="btn-ghost btn-sm"
                           onClick={(e) => { e.stopPropagation(); onOpenMatriz(caso); }}
@@ -304,6 +372,18 @@ export default function CasosList({ onSelectCaso, onOpenMatriz }) {
                           aria-label={`Matriz probatoria de ${caso.rit}`}
                         >
                           <Scale size={14} />
+                        </button>
+                        <button
+                          className="btn-ghost btn-sm"
+                          style={{ color: '#ef4444' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEliminarExpedienteCaso(caso);
+                          }}
+                          title="Eliminar este expediente"
+                          aria-label={`Eliminar expediente ${caso.rit}`}
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </td>
                     </tr>

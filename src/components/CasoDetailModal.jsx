@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, 
   Scale, 
@@ -7,7 +7,11 @@ import {
   FileText, 
   ShieldCheck, 
   AlertTriangle,
-  AlertCircle, 
+  AlertCircle,
+  Maximize2,
+  Minimize2,
+  GripHorizontal,
+  Table, 
   Gavel, 
   CheckCircle2, 
   Clock, 
@@ -36,12 +40,18 @@ import {
   MessageCircle,
   MessageSquare,
   BookOpen,
-  MapPin
+  MapPin,
+  Sparkles,
+  Loader2,
+  Paperclip
 } from 'lucide-react';
-import { REAL_DISK_DATA } from '../realDiskData';
+import { refrescarDiscoData } from '../realDiskData';
 import { findDiscoFolder } from '../utils/folderMatcher';
 import { MOCK_CASOS } from '../mockData';
+import { PJUD_CASOS } from '../pjudCausesData';
+import { LEXCONTROL_API } from '../apiBase.js';
 import { cargarPlazos, guardarPlazos, normalizarFechaIso, hoyLocal } from '../utils/radarPlazos.js';
+import { cargarExpedientes, guardarExpedientes, expedienteDeCaso, guardarGestionesDeCaso, eliminarExpediente } from '../utils/expedientes.js';
 
 function extraerCiudad(caso) {
   if (!caso) return 'Sin ciudad asignada';
@@ -73,8 +83,117 @@ function extraerCliente(caso) {
   return 'Sin cliente asignado';
 }
 
-export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectCaso }) {
-  const [activeTab, setActiveTab] = useState('resumen');
+export default function CasoDetailModal({ caso: casoProp, onClose, onOpenMatriz, onSelectCaso, initialTab = 'resumen' }) {
+  const listaCasos = useMemo(() => (Array.isArray(casoProp) ? casoProp : [casoProp].filter(Boolean)), [casoProp]);
+  const [idxCasoSel, setIdxCasoSel] = useState(0);
+  const [esModoFlotante, setEsModoFlotante] = useState(true);
+  const [posicionFlotante, setPosicionFlotante] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [subVistaPlanilla, setSubVistaPlanilla] = useState(() => (initialTab === 'gestiones' ? 'gestiones' : 'expedientes'));
+  const [vistaModal, setVistaModal] = useState(() => (Array.isArray(casoProp) && casoProp.length > 1 ? 'planilla' : 'ficha'));
+  const [modoVistaGestiones, setModoVistaGestiones] = useState('planilla');
+
+  useEffect(() => {
+    if (Array.isArray(casoProp) && casoProp.length > 1) {
+      setVistaModal('planilla');
+    } else if (casoProp && !Array.isArray(casoProp)) {
+      setVistaModal('ficha');
+    }
+    if (initialTab === 'gestiones') {
+      setSubVistaPlanilla('gestiones');
+      setActiveTab('gestiones');
+    }
+  }, [casoProp, initialTab]);
+
+  const esTextoFecha = (str) => {
+    if (!str) return false;
+    const s = String(str).trim();
+    if (s.length > 30) return false;
+    if (s.toLowerCase().includes('sin vencimiento') || s.toLowerCase().includes('sin plazo') || s.toLowerCase().includes('sin fecha')) return false;
+    return /\d/.test(s) && (s.includes('/') || s.includes('-') || s.includes('.'));
+  };
+
+  const obtenerVencimientoGestion = (g, casoItem) => {
+    if (esTextoFecha(g.fechaVencimiento)) return g.fechaVencimiento.trim();
+    if (esTextoFecha(g.fechaObjetivo)) return g.fechaObjetivo.trim();
+    if (esTextoFecha(g.vencimiento)) return g.vencimiento.trim();
+    if (g._isGhost) return '🚨 Inmediato (Abandono)';
+    return 'Sin plazo fatal';
+  };
+
+  const todasLasGestionesConsolidadas = useMemo(() => {
+    const result = [];
+    listaCasos.forEach((c, cIdx) => {
+      let gList = [];
+      const overrideGest = localStorage.getItem(`lexcontrol_gestiones_${c.id || c.rit}`);
+      if (overrideGest) {
+        try { gList = JSON.parse(overrideGest); } catch(e) {}
+      } else if (c.gestiones && Array.isArray(c.gestiones)) {
+        gList = c.gestiones;
+      } else if (c.movimientos && Array.isArray(c.movimientos)) {
+        gList = c.movimientos;
+      }
+
+      if (gList.length === 0) {
+        gList = [{
+          fecha: c.fechaIngreso || new Date().toLocaleDateString('es-CL'),
+          tramite: c.proximaAudiencia || c.estadoPlazo || 'Ingreso de causa / En tramitación judicial',
+          cuaderno: 'Principal',
+          origen: c.tribunal || 'Juzgado',
+          estado: c.estadoPlazo === 'URGENTE' ? 'PENDIENTE' : 'REALIZADO'
+        }];
+      }
+
+      gList.forEach(g => {
+        result.push({
+          ...g,
+          casoIdx: cIdx,
+          rit: c.rit || c.id || `EXP-${cIdx+1}`,
+          cliente: c.cliente || c.caratula || 'Sin denominación',
+          tribunal: c.tribunal || 'Juzgado'
+        });
+      });
+    });
+    return result;
+  }, [listaCasos]);
+
+  const caso = listaCasos[idxCasoSel] || listaCasos[0] || {};
+
+  const isDraggingRef = useRef(false);
+  const startMouseRef = useRef({ x: 0, y: 0 });
+  const startPosRef = useRef({ x: 0, y: 0 });
+
+  const handleMouseDownDrag = (e) => {
+    if (!esModoFlotante) return;
+    if (e.target.closest('button, input, select, textarea, a')) return;
+
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    startMouseRef.current = { x: e.clientX, y: e.clientY };
+    startPosRef.current = { ...posicionFlotante };
+
+    const handleMouseMove = (ev) => {
+      if (!isDraggingRef.current) return;
+      const dx = ev.clientX - startMouseRef.current.x;
+      const dy = ev.clientY - startMouseRef.current.y;
+      setPosicionFlotante({
+        x: startPosRef.current.x + dx,
+        y: startPosRef.current.y + dy
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   const [linkedCases, setLinkedCases] = useState([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [searchLinkTerm, setSearchLinkTerm] = useState('');
@@ -101,11 +220,21 @@ export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectC
   const [bitacoraEntries, setBitacoraEntries] = useState([]);
   const [nuevaBitacora, setNuevaBitacora] = useState({ tipo: 'Reunión Presencial', descripcion: '' });
 
+  // Resumen ejecutivo en prosa (IA local), a pedido: se genera al hacer clic,
+  // no automáticamente al abrir -abrir muchos casos seguidos no debe encolar
+  // llamadas al modelo local, que corre una a la vez en esta máquina-.
+  const [resumenIA, setResumenIA] = useState(null);
+  const [cargandoResumenIA, setCargandoResumenIA] = useState(false);
+
   // Estados para CRUD de Gestiones / Actuaciones (Añadir, Modificar, Eliminar)
   const [customGestiones, setCustomGestiones] = useState([]);
   const [showGestionModal, setShowGestionModal] = useState(false);
   const [editingGestionIdx, setEditingGestionIdx] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Diálogo propio -no window.confirm()- para preguntar por una gestión
+  // conexa justo después de crear una: null = oculto, o los datos ya
+  // calculados (tramite guardado, folio/cuaderno/origen para la siguiente).
+  const [confirmarConexaInfo, setConfirmarConexaInfo] = useState(null);
 
   // Estado de Vigencia del Caso
   const [estadoVigencia, setEstadoVigencia] = useState(() => {
@@ -126,13 +255,50 @@ export default function CasoDetailModal({ caso, onClose, onOpenMatriz, onSelectC
     return {};
   });
 
+  useEffect(() => {
+    if (!caso) return;
+    const overrideV = localStorage.getItem(`lexcontrol_vigencia_${caso.id || caso.rit}`);
+    if (overrideV) {
+      setEstadoVigencia(overrideV);
+    } else {
+      const et = (caso.etapa || "").toLowerCase();
+      const isTerminado = caso.estadoPlazo === 'TERMINADO' || et.includes('fallada') || et.includes('terminad') || et.includes('archiv');
+      setEstadoVigencia(isTerminado ? 'TERMINADO / CANCELADO' : 'VIGENTE');
+    }
+
+    try {
+      const storedO = localStorage.getItem(`lexcontrol_overrides_${caso.id || caso.rit}`);
+      setOverrides(storedO ? JSON.parse(storedO) : {});
+    } catch(e) {
+      setOverrides({});
+    }
+  }, [caso]);
+
   // El objeto caso visible será la mezcla entre el original y los overrides
   const displayCaso = { ...caso, ...overrides };
 
-  const handleSaveInfo = () => {
+  const handleSaveInfo = async () => {
     setIsEditingInfo(false);
     localStorage.setItem(`lexcontrol_overrides_${caso.id || caso.rit}`, JSON.stringify(overrides));
+    
+    try {
+      const expList = await cargarExpedientes();
+      const targetId = caso.id || caso.rit;
+      const idx = (expList || []).findIndex(e => e.id === targetId || e.rit === targetId || e.ritVinculado === targetId);
+      if (idx !== -1) {
+        expList[idx] = { ...expList[idx], ...overrides };
+        await guardarExpedientes(expList);
+      }
+    } catch (e) {
+      // Vacío antes: con `guardarExpedientes` sin importar, esto lanzaba un
+      // ReferenceError en CADA guardado del encabezado y se tragaba en silencio.
+      // La edición quedaba SÓLO en localStorage (línea de arriba) y nunca llegaba
+      // al servidor, así que "Guardar" parecía funcionar y no persistía nada.
+      alert('No se pudo guardar en el servidor: ' + e.message);
+    }
+
     window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+    window.dispatchEvent(new CustomEvent('lexcontrol_expedientes_updated'));
   };
 
   // Diccionario de autocompletado dinámico
@@ -419,7 +585,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
     if (!caso) return;
     const primerNombreCliente = caso.cliente ? caso.cliente.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') : '';
     
-    const detectados = MOCK_CASOS.filter(c => {
+    const detectados = [...MOCK_CASOS, ...PJUD_CASOS].filter(c => {
       if (c.id === caso.id) return false;
       const sameCliente = primerNombreCliente && primerNombreCliente.length > 3 && c.cliente && c.cliente.includes(primerNombreCliente);
       const sameCaratula = caso.caratula && c.caratula && (
@@ -444,20 +610,42 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
     setLinkedCases(detectados);
   }, [caso]);
 
+  // El servidor es la fuente de verdad. localStorage queda sólo como respaldo de
+  // lo que se escribió antes de que esta pantalla guardara en el servidor: si se
+  // leyera primero, una entrada vieja del navegador taparía la del servidor.
   useEffect(() => {
     if (!caso) return;
-    const storageKey = `lexcontrol_gestiones_${caso.id || caso.rit}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+    let cancelado = false;
+
+    const legacy = () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setCustomGestiones(parsed);
+        const saved = localStorage.getItem(`lexcontrol_gestiones_${caso.id || caso.rit}`);
+        const parsed = saved ? JSON.parse(saved) : null;
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+      return null;
+    };
+
+    // Se refresca junto con las gestiones -no antes, no en un efecto aparte-
+    // para que la MISMA re-renderización que ya dispara setCustomGestiones()
+    // muestre también la carpeta física al día: findDiscoFolder() se calcula
+    // en cada render a partir de REAL_DISK_DATA, así que basta con que el
+    // array esté fresco antes de ese setState.
+    Promise.all([cargarExpedientes(), refrescarDiscoData().catch(() => false)])
+      .then(([expedientes]) => {
+        if (cancelado) return;
+        const exp = expedienteDeCaso(caso, expedientes);
+        if (exp && Array.isArray(exp.gestiones) && exp.gestiones.length > 0) {
+          setCustomGestiones(exp.gestiones);
           return;
         }
-      } catch (e) {}
-    }
-    setCustomGestiones(caso.gestiones || []);
+        setCustomGestiones(legacy() || caso.gestiones || []);
+      })
+      .catch(() => {
+        if (!cancelado) setCustomGestiones(legacy() || caso.gestiones || []);
+      });
+
+    return () => { cancelado = true; };
   }, [caso]);
 
   const handleOpenAddGestion = () => {
@@ -503,7 +691,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
   const handleOpenEditGestion = (index, g) => {
     setEditingGestionIdx(index);
-    
+
     // Convertir de DD/MM/YYYY a YYYY-MM-DD si es necesario
     let fechaInput = g.fecha;
     if (fechaInput && fechaInput.includes('/')) {
@@ -512,8 +700,20 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         fechaInput = `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
     }
-    
-    setGestionForm({ ...g, fecha: fechaInput });
+
+    // Fecha Vencimiento/Plazo: mismo criterio. Si no es una fecha DD/MM/YYYY
+    // parseable -vacío, "Sin plazo", texto libre de antes del calendario-, el
+    // selector de fecha simplemente queda vacío: para esta app "sin fecha" y
+    // "sin plazo" ya significan lo mismo (ver esTextoFecha/obtenerVencimientoGestion).
+    let vencimientoInput = '';
+    if (g.fechaVencimiento && g.fechaVencimiento.includes('/')) {
+      const parts = g.fechaVencimiento.split('/');
+      if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
+        vencimientoInput = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+
+    setGestionForm({ ...g, fecha: fechaInput, fechaVencimiento: vencimientoInput });
     setShowGestionModal(true);
   };
 
@@ -532,7 +732,24 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           fechaFinal = `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
       }
-      const gestionToSave = { ...gestionForm, fecha: fechaFinal, fechaIso };
+
+      // Fecha Vencimiento/Plazo: el selector de fecha entrega YYYY-MM-DD (o
+      // vacío si se dejó sin marcar, que es "sin plazo"). Se guarda en el mismo
+      // formato DD/MM/YYYY que el resto de las fechas de la app.
+      let vencimientoFinal = gestionForm.fechaVencimiento;
+      if (vencimientoFinal && vencimientoFinal.includes('-')) {
+        const parts = vencimientoFinal.split('-');
+        if (parts.length === 3) {
+          vencimientoFinal = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+
+      // `fechaEsTramite` marca explícitamente que esta fecha la ELIGIÓ el abogado
+      // en el campo "Fecha Trámite". La Bitácora, en cambio, estampa la fecha del
+      // registro. El semáforo necesita distinguirlas: un trámite con fecha propia
+      // vence ese día, y un pendiente de bitácora sigue pendiente hasta que se
+      // marque realizado. Antes ambas cosas eran un campo `fecha` indistinguible.
+      const gestionToSave = { ...gestionForm, fecha: fechaFinal, fechaVencimiento: vencimientoFinal, fechaIso, fechaEsTramite: true };
 
       if (editingGestionIdx !== null) {
         updated[editingGestionIdx] = gestionToSave;
@@ -551,25 +768,96 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
       if (caso) {
         caso.gestiones = updated;
-        localStorage.setItem(`lexcontrol_gestiones_${caso.id || caso.rit}`, JSON.stringify(updated));
-        
+        // Al servidor, no a localStorage: esto es lo que hace que la gestión
+        // sobreviva a una limpieza del navegador o a la cuota agotada.
+        await guardarGestionesDeCaso(caso, updated);
+
         // Notificamos globalmente para que el Dashboard y el Radar recolecten
         // las gestiones actualizadas automáticamente sin generar duplicados.
         window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
       }
+
       setShowGestionModal(false);
+
+      // Se ofrece tanto al crear como al editar: es habitual que un trámite
+      // traiga aparejado otro de inmediato (ej. "se presenta demanda" -> "se
+      // solicita exhorto"), y eso vale igual si la gestión que se acaba de
+      // guardar era nueva o una que ya existía. El diálogo es propio -no
+      // window.confirm()-, para que se vea parte del sistema y no una alerta
+      // del navegador.
+      setConfirmarConexaInfo({
+        tramite: gestionToSave.tramite,
+        folioSiguiente: updated.length + 1,
+        cuaderno: gestionToSave.cuaderno || 'Principal',
+        origen: gestionToSave.origen || 'Jaime Moraga C. (Abogado)'
+      });
     } catch (err) {
       alert("Error al guardar: " + err.message);
     }
   };
 
-  const handleDeleteGestion = (index) => {
+  const handleConfirmarConexaSi = () => {
+    const info = confirmarConexaInfo;
+    if (!info) return;
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    setEditingGestionIdx(null);
+    setGestionForm({
+      fecha: `${yyyy}-${mm}-${dd}`,
+      tramite: '',
+      folio: `Folio ${info.folioSiguiente}`,
+      cuaderno: info.cuaderno,
+      origen: info.origen,
+      estado: 'PENDIENTE (POR HACER)'
+    });
+    setConfirmarConexaInfo(null);
+    setShowGestionModal(true);
+  };
+
+  /**
+   * Alterna PENDIENTE <-> REALIZADO.
+   *
+   * El botón que llama a esto existía en la tabla pero la función no estaba escrita
+   * en ninguna parte: hacer clic lanzaba un ReferenceError. Importa más de lo que
+   * parece, porque marcar REALIZADO es lo ÚNICO que saca una gestión de "Pendientes
+   * de bitácora" — sin esto, un pendiente no se podía cerrar nunca.
+   *
+   * Se escribe 'REALIZADO' exacto: así lo compara esta tabla, y radarPlazos.js lo
+   * reconoce por prefijo ('REALIZAD').
+   */
+  const handleToggleEstadoGestion = async (index) => {
+    const actual = customGestiones[index];
+    if (!actual) return;
+    const yaRealizada = String(actual.estado || '').toUpperCase().includes('REALIZAD');
+    const updated = customGestiones.map((g, i) =>
+      i === index ? { ...g, estado: yaRealizada ? 'PENDIENTE (POR HACER)' : 'REALIZADO' } : g
+    );
+    setCustomGestiones(updated);
+    if (caso) {
+      caso.gestiones = updated;
+      try {
+        await guardarGestionesDeCaso(caso, updated);
+        window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+      } catch (err) {
+        alert('No se pudo guardar el cambio de estado: ' + err.message);
+      }
+    }
+  };
+
+  const handleDeleteGestion = async (index) => {
     if (!window.confirm("¿Está seguro de eliminar esta actuación o gestión del historial procesal?")) return;
     const updated = customGestiones.filter((_, idx) => idx !== index);
     setCustomGestiones(updated);
     if (caso) {
       caso.gestiones = updated;
-      localStorage.setItem(`lexcontrol_gestiones_${caso.id || caso.rit}`, JSON.stringify(updated));
+      try {
+        await guardarGestionesDeCaso(caso, updated);
+        window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+      } catch (err) {
+        alert("No se pudo eliminar en el servidor: " + err.message);
+      }
     }
   };
 
@@ -605,17 +893,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                        etapaLower.includes('fallada') || 
                        etapaLower.includes('archiv');
 
-  if (!hasRecentActivity && !isFinalizado && caso.materia !== "Extrajudicial") {
-    gestionesList.unshift({
-      _isGhost: true,
-      tramite: "AUDITORÍA PROCESAL: Expediente sin movimientos registrados en más de 7 días. Requiere impulso para evitar abandono.",
-      estado: 'URGENTE',
-      fecha: new Date().toLocaleDateString('es-CL'),
-      folio: '-',
-      cuaderno: 'Todos',
-      origen: 'Alerta Automática de Sistema'
-    });
-  }
+
 
   // 2. Vincular Documentos y Expediente en Disco Local (usa función centralizada)
   const discoFolder = findDiscoFolder(caso);
@@ -666,6 +944,23 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
   }
   
   // Si el caso no tiene carpeta en el disco, la lista quedará vacía (sin documentos falsos/mock).
+  
+  // Agregar documentos adjuntados mediante la Bitácora Omnicanal (en el arreglo de gestiones)
+  gestionesList.forEach((g, gIdx) => {
+    if (g.documentos && Array.isArray(g.documentos)) {
+      g.documentos.forEach((doc, idx) => {
+        documentosList.push({
+          id: `doc-gestion-${g.id || gIdx}-${idx}`,
+          nombre: doc.nombre,
+          tipo: "Adjunto a Gestión",
+          fecha: g.fecha || "Desconocida",
+          tamano: "Subido por Bitácora",
+          path: doc.ruta,
+          origen: `Gestión: ${g.tramite || 'Sin título'}`
+        });
+      });
+    }
+  });
 
   // 4. Motor de Inteligencia Procesal: Gestiones Legalmente Procedentes
   // 4. Motor de Inteligencia Procesal: Gestiones Legalmente Procedentes EN VIVO
@@ -807,6 +1102,43 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
   const sugerenciasIA = getSugerenciasIA();
 
+  const handleEliminarExpediente = async () => {
+    const ident = displayCaso.rit || displayCaso.rol || displayCaso.cliente || 'este expediente';
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente el expediente "${ident}" y todas sus gestiones?`)) {
+      return;
+    }
+    try {
+      await eliminarExpediente(caso.id || caso.rit || displayCaso.rit);
+      onClose();
+    } catch (e) {
+      alert(`Ocurrió un error al eliminar el expediente: ${e.message}`);
+    }
+  };
+
+  const generarResumenIA = async () => {
+    setCargandoResumenIA(true);
+    try {
+      const res = await fetch(`${LEXCONTROL_API}/resumen_expediente`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caso: { caratula: displayCaso.caratula, materia: displayCaso.materia, tribunal: displayCaso.tribunal },
+          gestiones: gestionesList
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setResumenIA({ texto: data.texto, motor: data.motor_ia });
+      } else {
+        setResumenIA({ texto: data.error || 'No se pudo generar el resumen.', error: true });
+      }
+    } catch (e) {
+      setResumenIA({ texto: `No hay respuesta del servidor local: ${e.message}`, error: true });
+    } finally {
+      setCargandoResumenIA(false);
+    }
+  };
+
   return (
     <div className="lex-control-modal-root">
     <div style={{
@@ -815,457 +1147,745 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(10, 15, 29, 0.85)',
-      backdropFilter: 'blur(10px)',
+      backgroundColor: esModoFlotante ? 'transparent' : 'rgba(10, 15, 29, 0.82)',
+      backdropFilter: esModoFlotante ? 'none' : 'blur(8px)',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 100,
-      padding: '20px'
+      alignItems: esModoFlotante ? 'flex-start' : 'center',
+      justifyContent: esModoFlotante ? (vistaModal === 'planilla' ? 'center' : 'flex-end') : 'center',
+      zIndex: 850,
+      padding: esModoFlotante ? '70px 24px 24px 24px' : '20px',
+      pointerEvents: esModoFlotante ? 'none' : 'auto'
     }}
-    onClick={onClose}
+    onClick={esModoFlotante ? undefined : onClose}
     >
       <div 
         className="glass-card animate-fade-in" 
         style={{
           width: '100%',
-          maxWidth: '940px',
-          maxHeight: '92vh',
+          maxWidth: vistaModal === 'planilla' ? (esModoFlotante ? '1280px' : '1400px') : (esModoFlotante ? '1000px' : '1200px'),
+          maxHeight: esModoFlotante ? 'calc(100vh - 90px)' : '92vh',
           overflowY: 'auto',
-          padding: '32px',
+          padding: '28px 32px',
           backgroundColor: 'var(--bg-modal)',
           border: '1px solid var(--border-hover)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-          position: 'relative'
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.75)',
+          position: 'relative',
+          pointerEvents: 'auto',
+          transform: esModoFlotante ? `translate(${posicionFlotante.x}px, ${posicionFlotante.y}px)` : 'none',
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Botón Cerrar */}
-        <button 
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '24px',
-            right: '24px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-secondary)',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            zIndex: 10
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-        >
-          <X size={20} />
-        </button>
+        {/* Barra para arrastrar la ventana flotante */}
+        {esModoFlotante && (
+          <div
+            onMouseDown={handleMouseDownDrag}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              marginBottom: '16px',
+              marginTop: '-12px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              borderRadius: '6px',
+              border: '1px dashed rgba(255, 255, 255, 0.18)',
+              cursor: isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 600
+            }}
+            title="Haz clic y arrastra para mover la ventana por cualquier lugar de la pantalla"
+          >
+            <GripHorizontal size={14} />
+            <span>Mover ventana por la pantalla (arrastra aquí)</span>
+          </div>
+        )}
+        {/* Botones de Control de la Ventana */}
+        <div style={{ position: 'absolute', top: '24px', right: '24px', display: 'flex', gap: '8px', alignItems: 'center', zIndex: 10 }}>
+          {listaCasos.length > 1 && (
+            <button
+              onClick={() => setVistaModal(vistaModal === 'planilla' ? 'ficha' : 'planilla')}
+              className="btn-secondary"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: vistaModal === 'planilla' ? 'rgba(74, 163, 199, 0.2)' : 'rgba(201, 160, 70, 0.15)',
+                borderColor: vistaModal === 'planilla' ? 'var(--accent-cyan)' : 'var(--accent-gold)',
+                color: 'var(--text-primary)'
+              }}
+              title={vistaModal === 'planilla' ? "Ver Ficha Detallada" : "Volver a la Planilla Excel"}
+            >
+              <Table size={13} />
+              <span>{vistaModal === 'planilla' ? 'Ver Ficha' : `Planilla Excel (${listaCasos.length})`}</span>
+            </button>
+          )}
+          <button
+            onClick={() => setEsModoFlotante(!esModoFlotante)}
+            className="btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            title={esModoFlotante ? "Expandir a pantalla completa" : "Modo Ventana Flotante (sin ocultar el Dashboard)"}
+          >
+            {esModoFlotante ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+            <span>{esModoFlotante ? 'Expandir' : 'Ventana Flotante'}</span>
+          </button>
+          <button 
+            onClick={onClose}
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+            title="Cerrar Ficha"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-        {/* Cabecera del Caso - Rediseñada para mayor legibilidad y aire */}
-        <div style={{ marginBottom: '28px', paddingBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          {/* Fila 1: Metadatos y Badges */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: '800', color: 'var(--accent-cyan)', background: 'rgba(192, 160, 113, 0.1)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(192, 160, 113, 0.3)', letterSpacing: '0.5px' }}>
-                {caso.rit}
+        {/* VISTA PLANILLA TIPO EXCEL */}
+        {vistaModal === 'planilla' ? (
+          <div style={{ padding: '10px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontWeight: '700' }}>
+                  <Table size={20} color="var(--accent-gold)" />
+                  <span>
+                    {subVistaPlanilla === 'gestiones' 
+                      ? `Planilla Consolidada de Gestiones & Movimientos (${todasLasGestionesConsolidadas.length})` 
+                      : `Planilla de Expedientes Solicitados (${listaCasos.length})`}
+                  </span>
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                  Haz clic en cualquier fila para desplegar la Ficha del Expediente correspondiente como ventana flotante.
+                </p>
               </div>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '6px 0' }}>
-                NUC: {caso.nuc || 'No registrado'}
-              </span>
-              <span className="badge badge-purple" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>{caso.materia}</span>
-              <span className="badge badge-blue" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>Etapa: {caso.etapa}</span>
+
+              <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                  type="button"
+                  className={subVistaPlanilla === 'expedientes' ? 'btn-primary' : 'btn-secondary'}
+                  onClick={() => setSubVistaPlanilla('expedientes')}
+                  style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '6px' }}
+                >
+                  📂 Expedientes ({listaCasos.length})
+                </button>
+                <button
+                  type="button"
+                  className={subVistaPlanilla === 'gestiones' ? 'btn-primary' : 'btn-secondary'}
+                  onClick={() => setSubVistaPlanilla('gestiones')}
+                  style={{ 
+                    padding: '6px 14px', 
+                    fontSize: '0.78rem', 
+                    borderRadius: '6px',
+                    background: subVistaPlanilla === 'gestiones' ? 'linear-gradient(135deg, var(--accent-purple), var(--accent-cyan))' : 'transparent',
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  📋 Planilla Gestiones ({todasLasGestionesConsolidadas.length})
+                </button>
+              </div>
             </div>
-            
-            {/* Controles: WhatsApp y Vigencia */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button 
-                onClick={handleGenerarReporteWhatsApp}
-                className="btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: 'var(--ok)' }}
-              >
-                <MessageCircle size={16} />
-                <span>Reporte Cliente</span>
-              </button>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Estado:</span>
+
+            {subVistaPlanilla === 'gestiones' ? (
+              <div style={{
+                overflowX: 'auto',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.06)', borderBottom: '1px solid var(--border-color)', color: 'var(--accent-cyan)' }}>
+                      <th style={{ padding: '12px 14px', width: '40px' }}>#</th>
+                      <th style={{ padding: '12px 14px', width: '130px' }}>RIT / Causa</th>
+                      <th style={{ padding: '12px 14px', width: '180px' }}>Cliente / Carátula</th>
+                      <th style={{ padding: '12px 14px', width: '110px' }}>Fecha Trámite</th>
+                      <th style={{ padding: '12px 14px', width: '150px', color: 'var(--accent-gold)' }}>Fecha Vencimiento</th>
+                      <th style={{ padding: '12px 14px', width: '120px' }}>Cuaderno / Folio</th>
+                      <th style={{ padding: '12px 14px' }}>Trámite / Providencia Judicial</th>
+                      <th style={{ padding: '12px 14px', width: '160px' }}>Origen / Magistratura</th>
+                      <th style={{ padding: '12px 14px', width: '100px' }}>Estado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center', width: '120px' }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {todasLasGestionesConsolidadas.map((g, idx) => {
+                      const venc = obtenerVencimientoGestion(g, g.casoRef);
+                      const esPendiente = g.estado === 'URGENTE' || (g.estado || '').includes('PENDIENTE') || g._isGhost;
+                      return (
+                        <tr 
+                          key={idx}
+                          onClick={() => {
+                            setIdxCasoSel(g.casoIdx);
+                            setVistaModal('ficha');
+                            setActiveTab('gestiones');
+                          }}
+                          style={{
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            cursor: 'pointer',
+                            background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                            transition: 'background 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(74, 163, 199, 0.15)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'}
+                        >
+                          <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{idx + 1}</td>
+                          <td style={{ padding: '12px 14px', fontWeight: 'bold', color: 'var(--accent-cyan)' }}>{g.rit}</td>
+                          <td style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: '600' }}>{g.cliente}</td>
+                          <td style={{ padding: '12px 14px', fontWeight: 'bold', color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>{g.fecha || 'Sin fecha'}</td>
+                          <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 'bold',
+                              background: esPendiente ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+                              color: esPendiente ? 'var(--danger)' : 'var(--ok)',
+                              border: esPendiente ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(34, 197, 94, 0.25)'
+                            }}>
+                              {venc}
+                            </span>
+                          </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>
+                          {g.cuaderno || 'Principal'} {g.folio ? `(${g.folio})` : ''}
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                          {g.tramite || 'Gestión procesal'}
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>
+                          {g.origen || g.tribunal || 'Juzgado'}
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            background: g.estado === 'REALIZADO' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                            color: g.estado === 'REALIZADO' ? 'var(--ok)' : 'var(--warning)'
+                          }}>
+                            {g.estado || 'REALIZADO'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <button 
+                            className="btn-primary"
+                            style={{ padding: '4px 10px', fontSize: '0.72rem', borderRadius: '4px' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIdxCasoSel(g.casoIdx);
+                              setVistaModal('ficha');
+                              setActiveTab('gestiones');
+                            }}
+                          >
+                            📂 Ver Ficha
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{
+                overflowX: 'auto',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.06)', borderBottom: '1px solid var(--border-color)', color: 'var(--accent-gold)' }}>
+                      <th style={{ padding: '12px 14px', width: '40px' }}>#</th>
+                      <th style={{ padding: '12px 14px' }}>RIT / Identificador</th>
+                      <th style={{ padding: '12px 14px' }}>Cliente</th>
+                      <th style={{ padding: '12px 14px' }}>Carátula / Asunto</th>
+                      <th style={{ padding: '12px 14px' }}>Tribunal / Vía</th>
+                      <th style={{ padding: '12px 14px' }}>Estado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center' }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listaCasos.map((c, idx) => {
+                      const ritId = c.rit || c.id || `EXP-${idx+1}`;
+                      const cli = c.cliente || 'Sin cliente';
+                      const car = c.caratula || c.asunto || 'Sin carátula';
+                      const trib = c.tribunal || (c.tipo === 'extrajudicial' ? 'Extrajudicial' : 'PJUD');
+                      const est = c.estadoPlazo || c.estado || 'VIGENTE';
+                      return (
+                        <tr 
+                          key={idx}
+                          onClick={() => {
+                            setIdxCasoSel(idx);
+                            setVistaModal('ficha');
+                          }}
+                          style={{
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s ease',
+                            background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(74, 163, 199, 0.15)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'}
+                        >
+                          <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{idx + 1}</td>
+                          <td style={{ padding: '12px 14px', fontWeight: 'bold', color: 'var(--accent-cyan)' }}>{ritId}</td>
+                          <td style={{ padding: '12px 14px', color: 'var(--text-primary)', fontWeight: '600' }}>{cli}</td>
+                          <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{car}</td>
+                          <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>{trib}</td>
+                          <td style={{ padding: '12px 14px' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '10px',
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold',
+                              background: est === 'VIGENTE' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: est === 'VIGENTE' ? 'var(--ok)' : 'var(--danger)'
+                            }}>
+                              {est}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button 
+                                className="btn-primary"
+                                style={{ padding: '4px 10px', fontSize: '0.72rem', borderRadius: '4px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIdxCasoSel(idx);
+                                  setVistaModal('ficha');
+                                }}
+                              >
+                                📂 Abrir Ficha
+                              </button>
+                              <button 
+                                className="btn-secondary"
+                                style={{ padding: '4px 10px', fontSize: '0.72rem', borderRadius: '4px', background: 'rgba(74, 163, 199, 0.15)', borderColor: 'var(--accent-cyan)', color: 'var(--text-primary)' }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIdxCasoSel(idx);
+                                  setVistaModal('ficha');
+                                  setActiveTab('gestiones');
+                                }}
+                              >
+                                📋 Ver Gestiones
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* VISTA FICHA INDIVIDUAL */
+          <div className="ficha-individual-wrapper">
+            {/* Selector de Causas cuando se abrieron múltiples simultáneamente */}
+            {listaCasos.length > 1 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                marginBottom: '20px',
+                background: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                overflowX: 'auto',
+                width: 'calc(100% - 130px)'
+              }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
+                  📂 Causas Abiertas ({listaCasos.length}):
+                </span>
+                {listaCasos.map((c, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setIdxCasoSel(idx)}
+                    className={idxCasoSel === idx ? 'btn-primary' : 'btn-secondary'}
+                    style={{ padding: '4px 10px', fontSize: '0.75rem', borderRadius: '6px', whiteSpace: 'nowrap' }}
+                  >
+                    {c.rit || c.id} — {c.cliente || c.caratula || 'Sin denominación'}
+                  </button>
+                ))}
+              </div>
+            )}
+
+        {/* Cabecera del Caso — Estructura Completa de Ficha con 9 Campos Clave */}
+        {(() => {
+          const esCasoExtrajudicial = caso.materia === 'Extrajudicial' || caso.tipo === 'extrajudicial' || (displayCaso.rit && String(displayCaso.rit).startsWith('EXT'));
+          return (
+        <div style={{ marginBottom: '24px', paddingBottom: '18px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          {/* Fila 1: ROL / RIT + RUC + Materia + Vigencia + Editar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.15rem', fontWeight: '800', color: esCasoExtrajudicial ? '#f59e0b' : 'var(--accent-cyan)', background: esCasoExtrajudicial ? 'rgba(245, 158, 11, 0.12)' : 'rgba(192, 160, 113, 0.1)', padding: '8px 18px', borderRadius: '8px', border: `1px solid ${esCasoExtrajudicial ? 'rgba(245, 158, 11, 0.4)' : 'rgba(192, 160, 113, 0.3)'}`, letterSpacing: '0.5px' }}>
+                {esCasoExtrajudicial ? 'ROL EXTRAJUDICIAL: ' : 'ROL/RIT: '}{displayCaso.rit || displayCaso.rol || 'Sin ROL'}
+              </div>
+              {!esCasoExtrajudicial && (displayCaso.ruc || displayCaso.materia?.toLowerCase().includes('penal') || displayCaso.tribunal?.toLowerCase().includes('garantía')) && (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: '#ec4899', background: 'rgba(236,72,153,0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(236,72,153,0.3)', fontWeight: '700' }}>
+                  RUC: {displayCaso.ruc || 'Sin RUC'}
+                </div>
+              )}
+              <span className={esCasoExtrajudicial ? "badge badge-gold" : "badge badge-purple"} style={{ padding: '5px 12px', fontSize: '0.78rem' }}>
+                {esCasoExtrajudicial ? '📂 EXPEDIENTE EXTRAJUDICIAL' : (caso.materia || 'Judicial')}
+              </span>
               <select 
                 value={estadoVigencia}
                 onChange={(e) => {
                   const val = e.target.value;
                   setEstadoVigencia(val);
                   localStorage.setItem(`lexcontrol_vigencia_${caso.id || caso.rit}`, val);
-                  if (val === 'TERMINADO / CANCELADO') {
-                    caso.estadoPlazo = 'TERMINADO';
-                  } else {
-                    caso.estadoPlazo = 'VIGENTE';
-                  }
+                  if (val === 'TERMINADO / CANCELADO') { caso.estadoPlazo = 'TERMINADO'; } else { caso.estadoPlazo = 'VIGENTE'; }
                 }}
                 style={{
                   background: estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(207, 95, 87, 0.15)',
                   color: estadoVigencia === 'VIGENTE' ? 'var(--ok)' : 'var(--danger)',
                   border: `1px solid ${estadoVigencia === 'VIGENTE' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(207, 95, 87, 0.4)'}`,
-                  padding: '6px 14px',
-                  borderRadius: '12px',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
+                  padding: '5px 12px', borderRadius: '10px', fontSize: '0.78rem', fontWeight: '700', outline: 'none', cursor: 'pointer', fontFamily: 'inherit'
                 }}
               >
                 <option value="VIGENTE" style={{ background: 'var(--bg-app)', color: 'var(--ok)' }}>🟢 VIGENTE</option>
                 <option value="TERMINADO / CANCELADO" style={{ background: 'var(--bg-app)', color: 'var(--danger)' }}>TERMINADA / CANCELADA</option>
               </select>
             </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {discoFolder && discoFolder.path && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetch(`${LEXCONTROL_API}/abrir?ruta=${encodeURIComponent(discoFolder.path)}`).catch(console.error);
+                  }}
+                  className="btn-secondary"
+                  style={{ padding: '6px 14px', display: 'flex', gap: '6px', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-cyan)', border: '1px solid rgba(59, 130, 246, 0.4)' }}
+                  title="Abrir la carpeta física en el disco duro local"
+                >
+                  <FolderOpen size={14} /> Carpeta
+                </button>
+              )}
+              {isEditingInfo ? (
+                <button onClick={handleSaveInfo} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', gap: '6px', alignItems: 'center', fontSize: '0.8rem' }}>
+                  <CheckCircle2 size={14} /> Guardar
+                </button>
+              ) : (
+                <button onClick={() => setIsEditingInfo(true)} className="btn-secondary" style={{ padding: '6px 14px', display: 'flex', gap: '6px', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Edit3 size={14} /> Editar
+                </button>
+              )}
+              <button
+                onClick={handleEliminarExpediente}
+                style={{
+                  padding: '6px 14px',
+                  display: 'flex',
+                  gap: '6px',
+                  alignItems: 'center',
+                  fontSize: '0.8rem',
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+                title="Eliminar este expediente permanentemente del sistema"
+              >
+                <Trash2 size={14} /> Eliminar Expediente
+              </button>
+            </div>
           </div>
 
-          </div>
-          {/* Fila 2: Carátula Principal */}
-          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '300px' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px' }}>
-                Carátula Judicial / Causa
-              </span>
+          {/* Carátula principal */}
+          {isEditingInfo ? (
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Carátula</label>
+              <input 
+                type="text" 
+                value={overrides.caratula !== undefined ? overrides.caratula : (caso.caratula || '')}
+                onChange={(e) => setOverrides({...overrides, caratula: e.target.value})}
+                className="input-field"
+                style={{ width: '100%', fontSize: '1.1rem', marginTop: '4px', fontWeight: 'bold' }}
+                placeholder="Ej: MORAGA / PEREZ"
+              />
+            </div>
+          ) : (
+            <h2 style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 14px 0', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6 }}>
+              {esCasoExtrajudicial ? '📁' : '⚖️'} Carátula: {displayCaso.caratula || displayCaso.cliente || 'Carátula no especificada'}
+            </h2>
+          )}
+
+          {/* Fila Grid: 8 Campos Restantes (ROL/RIT, RUC, Tribunal, Nº Tribunal, Ciudad, Cliente, Contraparte, Abogado Contraparte) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>
+                {esCasoExtrajudicial ? 'ROL EXTRAJUDICIAL' : 'ROL / RIT'}
+              </div>
               {isEditingInfo ? (
-                <input 
-                  type="text" 
-                  value={overrides.caratula !== undefined ? overrides.caratula : (caso.caratula || '')}
-                  onChange={(e) => setOverrides({...overrides, caratula: e.target.value})}
-                  className="input-field"
-                  style={{ width: '100%', fontSize: '1.4rem', marginTop: '4px', fontWeight: 'bold' }}
-                  placeholder="Ej: MORAGA/PEREZ"
-                />
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.rit !== undefined ? overrides.rit : (caso.rit || '')} onChange={(e) => setOverrides({...overrides, rit: e.target.value})} placeholder="Ej: EXT-001-2026" />
               ) : (
-                <h2 style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginTop: '4px', lineHeight: '1.3', opacity: estadoVigencia === 'VIGENTE' ? 1 : 0.6, letterSpacing: '-0.5px' }}>
-                  ⚖️ {displayCaso.caratula || displayCaso.cliente || 'Carátula no especificada'}
-                </h2>
+                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: esCasoExtrajudicial ? '#f59e0b' : 'var(--accent-cyan)' }}>{displayCaso.rit || displayCaso.rol || 'N/A'}</div>
               )}
             </div>
-            
-            {isEditingInfo ? (
-              <button onClick={handleSaveInfo} className="btn-primary" style={{ padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <CheckCircle2 size={16} /> Guardar
-              </button>
-            ) : (
-              <button onClick={() => setIsEditingInfo(true)} className="btn-secondary" style={{ padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Edit3 size={16} /> Editar
-              </button>
-            )}
-          </div>
 
-          {/* Fila 3: Ficha con Cliente, Ciudad y Tribunal */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '14px 18px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <User size={20} color="var(--accent-gold)" style={{ marginTop: '2px' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Cliente / Patrocinado</div>
-                {isEditingInfo ? (
-                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.cliente !== undefined ? overrides.cliente : (caso.cliente || '')} onChange={(e) => setOverrides({...overrides, cliente: e.target.value})} placeholder="Nombre del cliente" />
-                ) : (
-                  <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', marginTop: '2px' }}>
-                    👤 {extraerCliente(displayCaso)}
-                  </div>
-                )}
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>
+                {esCasoExtrajudicial ? 'TIPO DE TRÁMITE' : 'RUC (Causas Penales)'}
               </div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.ruc !== undefined ? overrides.ruc : (caso.ruc || '')} onChange={(e) => setOverrides({...overrides, ruc: e.target.value})} placeholder="Ej: Asesoría Contratual" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  {displayCaso.ruc || (esCasoExtrajudicial ? '💼 Asesoría / Negociación Directa' : 'Sin RUC')}
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <MapPin size={20} color="var(--accent-cyan)" style={{ marginTop: '2px' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Ciudad / Jurisdicción</div>
-                {isEditingInfo ? (
-                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.ciudad !== undefined ? overrides.ciudad : (caso.ciudad || extraerCiudad(caso))} onChange={(e) => setOverrides({...overrides, ciudad: e.target.value})} placeholder="Ej: Concepción" />
-                ) : (
-                  <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', marginTop: '2px' }}>
-                    📍 {extraerCiudad(displayCaso)}
-                  </div>
-                )}
-              </div>
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>Cliente / Patrocinado</div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.cliente !== undefined ? overrides.cliente : (caso.cliente || '')} onChange={(e) => setOverrides({...overrides, cliente: e.target.value})} placeholder="Nombre del cliente" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>👤 {extraerCliente(displayCaso)}</div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-              <Gavel size={20} color="var(--accent-purple)" style={{ marginTop: '2px' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Tribunal / Corte</div>
-                {isEditingInfo ? (
-                  <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.9rem', marginTop: '4px' }} value={overrides.tribunal !== undefined ? overrides.tribunal : (caso.tribunal || '')} onChange={(e) => setOverrides({...overrides, tribunal: e.target.value})} placeholder="Ej: 1° Juzgado Civil" />
-                ) : (
-                  <div style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)', marginTop: '2px' }}>
-                    🏛️ {displayCaso.tribunal || 'Juzgado de Letras'}
-                  </div>
-                )}
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>Contraparte</div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.contraparte !== undefined ? overrides.contraparte : (caso.contraparte || '')} onChange={(e) => setOverrides({...overrides, contraparte: e.target.value})} placeholder="Nombre contraparte" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>👥 {displayCaso.contraparte || 'En Reserva / Directa'}</div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>Abogado Contraparte</div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.abogadoContraparte !== undefined ? overrides.abogadoContraparte : (caso.abogadoContraparte || '')} onChange={(e) => setOverrides({...overrides, abogadoContraparte: e.target.value})} placeholder="Ej: Juan Pérez L." />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>⚖️ {displayCaso.abogadoContraparte || 'No registrado'}</div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>
+                {esCasoExtrajudicial ? 'SEDE DE GESTIÓN / LUGAR' : 'Tribunal'}
               </div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.tribunal !== undefined ? overrides.tribunal : (caso.tribunal || '')} onChange={(e) => setOverrides({...overrides, tribunal: e.target.value})} placeholder="Ej: Notaría / Directo" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  {displayCaso.tribunal || (esCasoExtrajudicial ? '📁 Tramitación Directa / Notarial' : 'Juzgado de Letras')}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>
+                {esCasoExtrajudicial ? 'MODALIDAD' : 'Nº Tribunal'}
+              </div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.numeroTribunal !== undefined ? overrides.numeroTribunal : (caso.numeroTribunal || '')} onChange={(e) => setOverrides({...overrides, numeroTribunal: e.target.value})} placeholder="Ej: 1°" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  {displayCaso.numeroTribunal || (esCasoExtrajudicial ? '✍️ Asesoría Integral' : '1°')}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '4px' }}>Ciudad</div>
+              {isEditingInfo ? (
+                <input type="text" className="input-field" style={{ width: '100%', padding: '4px 8px', fontSize: '0.85rem' }} value={overrides.ciudad !== undefined ? overrides.ciudad : (caso.ciudad || extraerCiudad(caso))} onChange={(e) => setOverrides({...overrides, ciudad: e.target.value})} placeholder="Ej: Concepción" />
+              ) : (
+                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>📍 {extraerCiudad(displayCaso)}</div>
+              )}
             </div>
           </div>
         </div>
+          );
+        })()}
 
-        {/* Barra de Pestañas de la Ficha */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('resumen')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'resumen' ? 'rgba(192, 160, 113, 0.15)' : 'transparent',
-              color: activeTab === 'resumen' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'resumen' ? '2px solid var(--accent-cyan)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>Resumen & Teoría ({caso.estadisticasPrueba ? caso.estadisticasPrueba.total : 10} Pruebas)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('gestiones')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'gestiones' ? 'rgba(125, 133, 144, 0.15)' : 'transparent',
-              color: activeTab === 'gestiones' ? 'var(--accent-purple)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'gestiones' ? '2px solid var(--accent-purple)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>Gestiones & Estado Diario ({gestionesList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('documentos')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'documentos' ? 'rgba(93, 145, 105, 0.15)' : 'transparent',
-              color: activeTab === 'documentos' ? 'var(--alert-green)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'documentos' ? '2px solid var(--alert-green)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>Documentos ({documentosList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('vinculadas')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'vinculadas' ? 'rgba(201, 148, 70, 0.15)' : 'transparent',
-              color: activeTab === 'vinculadas' ? 'var(--accent-gold)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'vinculadas' ? '2px solid var(--accent-gold)' : 'none',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span>Causas Conexas / Recursos ({linkedCases.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('redaccion')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'redaccion' ? 'rgba(192, 160, 113, 0.15)' : 'transparent',
-              color: activeTab === 'redaccion' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'redaccion' ? '2px solid var(--accent-cyan)' : 'none',
-              transition: 'all 0.2s',
-              boxShadow: activeTab === 'redaccion' ? 'var(--shadow-glow-cyan)' : 'none'
-            }}
-          >
-            <Edit3 size={16} />
-            <span>Redacción OJV (IA)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('alegatos')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'alegatos' ? 'rgba(125, 133, 144, 0.15)' : 'transparent',
-              color: activeTab === 'alegatos' ? 'var(--text-secondary)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'alegatos' ? '2px solid #8b5cf6' : 'none',
-              transition: 'all 0.2s',
-              boxShadow: activeTab === 'alegatos' ? '0 0 20px rgba(125, 133, 144, 0.3)' : 'none'
-            }}
-          >
-            <span>Estudio de Alegatos</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('bitacora')}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'bitacora' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: activeTab === 'bitacora' ? 'var(--info)' : 'var(--text-secondary)',
-              fontWeight: '700',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: activeTab === 'bitacora' ? '2px solid #3b82f6' : 'none',
-              transition: 'all 0.2s',
-              boxShadow: activeTab === 'bitacora' ? '0 0 20px rgba(59, 130, 246, 0.3)' : 'none'
-            }}
-          >
-            <BookOpen size={16} />
-            <span>Bitácora Extrajudicial</span>
-          </button>
+        {/* Barra de Pestañas — 4 esenciales */}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '0' }}>
+          {[
+            { id: 'resumen', label: 'Resumen', color: 'var(--accent-cyan)' },
+            { id: 'gestiones', label: `Gestiones (${gestionesList.length})`, color: 'var(--accent-purple)' },
+            { id: 'documentos', label: `Documentos (${documentosList.length})`, color: 'var(--alert-green)' },
+            { id: 'bitacora', label: 'Bitácora', color: '#3b82f6' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '10px 18px',
+                border: 'none',
+                background: 'transparent',
+                color: activeTab === tab.id ? tab.color : 'var(--text-secondary)',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                borderBottom: activeTab === tab.id ? `2px solid ${tab.color}` : '2px solid transparent',
+                transition: 'all 0.2s',
+                borderRadius: '0'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* PESTAÑA 1: RESUMEN Y TEORÍA DEL CASO - Rediseñada para ser más limpia */}
         {activeTab === 'resumen' && (
           <div className="animate-fade-in" style={{ padding: '10px 0' }}>
-            
-            {/* Banner de Hito Procesal y Última Gestión Pendiente */}
+            {/* Resumen ejecutivo en prosa (IA local), a pedido -no opina ni sugiere
+                estrategia, sólo redacta lo que ya está en la bitácora-. */}
             <div style={{
-              padding: '24px 28px',
-              borderRadius: '16px',
-              backgroundColor: isUrgente ? 'rgba(207, 95, 87, 0.08)' : (ultimaGestionPendiente ? 'rgba(125, 133, 144, 0.08)' : 'rgba(201, 148, 70, 0.08)'),
-              border: isUrgente ? '1px solid rgba(207, 95, 87, 0.3)' : (ultimaGestionPendiente ? '1px solid rgba(125, 133, 144, 0.3)' : '1px solid rgba(201, 148, 70, 0.3)'),
-              marginBottom: '32px',
+              padding: '18px 20px',
+              borderRadius: '12px',
+              background: 'rgba(139,92,246,0.05)',
+              border: '1px solid rgba(139,92,246,0.2)',
+              marginBottom: '20px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '20px',
-              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)'
+              alignItems: 'flex-start',
+              gap: '14px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                {isUrgente ? <AlertTriangle size={32} color="var(--alert-red)" /> : (ultimaGestionPendiente ? <AlertCircle size={32} color="var(--accent-purple)" /> : <Clock size={32} color="var(--accent-gold)" />)}
-                <div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: isUrgente ? 'var(--alert-red)' : (ultimaGestionPendiente ? 'var(--accent-purple)' : 'var(--accent-gold)'), textTransform: 'uppercase', display: 'block', marginBottom: '4px', letterSpacing: '0.5px' }}>
-                    {ultimaGestionPendiente ? 'GESTIÓN PENDIENTE PRIORITARIA' : `Próximo Hito Procesal (${caso.estadoPlazo})`} {caso.diasRestantes ? `- ${caso.diasRestantes} días restantes` : ''}
-                  </span>
-                  
+              <Sparkles size={18} color="#8b5cf6" style={{ marginTop: 2, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.75rem', color: '#8b5cf6', textTransform: 'uppercase', fontWeight: '700', marginBottom: '8px' }}>
+                  Resumen Ejecutivo (IA)
+                </div>
+                {resumenIA ? (
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: resumenIA.error ? 'var(--danger)' : 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {resumenIA.texto}
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Redacta un resumen del estado procesal a partir de las gestiones registradas.
+                  </p>
+                )}
+              </div>
+              <button
+                className="btn-secondary btn-sm"
+                onClick={generarResumenIA}
+                disabled={cargandoResumenIA}
+                style={{ flexShrink: 0 }}
+              >
+                {cargandoResumenIA ? <Loader2 size={13} className="spin" /> : <Sparkles size={13} />}
+                {resumenIA ? 'Redactar de nuevo' : 'Generar resumen'}
+              </button>
+            </div>
+
+            {/* Layout 2 columnas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+
+              {/* Columna izquierda: Datos del Caso */}
+              <div>
+                {/* Partes */}
+                <div style={{ padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '12px' }}>Defensa / Representación</div>
+                  <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>{caso.cliente || 'Mandante en registro'}</p>
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }}></div>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Abogado: <strong style={{ color: 'var(--text-primary)' }}>{caso.abogadoAspirante || 'Jaime Moraga C.'}</strong></span>
+                </div>
+
+                <div style={{ padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--accent-purple)', textTransform: 'uppercase', fontWeight: '700', marginBottom: '12px' }}>Contraparte</div>
+                  <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>{caso.contraparte || 'Parte contraria según carátula'}</p>
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '10px 0' }}></div>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Ingreso: <strong style={{ color: 'var(--text-primary)' }}>{caso.fechaIngreso || 'Ver en OJV'}</strong></span>
+                </div>
+
+                {/* Teoría del Caso */}
+                {caso.resumenTeoriaCaso && (
+                  <div style={{ padding: '20px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(192,160,113,0.03), rgba(125,133,144,0.03))', border: '1px solid rgba(125,133,144,0.2)' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', margin: '0 0 10px 0' }}>Teoría del Caso</h4>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.7 }}>{caso.resumenTeoriaCaso}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Columna derecha: Hito pendiente + Acciones rápidas */}
+              <div>
+                {/* Banner de Hito Procesal */}
+                <div style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  backgroundColor: isUrgente ? 'rgba(207,95,87,0.08)' : (ultimaGestionPendiente ? 'rgba(125,133,144,0.08)' : 'rgba(201,148,70,0.08)'),
+                  border: isUrgente ? '1px solid rgba(207,95,87,0.3)' : (ultimaGestionPendiente ? '1px solid rgba(125,133,144,0.3)' : '1px solid rgba(201,148,70,0.3)'),
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                    {isUrgente ? <AlertTriangle size={24} color="var(--alert-red)" /> : (ultimaGestionPendiente ? <AlertCircle size={24} color="var(--accent-purple)" /> : <Clock size={24} color="var(--accent-gold)" />)}
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700', color: isUrgente ? 'var(--alert-red)' : (ultimaGestionPendiente ? 'var(--accent-purple)' : 'var(--accent-gold)'), textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {ultimaGestionPendiente ? 'GESTIÓN PENDIENTE' : `Hito Procesal (${caso.estadoPlazo || 'VIGENTE'})`} {caso.diasRestantes ? `— ${caso.diasRestantes} días` : ''}
+                    </span>
+                  </div>
+
                   {ultimaGestionPendiente ? (
                     <>
-                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
-                        {ultimaGestionPendiente.tramite}
-                      </p>
-                      <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', opacity: 0.9 }}>
-                        Programado para: <strong>{ultimaGestionPendiente.fecha}</strong> • Estado: <strong>{ultimaGestionPendiente.estado}</strong>
+                      <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>{ultimaGestionPendiente.tramite}</p>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        Programado: <strong>{ultimaGestionPendiente.fecha}</strong> • <strong>{ultimaGestionPendiente.estado}</strong>
                       </span>
                     </>
                   ) : (
                     <>
-                      <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
-                        {caso.proximaAudiencia || 'Consultar en Estado Diario / Tramitación'}
-                      </p>
-                      <span style={{ fontSize: '0.9rem', color: isUrgente ? 'var(--danger)' : '#fde68a', opacity: 0.9 }}>
-                        {caso.plazoDescripcion || 'Monitorear plazos en OJV.'}
-                      </span>
+                      {caso.proximaAudiencia && <p style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{caso.proximaAudiencia}</p>}
+                      {caso.plazoDescripcion && <span style={{ fontSize: '0.85rem', color: isUrgente ? 'var(--danger)' : 'var(--text-secondary)' }}>{caso.plazoDescripcion}</span>}
+                      {!caso.proximaAudiencia && !caso.plazoDescripcion && <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>Sin hitos pendientes registrados</p>}
                     </>
                   )}
+
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                    {ultimaGestionPendiente && (
+                      <button className="btn-primary" style={{ fontSize: '0.8rem', padding: '8px 14px', borderRadius: '8px', background: 'var(--accent-purple)' }} onClick={() => setActiveTab('gestiones')}>Ver Gestiones</button>
+                    )}
+                    {caso.materia !== "Extrajudicial" && (
+                      <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '8px 14px', borderRadius: '8px' }} onClick={() => alert("Abriendo expediente en OJV...")}>
+                        Ver en OJV <ExternalLink size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Acciones rápidas (lo que antes eran pestañas) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button onClick={handleGenerarReporteWhatsApp} className="btn-secondary" style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                    <MessageCircle size={18} color="var(--ok)" />
+                    <span>Reporte WhatsApp</span>
+                  </button>
+                  <button onClick={() => setActiveTab('redaccion')} className="btn-secondary" style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(192,160,113,0.06)', border: '1px solid rgba(192,160,113,0.2)' }}>
+                    <Edit3 size={18} color="var(--accent-cyan)" />
+                    <span>Redacción OJV (IA)</span>
+                  </button>
+                  <button onClick={() => setActiveTab('alegatos')} className="btn-secondary" style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                    <Mic size={18} color="#8b5cf6" />
+                    <span>Estudio Alegatos</span>
+                  </button>
+                  <button onClick={() => setActiveTab('vinculadas')} className="btn-secondary" style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(201,148,70,0.06)', border: '1px solid rgba(201,148,70,0.2)' }}>
+                    <Link2 size={18} color="var(--accent-gold)" />
+                    <span>Causas Conexas ({linkedCases.length})</span>
+                  </button>
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                {ultimaGestionPendiente && (
-                  <button className="btn-primary" style={{ fontSize: '0.9rem', padding: '10px 20px', borderRadius: '8px', background: 'var(--accent-purple)' }} onClick={() => setActiveTab('gestiones')}>
-                    <span>Ver Gestiones</span>
-                  </button>
-                )}
-                {caso.materia !== "Extrajudicial" && (
-                  <button className="btn-secondary" style={{ fontSize: '0.9rem', padding: '10px 20px', borderRadius: '8px' }} onClick={() => alert("Simulación: Abriendo expediente en el portal del Poder Judicial.")}>
-                    <span>Ver en Portal Judicial</span>
-                    <ExternalLink size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Grid de Partes */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-              <div style={{ padding: '24px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent-cyan)', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', letterSpacing: '0.5px' }}>
-                  Defensa / Representación
-                </span>
-                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
-                  {caso.cliente || 'Mandante en registro'}
-                </p>
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '12px 0' }}></div>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>
-                  Abogado Litigante a Cargo:<br/>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.abogadoAspirante || 'Jaime Moraga C.'}</strong>
-                </span>
-              </div>
-
-              <div style={{ padding: '24px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent-purple)', textTransform: 'uppercase', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', letterSpacing: '0.5px' }}>
-                  Contraparte & Intervinientes
-                </span>
-                <p style={{ fontSize: '1.15rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 12px 0' }}>
-                  {caso.contraparte || 'Parte contraria según carátula'}
-                </p>
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '12px 0' }}></div>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'block' }}>
-                  Fecha Ingreso Judicial:<br/>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.95rem', marginTop: '4px', display: 'block' }}>{caso.fechaIngreso || 'Ver en OJV'}</strong>
-                </span>
-              </div>
-            </div>
-
-            {/* Teoría del Caso */}
-            <div style={{ 
-              padding: '28px', 
-              borderRadius: '16px', 
-              background: 'linear-gradient(135deg, rgba(192, 160, 113, 0.03) 0%, rgba(125, 133, 144, 0.03) 100%)', 
-              border: '1px solid rgba(125, 133, 144, 0.2)',
-              marginBottom: '16px'
-            }}>
-              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', letterSpacing: '0.5px' }}>
-                Teoría del Caso & Estrategia Litigante
-              </h3>
-              <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.7, fontWeight: '400' }}>
-                {caso.resumenTeoriaCaso || 'Expediente bajo monitoreo procesal activo por parte del estudio legal.'}
-              </p>
             </div>
           </div>
         )}
@@ -1273,95 +1893,32 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         {/* PESTAÑA 2: GESTIONES Y ESTADO DIARIO */}
         {activeTab === 'gestiones' && (
           <div className="animate-fade-in">
-            {/* SECCIÓN DE SUGERENCIAS LEGALES DE INTELIGENCIA ARTIFICIAL */}
-            {caso.materia !== 'Extrajudicial' && (
-              <div style={{ 
-              padding: '28px', 
-              borderRadius: '16px', 
-              background: 'linear-gradient(135deg, rgba(125, 133, 144, 0.12) 0%, rgba(192, 160, 113, 0.08) 100%)', 
-              border: '1px solid var(--accent-purple)', 
-              marginBottom: '32px',
-              boxShadow: '0 10px 30px -5px rgba(125, 133, 144, 0.25)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}>
-                  <span style={{ fontSize: '1.25rem' }}></span>
-                  <span>Sugerencias de Estrategia Procesal (Motor Heurístico Local) ({sugerenciasIA.length})</span>
-                </h4>
-                <span className="badge badge-purple" style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'rgba(125, 133, 144, 0.25)', border: '1px solid var(--accent-purple)' }}>
-                  Procedimiento: {caso.materia}
-                </span>
-              </div>
 
-              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-                Evaluando la competencia y el estado actual (<strong>{caso.etapa}</strong> en <strong>{caso.tribunal}</strong>), el motor jurídico forense recomienda impulsar las siguientes gestiones conforme al código procesal aplicable:
-              </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {sugerenciasIA.map((sug, idx) => (
-                  <div key={idx} style={{ 
-                    padding: '20px 24px', 
-                    borderRadius: '14px', 
-                    background: 'rgba(0, 0, 0, 0.5)', 
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: '20px',
-                    flexWrap: 'wrap',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                  }}>
-                    <div style={{ flex: '1', minWidth: '280px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ 
-                          fontSize: '0.72rem', 
-                          fontWeight: '800', 
-                          color: sug.prioridad === 'ALTA' ? 'var(--danger)' : '#f59e0b',
-                          background: sug.prioridad === 'ALTA' ? 'rgba(207, 95, 87, 0.15)' : 'rgba(201, 148, 70, 0.15)',
-                          padding: '3px 8px', 
-                          borderRadius: '6px',
-                          border: sug.prioridad === 'ALTA' ? '1px solid rgba(207, 95, 87, 0.4)' : '1px solid rgba(201, 148, 70, 0.4)'
-                        }}>
-                          PRIORIDAD {sug.prioridad}
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
-                          {sug.fundamento}
-                        </span>
-                      </div>
-                      
-                      <strong style={{ fontSize: '1rem', color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
-                        {sug.titulo}
-                      </strong>
-                      
-                      <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
-                        <strong>Acción Litigante:</strong> {sug.accion}
-                      </p>
-                      
-                      <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '700', display: 'block', background: 'rgba(207, 95, 87, 0.08)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content', marginTop: '4px' }}>
-                        {sug.plazoFatal}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignSelf: 'center' }}>
-                      <button 
-                        className="btn-primary" 
-                        style={{ padding: '8px 14px', fontSize: '0.78rem', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        onClick={() => handleConvertirSugerencia(sug)}
-                      >
-                        <span>Añadir como Gestión Pendiente</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', margin: 0, letterSpacing: '0.5px' }}>
                 Historial de Tramitación & Movimientos OJV
               </h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setModoVistaGestiones(modoVistaGestiones === 'planilla' ? 'tarjetas' : 'planilla')}
+                  style={{
+                    fontSize: '0.75rem',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: modoVistaGestiones === 'planilla' ? 'rgba(74, 163, 199, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                    borderColor: modoVistaGestiones === 'planilla' ? 'var(--accent-cyan)' : 'var(--border-color)',
+                    color: 'var(--text-primary)'
+                  }}
+                  title={modoVistaGestiones === 'planilla' ? "Cambiar a Vista Tarjetas" : "Cambiar a Vista Planilla Excel de Gestiones"}
+                >
+                  <Table size={14} />
+                  <span>{modoVistaGestiones === 'planilla' ? 'Vista Tarjetas' : 'Planilla Excel Gestiones'}</span>
+                </button>
                 <button 
                   type="button"
                   className="btn-primary" 
@@ -1382,12 +1939,12 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 margin: '0 0 20px 0',
                 padding: '20px',
                 borderRadius: '12px',
-                background: 'rgba(15, 23, 42, 0.98)',
+                background: 'var(--bg-raised)',
                 border: '2px solid var(--accent-purple)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.7)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
                 animation: 'fadeIn 0.2s ease'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                   <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Edit3 size={18} color="var(--accent-purple)" />
                     {editingGestionIdx !== null ? "Modificar Actuación Procesal / Trámite" : "Registrar Nueva Actuación Procesal"}
@@ -1405,7 +1962,17 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         type="date" 
                         value={gestionForm.fecha} 
                         onChange={e => setGestionForm({ ...gestionForm, fecha: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', display: 'block', marginBottom: '4px', fontWeight: '600' }}>Fecha Vencimiento / Plazo</label>
+                      <input
+                        type="date"
+                        value={gestionForm.fechaVencimiento || ''}
+                        onChange={e => setGestionForm({ ...gestionForm, fechaVencimiento: e.target.value })}
+                        title="Déjalo vacío si no hay plazo"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       />
                     </div>
                     <div>
@@ -1415,7 +1982,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         value={gestionForm.folio} 
                         onChange={e => setGestionForm({ ...gestionForm, folio: e.target.value })}
                         placeholder="Ej: Folio 55 / Escrito 4"
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       />
                     </div>
                     <div>
@@ -1423,7 +1990,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <select 
                         value={gestionForm.cuaderno} 
                         onChange={e => setGestionForm({ ...gestionForm, cuaderno: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       >
                         <option value="Principal">Principal</option>
                         <option value="Prueba">Prueba</option>
@@ -1437,11 +2004,17 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <select 
                         value={gestionForm.estado} 
                         onChange={e => setGestionForm({ ...gestionForm, estado: e.target.value })}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                       >
                         <option value="PENDIENTE">PENDIENTE</option>
+                        <option value="EN ESPERA (RESOLUCIÓN PENDIENTE)">EN ESPERA (resolución del tribunal)</option>
                         <option value="REALIZADO">REALIZADO</option>
                       </select>
+                      {gestionForm.estado === 'EN ESPERA (RESOLUCIÓN PENDIENTE)' && (
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                          Sin fecha de vencimiento propia: se muestra en Mi Día &amp; Plazos ordenada por antigüedad, no como plazo fatal.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1452,7 +2025,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       value={gestionForm.origen} 
                       onChange={e => setGestionForm({ ...gestionForm, origen: e.target.value })}
                       placeholder="Ej: 3º Juzgado Civil de Temuco / Jaime Moraga C. / Receptor Judicial"
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }}
                     />
                   </div>
 
@@ -1467,7 +2040,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                       placeholder="Ej: Acompaña lista de testigos (Escribe para buscar sugerencias...)"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'inherit' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', background: 'var(--bg-inset)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'inherit' }}
                     />
                     
                     {showSuggestions && (
@@ -1499,7 +2072,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                                 cursor: 'pointer',
                                 color: 'var(--text-secondary)',
                                 fontSize: '0.85rem',
-                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                borderBottom: '1px solid var(--border-color)',
                                 transition: 'all 0.2s'
                               }}
                               onMouseEnter={e => {
@@ -1544,6 +2117,112 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               </div>
             )}
 
+            {modoVistaGestiones === 'planilla' ? (
+              <div style={{
+                overflowX: 'auto',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-secondary)',
+                marginBottom: '24px'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255, 255, 255, 0.06)', borderBottom: '1px solid var(--border-color)', color: 'var(--accent-cyan)' }}>
+                      <th style={{ padding: '10px 12px', width: '36px' }}>#</th>
+                      <th style={{ padding: '10px 12px', width: '110px' }}>Fecha Trámite</th>
+                      <th style={{ padding: '10px 12px', width: '140px', color: 'var(--accent-gold)' }}>Fecha Vencimiento</th>
+                      <th style={{ padding: '10px 12px', width: '120px' }}>Cuaderno / Folio</th>
+                      <th style={{ padding: '10px 12px' }}>Trámite / Providencia Judicial</th>
+                      <th style={{ padding: '10px 12px' }}>Origen / Magistratura</th>
+                      <th style={{ padding: '10px 12px', width: '100px' }}>Estado</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', width: '150px' }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gestionesList.map((g, index) => {
+                      const isGhost = g._isGhost;
+                      const realIndex = isGhost ? null : (gestionesList[0]._isGhost ? index - 1 : index);
+                      const venc = obtenerVencimientoGestion(g, caso);
+                      const esPendiente = g.estado === 'URGENTE' || (g.estado || '').includes('PENDIENTE') || isGhost;
+                      return (
+                        <tr
+                          key={index}
+                          style={{
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            background: index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                            transition: 'background 0.15s ease',
+                            cursor: realIndex !== null ? 'pointer' : 'default'
+                          }}
+                          onClick={() => realIndex !== null && handleOpenEditGestion(realIndex, g)}
+                          title={realIndex !== null ? 'Clic para editar esta gestión' : undefined}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(74, 163, 199, 0.12)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'}
+                        >
+                          <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontWeight: 'bold' }}>{index + 1}</td>
+                          <td style={{ padding: '10px 12px', fontWeight: 'bold', color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>{g.fecha || 'Sin fecha'}</td>
+                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.74rem',
+                              fontWeight: 'bold',
+                              background: esPendiente ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.12)',
+                              color: esPendiente ? 'var(--danger)' : 'var(--ok)',
+                              border: esPendiente ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(34, 197, 94, 0.25)'
+                            }}>
+                              {venc}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                            {g.cuaderno || 'Principal'} {g.folio ? `(${g.folio})` : ''}
+                          </td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                            {g.tramite || 'Gestión procesal'}
+                          </td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
+                            {g.origen || 'Juzgado'}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '10px',
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold',
+                              background: g.estado === 'REALIZADO' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                              color: g.estado === 'REALIZADO' ? 'var(--ok)' : 'var(--warning)'
+                            }}>
+                              {g.estado || 'REALIZADO'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {realIndex !== null && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleToggleEstadoGestion(realIndex); }}
+                                  className="btn-secondary"
+                                  style={{ padding: '3px 8px', fontSize: '0.7rem', borderRadius: '4px', marginRight: '6px' }}
+                                  title="Alternar Estado PENDIENTE / REALIZADO"
+                                >
+                                  {g.estado === 'REALIZADO' ? '↩ Pendiente' : '✓ Realizado'}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteGestion(realIndex); }}
+                                  className="btn-secondary"
+                                  style={{ padding: '3px 8px', fontSize: '0.7rem', borderRadius: '4px', color: 'var(--danger)', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                                  title="Eliminar actuación"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
               {gestionesList.map((g, index) => {
                 const isGhost = g._isGhost;
@@ -1585,6 +2264,15 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
                       Origen / Magistratura: <strong>{g.origen}</strong>
                     </span>
+                    {g.documentos && g.documentos.length > 0 && (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {g.documentos.map((doc, docIdx) => (
+                          <span key={docIdx} className="badge" style={{ fontSize: '0.75rem', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-cyan)', border: '1px solid rgba(59, 130, 246, 0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Paperclip size={12} /> {doc.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1630,6 +2318,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 </div>
               )})}
             </div>
+            )}
           </div>
         )}
 
@@ -1809,7 +2498,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 {/* Resultados de búsqueda inline */}
                 {searchLinkTerm.trim().length >= 2 && (
                   <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    {MOCK_CASOS.filter(c => {
+                    {[...MOCK_CASOS, ...PJUD_CASOS].filter(c => {
                       const cCaratula = c.caratula || '';
                       const cRit = c.rit || '';
                       const cCliente = c.cliente || '';
@@ -1837,7 +2526,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </button>
                       </div>
                     ))}
-                    {MOCK_CASOS.filter(c => {
+                    {[...MOCK_CASOS, ...PJUD_CASOS].filter(c => {
                       const cCaratula = c.caratula || '';
                       const cRit = c.rit || '';
                       const cCliente = c.cliente || '';
@@ -2457,6 +3146,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             </div>
           </div>
         )}
+        </div>
+      )}
 
       </div>
     </div>
@@ -2509,6 +3200,49 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               <MessageSquare size={16} /> Enviar WhatsApp
             </button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* DIÁLOGO GESTIÓN CONEXA -flotante, sin telón oscuro: no tapa el fondo */}
+    {confirmarConexaInfo && (
+      <div
+        className="animate-fade-in"
+        style={{
+          position: 'fixed', right: '24px', bottom: '24px', zIndex: 99999,
+          width: 'min(380px, calc(100vw - 48px))',
+          background: 'var(--bg-modal)', border: '1px solid var(--border-color)',
+          borderRadius: '16px', padding: '20px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <Link2 size={20} color="var(--accent-purple)" />
+          <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.05rem' }}>Gestión conexa</h3>
+        </div>
+        <p style={{ margin: '0 0 4px 0', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          Se guardó la gestión <strong style={{ color: 'var(--text-primary)' }}>"{confirmarConexaInfo.tramite}"</strong>.
+        </p>
+        <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          ¿Deseas agregar una gestión conexa a este expediente?
+        </p>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ flex: 1, justifyContent: 'center' }}
+            onClick={() => setConfirmarConexaInfo(null)}
+          >
+            No, gracias
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-cyan))' }}
+            onClick={handleConfirmarConexaSi}
+          >
+            <PlusCircle size={16} /> Sí, agregar
+          </button>
         </div>
       </div>
     )}

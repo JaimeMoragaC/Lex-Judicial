@@ -15,13 +15,18 @@ Ctrl-C y retomar donde iba.
     python3 indexar_pdfs.py --limite 200 # sólo los primeros 200 (para probar)
 """
 import argparse
+import hashlib
+import json
 import os
 import sqlite3
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import fitz  # PyMuPDF
+import numpy as np
 try:
     import docx  # python-docx
 except ImportError:
@@ -46,6 +51,16 @@ RAICES = [
 
 MAX_PAGINAS = 60
 MAX_CARACTERES = 400_000
+
+# --- Índice semántico (embeddings) --------------------------------------------
+# nomic-embed-text vía Ollama, 768 dimensiones. El modelo corre cargado con
+# contexto fijo de 2048 tokens; pedir más (con "num_ctx" en la request o con
+# /api/embed + truncate=True) igual responde 500 "input length exceeds the
+# context length" -se verificó empíricamente (30-jul-2026) que Ollama no trunca
+# solo. Por eso truncamos nosotros: 6000 caracteres funciona, 8000 falla.
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+MODELO_EMBEDDING = "nomic-embed-text"
+MAX_CARACTERES_EMBEDDING = 6000
 
 
 def abrir_indice():
@@ -72,7 +87,69 @@ def abrir_indice():
             tokenize = "unicode61 remove_diacritics 2"
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS embeddings (
+            ruta      TEXT PRIMARY KEY,
+            modelo    TEXT,
+            vector    BLOB,
+            generado  REAL
+        )
+    """)
+    # Hash SHA256 del contenido, para detectar el mismo archivo bajado dos veces
+    # con nombre distinto (ej. "Resolución (1).pdf") -por ruta no se detecta,
+    # porque cada descarga repetida es un path nuevo-. Se agrega con ALTER en vez
+    # de ir en el CREATE TABLE de arriba porque el índice ya existe en producción
+    # con miles de filas: así las bases viejas se actualizan solas al abrirlas.
+    try:
+        con.execute("ALTER TABLE archivos ADD COLUMN hash TEXT")
+    except sqlite3.OperationalError:
+        pass  # la columna ya existe
+    con.execute("CREATE INDEX IF NOT EXISTS idx_archivos_hash ON archivos(hash)")
     return con
+
+
+def calcular_hash(ruta):
+    """SHA256 del contenido del archivo. None si no se puede leer -nunca lanza-."""
+    try:
+        h = hashlib.sha256()
+        with open(ruta, "rb") as f:
+            for bloque in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(bloque)
+        return h.hexdigest()
+    except Exception:
+        return None
+
+
+def calcular_hash_bytes(datos):
+    return hashlib.sha256(datos).hexdigest() if datos else None
+
+
+def embeber_texto(texto):
+    """Pide a Ollama el vector semántico (768 floats, nomic-embed-text) de `texto`.
+    Devuelve una lista de floats, o None si Ollama no está disponible o falla
+    -nunca lanza-, para que el llamador pueda seguir sin romperse (igual criterio
+    que _ollama_generar_json en servidor_local_lexcontrol.py)."""
+    payload = {"model": MODELO_EMBEDDING, "prompt": texto[:MAX_CARACTERES_EMBEDDING]}
+    try:
+        req = urllib.request.Request(
+            f"{OLLAMA_HOST}/api/embeddings",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data.get("embedding")
+    except Exception:
+        return None
+
+
+def guardar_embedding(con, ruta, vector):
+    """Guarda `vector` (lista de floats) como BLOB float32 en la tabla `embeddings`."""
+    arr = np.asarray(vector, dtype=np.float32)
+    con.execute(
+        "INSERT OR REPLACE INTO embeddings (ruta, modelo, vector, generado) VALUES (?, ?, ?, ?)",
+        (str(ruta), MODELO_EMBEDDING, arr.tobytes(), time.time())
+    )
 
 
 def extraer_texto_docx(ruta):
@@ -206,9 +283,9 @@ def main():
                 (ruta, p.name, carpeta, texto),
             )
             con.execute(
-                "INSERT OR REPLACE INTO archivos (ruta, nombre, carpeta, tamano, modificado, paginas, indexado)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (ruta, p.name, carpeta, st.st_size, st.st_mtime, paginas, time.time()),
+                "INSERT OR REPLACE INTO archivos (ruta, nombre, carpeta, tamano, modificado, paginas, indexado, hash)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (ruta, p.name, carpeta, st.st_size, st.st_mtime, paginas, time.time(), calcular_hash(ruta)),
             )
             hechos += 1
 

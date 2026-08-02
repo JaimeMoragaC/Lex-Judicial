@@ -16,22 +16,34 @@ import {
   Download,
   MessageSquare,
   UploadCloud,
+  Inbox,
   Sun,
-  Moon
+  Moon,
+  Copy
 } from 'lucide-react';
 
-import { MOCK_STATS } from '../mockData';
-import { cargarPlazos, resumen } from '../utils/radarPlazos.js';
+import { MOCK_STATS, MOCK_CASOS } from '../mockData';
+import { cargarAtencion } from '../utils/radarPlazos.js';
+import { LEXCONTROL_API } from '../apiBase.js';
 
 export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme }) {
   // El aviso del pie era un texto fijo en el código ("ALERTA ROJA 28/07") que
   // seguiría diciendo lo mismo para siempre. Ahora sale del registro real.
   const [alerta, setAlerta] = useState(null);
+  const [pendientesRevision, setPendientesRevision] = useState(0);
 
   useEffect(() => {
-    cargarPlazos()
-      .then((plazos) => setAlerta(resumen(plazos)))
+    // Misma función que el Dashboard y el Radar. Antes esta cifra contaba sólo
+    // los plazos fatales, así que el badge podía decir 2 mientras el semáforo
+    // mostraba 5 gestiones venciendo hoy.
+    cargarAtencion({ causas: MOCK_CASOS })
+      .then((r) => setAlerta(r.resumen))
       .catch(() => setAlerta(null));
+
+    fetch(`${LEXCONTROL_API}/documentos_pendientes`)
+      .then((r) => r.json())
+      .then((data) => setPendientesRevision((data.documentos || []).length))
+      .catch(() => setPendientesRevision(0));
   }, []);
 
   // Toda sección que App.jsx sepa renderizar tiene que tener entrada acá. Cinco
@@ -42,8 +54,11 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
     { id: 'radar', label: 'Radar de Plazos', icon: Radar, badge: alerta?.accionables || null, tono: 'badge-red' },
     { id: 'agenda', label: 'Agenda & Calendario', icon: CalendarClock },
     { id: 'calculadora', label: 'Cómputo de Términos', icon: Calculator },
+    { id: 'chat_bot', label: 'Chatbot Asistente IA', icon: MessageSquare },
 
+    { id: 'documentos_pendientes', label: 'Documentos por Revisar', icon: Inbox, badge: pendientesRevision || null, tono: 'badge-gold', grupo: 'Documentos' },
     { id: 'subir', label: 'Subir & Analizar Documento', icon: UploadCloud, grupo: 'Documentos' },
+    { id: 'archivos_analizados', label: 'Documentos Analizados', icon: FileSearch, grupo: 'Documentos' },
     { id: 'proactivo', label: 'Asistente Proactivo (IA)', icon: Sparkles, grupo: 'Documentos' },
     { id: 'smartdrive', label: 'Explorador del Disco', icon: HardDrive, grupo: 'Documentos' },
     { id: 'buscador', label: 'Buscar en el Contenido', icon: FileSearch, grupo: 'Documentos' },
@@ -52,7 +67,8 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
     { id: 'casos', label: 'Mis Casos & Expedientes', icon: FolderGit2, badge: MOCK_STATS.casosActivos || null, grupo: 'Expedientes' },
     { id: 'matriz', label: 'Matriz Probatoria', icon: Scale, grupo: 'Expedientes' },
     { id: 'clientes', label: 'Directorio de Clientes', icon: Users, grupo: 'Expedientes' },
-    { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare, grupo: 'Expedientes' }
+    { id: 'bitacora', label: 'Bitácora Instantánea', icon: MessageSquare, grupo: 'Expedientes' },
+    { id: 'duplicados', label: 'Posibles Duplicados', icon: Copy, grupo: 'Expedientes' }
   ];
 
   return (
@@ -98,7 +114,13 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
             <React.Fragment key={item.id}>
             {grupoNuevo && <p className="eyebrow sidebar-nav-title sidebar-nav-grupo">{item.grupo}</p>}
             <button
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.id === 'chat_bot') {
+                  window.dispatchEvent(new CustomEvent('lexcontrol_open_chat_asistente'));
+                } else {
+                  setActiveTab(item.id);
+                }
+              }}
               className={`sidebar-link${activo ? ' is-active' : ''}`}
               aria-current={activo ? 'page' : undefined}
             >

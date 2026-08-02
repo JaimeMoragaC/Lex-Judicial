@@ -20,6 +20,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { MOCK_CASOS, integrarExpedienteIA } from '../mockData';
+import { PJUD_CASOS } from '../pjudCausesData';
 
 export default function AsistenteProactivo({ onSelectCaso }) {
   const fileInputRef = useRef(null);
@@ -64,26 +65,6 @@ export default function AsistenteProactivo({ onSelectCaso }) {
       });
   };
 
-  const analizarPdfEnDisco = () => {
-    setIsAnalyzing(true);
-    fetch("http://localhost:8888/analizar_documento")
-      .then(res => res.json())
-      .then(data => {
-        setIsAnalyzing(false);
-        if (data.status === "ok") {
-          setAnalizadoData(data);
-          setIngestaRealizada(true);
-          integrarExpedienteIA(data); // ⚡ Integración automática a causas activas
-        } else {
-          alert("Error leyendo PDF del disco: " + data.error);
-        }
-      })
-      .catch(() => {
-        setIsAnalyzing(false);
-        setIngestaRealizada(true);
-      });
-  };
-
   const handleFileDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
@@ -98,7 +79,7 @@ export default function AsistenteProactivo({ onSelectCaso }) {
     }
   };
 
-  const casoSeleccionado = MOCK_CASOS.find(c => c.id === selectedCasoId) || MOCK_CASOS[0];
+  const casoSeleccionado = [...MOCK_CASOS, ...PJUD_CASOS].find(c => c.id === selectedCasoId) || [...MOCK_CASOS, ...PJUD_CASOS][0];
 
   // Generador de textos legales adaptados a la realidad chilena
   const generarEscrito = () => {
@@ -281,26 +262,23 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
             </p>
             
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button 
+              <button
                 type="button"
-                className="btn-primary" 
+                className="btn-primary"
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current && fileInputRef.current.click(); }}
                 style={{ background: 'var(--accent-cyan)', color: 'var(--text-inverse)', fontWeight: '800' }}
               >
                 <UploadCloud size={18} />
                 <span>📂 Seleccionar PDF desde tu disco Linux</span>
               </button>
-
-              <button 
-                type="button"
-                className="btn-secondary" 
-                onClick={(e) => { e.stopPropagation(); analizarPdfEnDisco(); }}
-                style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-primary)', fontWeight: '700', border: '1px solid rgba(255,255,255,0.2)' }}
-              >
-                <Sparkles size={18} color="var(--accent-gold)" />
-                <span>⚡ Analizar PDF en Disco (/home/jaime/Descargas)</span>
-              </button>
             </div>
+            {/* Antes había acá un botón "Analizar PDF en Disco" que, sin decir cuál
+                archivo, tomaba uno al azar de ~/Descargas (glob.glob sin orden
+                garantizado) y lo archivaba de inmediato. Si el heurístico de carpeta
+                erraba, terminaba guardado en el expediente de otro cliente. Se quitó:
+                para analizar un PDF hay que elegirlo, con el botón de arriba o desde
+                "Subir y analizar documento", que además muestra una vista previa y no
+                archiva nada hasta que confirmas la carpeta de destino. */}
           </div>
 
           {/* RESULTADO DE LA INGESTA REAL */}
@@ -519,7 +497,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
                 onChange={(e) => setSelectedCasoId(e.target.value)}
                 style={{ width: '100%', background: 'var(--bg-modal)', color: 'var(--text-primary)', border: '1px solid var(--border-hover)', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', outline: 'none' }}
               >
-                {MOCK_CASOS.map(c => (
+                {[...MOCK_CASOS, ...PJUD_CASOS].map(c => (
                   <option key={c.id} value={c.id}>{c.rit} • {c.caratula} ({c.tribunal})</option>
                 ))}
               </select>
@@ -657,7 +635,7 @@ RUEGO A S.I. / S.E.: Tener por anunciado el alegato por el tiempo y en la forma 
               <button 
                 className="btn-secondary" 
                 style={{ background: 'rgba(0,0,0,0.5)', borderColor: 'rgba(255,255,255,0.2)', padding: '14px', justifyContent: 'center' }}
-                onClick={() => onSelectCaso(MOCK_CASOS[0])}
+                onClick={() => onSelectCaso([...MOCK_CASOS, ...PJUD_CASOS][0])}
               >
                 <FileText size={18} color="var(--accent-cyan)" />
                 <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>2. Revisar Pliego de Posiciones</span>

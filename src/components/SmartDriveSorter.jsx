@@ -26,7 +26,7 @@ import {
   Monitor,
   Eye
 } from 'lucide-react';
-import { MOCK_CASOS } from '../mockData';
+
 import { REAL_DISK_DATA, TOTAL_REAL_FILES } from '../realDiskData';
 
 export default function SmartDriveSorter({ onSelectCaso }) {

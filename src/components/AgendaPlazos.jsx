@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -20,12 +20,39 @@ import {
   PlusCircle,
   ExternalLink
 } from 'lucide-react';
-import { MOCK_PLAZOS_FATALES, MOCK_AUDIENCIAS_HOY_SEMANA, MOCK_CASOS, DEFAULT_TAREAS } from '../mockData';
+import { MOCK_CASOS, DEFAULT_TAREAS } from '../mockData';
+import { PJUD_CASOS } from '../pjudCausesData';
+import { cargarAtencion, audienciasProximas } from '../utils/radarPlazos.js';
+import { cargarTareas, guardarTareas, nuevaTarea } from '../utils/tareas.js';
+import { cargarExpedientes } from '../utils/expedientes.js';
 import PremiumCalendar from './PremiumCalendar';
 
-export default function AgendaPlazos({ onSelectCaso }) {
+/** Ventana de "Audiencias Confirmadas en Tribunales": hoy + este tanto de días. */
+const DIAS_AUDIENCIAS = 30;
+
+export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
   const [activeTab, setActiveTab] = useState('agenda');
   const [tareasList, setTareasList] = useState([]);
+  // Plazos REALES, por la misma vía que el Dashboard, el Radar y la Sidebar.
+  //
+  // Antes esta pantalla pintaba MOCK_PLAZOS_FATALES, que se derivaba únicamente de
+  // las causas inventadas por la IA y traía "En 5 días" como texto en el campo de
+  // fecha y `horasRestantes: plazoDias * 24`. O sea: una pantalla llamada "Plazos"
+  // mostrando vencimientos fabricados y ninguno de los reales.
+  const [plazosReales, setPlazosReales] = useState([]);
+  const [cargandoPlazos, setCargandoPlazos] = useState(true);
+
+  // Audiencias: sólo las que tengan fecha Y hora fijada por el tribunal -flag
+  // `esAudiencia`, que pone el servidor únicamente cuando el análisis de un
+  // documento la detectó explícitamente-. Antes se mostraba `proximaAudiencia`
+  // de las causas que inventó la IA, rotuladas "CONFIRMADA POR GEMINI IA" — una
+  // audiencia adivinada presentada como confirmada, que en una agenda judicial
+  // es de las afirmaciones más caras que se pueden hacer.
+  const [expedientesReales, setExpedientesReales] = useState([]);
+  const audienciasConfirmadas = useMemo(
+    () => audienciasProximas(expedientesReales, DIAS_AUDIENCIAS),
+    [expedientesReales]
+  );
   const [filtroCaso, setFiltroCaso] = useState('ALL');
   const [filtroEstado, setFiltroEstado] = useState('ALL');
   const [showTareaModal, setShowTareaModal] = useState(false);
@@ -41,21 +68,42 @@ export default function AgendaPlazos({ onSelectCaso }) {
     notas: ''
   });
 
+  // Las tareas vienen del servidor. cargarTareas() sube por única vez lo que
+  // hubiera quedado en localStorage, así que no se pierde nada de lo anotado antes.
   useEffect(() => {
-    const saved = localStorage.getItem('lexcontrol_tareas_globales');
-    if (saved) {
-      try {
-        setTareasList(JSON.parse(saved));
-        return;
-      } catch(e) {}
+    cargarTareas()
+      .then(setTareasList)
+      .catch(() => setTareasList(DEFAULT_TAREAS));
+  }, []);
+
+  /** Persiste y avisa al resto del sistema. Única vía de escritura de la pantalla. */
+  const persistirTareas = async (siguientes) => {
+    setTareasList(siguientes);
+    try {
+      await guardarTareas(siguientes);
+      window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+    } catch (e) {
+      alert('No se pudo guardar la tarea en el servidor: ' + e.message);
     }
-    setTareasList(DEFAULT_TAREAS);
-    localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(DEFAULT_TAREAS));
+  };
+
+  useEffect(() => {
+    cargarExpedientes().then(setExpedientesReales).catch(() => setExpedientesReales([]));
+
+    const recargar = () =>
+      cargarAtencion({ causas: [...MOCK_CASOS, ...PJUD_CASOS] })
+        .then((r) => setPlazosReales(r.atencion))
+        .catch(() => setPlazosReales([]))
+        .finally(() => setCargandoPlazos(false));
+
+    recargar();
+    window.addEventListener('lexcontrol_plazos_updated', recargar);
+    return () => window.removeEventListener('lexcontrol_plazos_updated', recargar);
   }, []);
 
   const handleOpenAddTarea = () => {
     setEditingTareaIdx(null);
-    const primerCaso = MOCK_CASOS[0] || { rit: "ROL C-1869-2026", caratula: "MEDINA con MORAGA", id: "caso-temuco-1869" };
+    const primerCaso = [...MOCK_CASOS, ...PJUD_CASOS][0] || { rit: "ROL C-1869-2026", caratula: "MEDINA con MORAGA", id: "caso-temuco-1869" };
     setTareaForm({
       casoRit: primerCaso.rit || "ROL General",
       casoCaratula: primerCaso.caratula || "Causa General",
@@ -82,35 +130,23 @@ export default function AgendaPlazos({ onSelectCaso }) {
     if (editingTareaIdx !== null) {
       updated[editingTareaIdx] = { ...tareaForm };
     } else {
-      const selectedCasoObj = MOCK_CASOS.find(c => c.rit === tareaForm.casoRit || c.id === tareaForm.casoId);
+      const selectedCasoObj = [...MOCK_CASOS, ...PJUD_CASOS].find(c => c.rit === tareaForm.casoRit || c.id === tareaForm.casoId);
       updated.unshift({
-        ...tareaForm,
-        id: `tar-${Date.now()}`,
-        casoCaratula: selectedCasoObj ? selectedCasoObj.caratula : tareaForm.casoCaratula,
-        completada: false,
-        fechaCreacion: new Date().toLocaleDateString('es-CL')
+        ...nuevaTarea(tareaForm),
+        casoCaratula: selectedCasoObj ? selectedCasoObj.caratula : tareaForm.casoCaratula
       });
     }
-    setTareasList(updated);
-    localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
-    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+    persistirTareas(updated);
     setShowTareaModal(false);
   };
 
   const handleToggleCompletada = (index) => {
-    let updated = [...tareasList];
-    updated[index].completada = !updated[index].completada;
-    setTareasList(updated);
-    localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
-    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+    persistirTareas(tareasList.map((t, i) => (i === index ? { ...t, completada: !t.completada } : t)));
   };
 
   const handleDeleteTarea = (index) => {
     if (!window.confirm("¿Estás seguro de eliminar este pendiente o tarea del estudio?")) return;
-    const updated = tareasList.filter((_, idx) => idx !== index);
-    setTareasList(updated);
-    localStorage.setItem('lexcontrol_tareas_globales', JSON.stringify(updated));
-    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+    persistirTareas(tareasList.filter((_, idx) => idx !== index));
   };
 
   const tareasFiltradas = tareasList.filter(t => {
@@ -131,13 +167,23 @@ export default function AgendaPlazos({ onSelectCaso }) {
           <p>Control centralizado de plazos fatales, audiencias confirmadas y asignación de pendientes procesales por expediente.</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            className="btn-primary" 
+            onClick={() => {
+              if (onOpenCrearExpediente) onOpenCrearExpediente();
+              else window.dispatchEvent(new CustomEvent('lexcontrol_open_crear_expediente'));
+            }}
+          >
+            <Briefcase size={18} />
+            <span>+ Nuevo Expediente</span>
+          </button>
           <button className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent-purple), var(--accent-cyan))', fontWeight: '700' }} onClick={handleOpenAddTarea}>
             <PlusCircle size={18} />
-            <span>+ Nueva Tarea / Pendiente</span>
+            <span>+ Nueva Tarea</span>
           </button>
           <button className="btn-secondary" onClick={() => alert("Simulación: Sincronizando con calendario judicial del Poder Judicial / Oficina Judicial Virtual.")}>
             <Calendar size={18} />
-            <span>Sincronizar Poder Judicial</span>
+            <span>Sincronizar PJUD</span>
           </button>
         </div>
       </div>
@@ -205,13 +251,25 @@ export default function AgendaPlazos({ onSelectCaso }) {
               <h2 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', margin: 0 }}>
                 Términos Fatales en Cuenta Regresiva
               </h2>
-              <span className="badge badge-red">Monitoreo 24/7</span>
+              <span className="badge badge-red">
+                {cargandoPlazos ? 'cargando…' : `${plazosReales.length} en cuenta regresiva`}
+              </span>
             </div>
 
+            {!cargandoPlazos && plazosReales.length === 0 && (
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                  No hay plazos ni trámites que venzan hoy. Los plazos fatales se agregan desde
+                  Cómputo de Términos con «Vigilar en el radar»; las gestiones pendientes viven en
+                  el Radar de Plazos.
+                </p>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-              {MOCK_PLAZOS_FATALES.map((plazo) => {
-                const isCritical = plazo.prioridad === 'CRITICA';
-                const isHigh = plazo.prioridad === 'ALTA';
+              {plazosReales.map((plazo) => {
+                const isCritical = plazo.esCritico;
+                const isHigh = !isCritical;
 
                 return (
                   <div 
@@ -232,16 +290,19 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       }}>
                         {plazo.casoRit}
                       </span>
-                      <span className={`badge ${isCritical ? 'badge-red' : isHigh ? 'badge-yellow' : 'badge-blue'}`}>
-                        Prioridad {plazo.prioridad}
+                      {/* Un plazo fatal se calculó con el motor procesal; un trámite
+                          sólo tiene la fecha que se le puso. La consecuencia de
+                          dejarlos pasar no es la misma, así que se distingue. */}
+                      <span className={`badge ${plazo.esFatal ? 'badge-red' : 'badge-yellow'}`}>
+                        {plazo.esFatal ? 'Plazo fatal' : 'Trámite'}
                       </span>
                     </div>
 
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
-                      {plazo.caratula}
+                      {plazo.caratulaMostrada}
                     </h3>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.4 }}>
-                      {plazo.descripcion}
+                      {plazo.titulo}
                     </p>
 
                     <div style={{ 
@@ -256,22 +317,33 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                         <Clock size={16} color={isCritical ? 'var(--alert-red)' : 'var(--accent-gold)'} />
-                        <span>Vencimiento: <strong style={{ color: 'var(--text-primary)' }}>{plazo.fechaVencimiento}</strong></span>
+                        <span>
+                          {plazo.esFatal ? 'Vence' : 'Trámite'}:{' '}
+                          <strong style={{ color: 'var(--text-primary)' }}>{plazo.fechaMostrada}</strong>
+                        </span>
                       </div>
-                      <div style={{ 
-                        fontFamily: 'var(--font-mono)', 
-                        fontSize: '1.15rem', 
-                        fontWeight: '800', 
-                        color: isCritical ? 'var(--alert-red)' : 'var(--accent-gold)' 
+                      <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.85rem',
+                        fontWeight: '800',
+                        color: isCritical ? 'var(--alert-red)' : 'var(--accent-gold)'
                       }}>
-                        {plazo.horasRestantes}h
+                        {plazo.etiquetaTiempo}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      <span>Abogado: <strong>{plazo.responsable}</strong></span>
-                      <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => alert(`Marcando escrito preparado para ${plazo.casoRit}`)}>
-                        ✓ Marcar Cumplido
+                      <span>Abogado: <strong>Jaime Moraga C.</strong></span>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                        onClick={() => {
+                          const caso = [...MOCK_CASOS, ...PJUD_CASOS].find((c) => c.rit === plazo.casoRit || c.id === plazo.casoId);
+                          if (caso && onSelectCaso) onSelectCaso(caso);
+                          else alert(`No se encontró la ficha de ${plazo.casoRit}. Ábrela desde Mis Casos & Expedientes.`);
+                        }}
+                      >
+                        Abrir ficha →
                       </button>
                     </div>
                   </div>
@@ -287,13 +359,22 @@ export default function AgendaPlazos({ onSelectCaso }) {
               <h2 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', margin: 0 }}>
                 Audiencias Confirmadas en Tribunales
               </h2>
-              <span className="badge badge-cyan">Próximos 7 días</span>
+              <span className="badge badge-cyan">Próximos {DIAS_AUDIENCIAS} días</span>
             </div>
 
             <div className="glass-card" style={{ padding: '24px' }}>
+              {audienciasConfirmadas.length === 0 && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+                  No hay audiencias con fecha confirmada por el tribunal en los próximos {DIAS_AUDIENCIAS} días.
+                  Sólo entran acá las que un documento analizado trajo con fecha explícita -nunca una adivinada
+                  por la IA a partir del texto-.
+                </p>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {MOCK_AUDIENCIAS_HOY_SEMANA.map((aud, index) => (
-                  <div 
+                {audienciasConfirmadas.map((aud, index) => {
+                  const [, mes, dia] = aud.fecha.split('-');
+                  return (
+                  <div
                     key={aud.id}
                     style={{
                       display: 'flex',
@@ -309,33 +390,33 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '18px', flex: '1', minWidth: '320px' }}>
-                      <div style={{ 
-                        padding: '12px', 
-                        borderRadius: '10px', 
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '10px',
                         background: index === 0 ? 'rgba(192, 160, 113, 0.15)' : 'rgba(125, 133, 144, 0.15)',
                         textAlign: 'center',
                         minWidth: '70px'
                       }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: '700', color: index === 0 ? 'var(--accent-cyan)' : 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>
-                          {aud.fecha.split('-')[0].trim()}
+                          {dia}/{mes}
                         </span>
                         <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)' }}>
-                          {aud.fecha.split('-')[1] ? aud.fecha.split('-')[1].trim() : ''}
+                          {aud.hora || '—'}
                         </span>
                       </div>
 
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-gold)', textTransform: 'uppercase' }}>
-                            {aud.tribunal} • {aud.sala}
+                            {aud.tribunal || 'Tribunal no especificado'}
                           </span>
-                          <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>{aud.estado}</span>
+                          <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>{aud.casoRit}</span>
                         </div>
                         <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                          {aud.caso}
+                          {aud.caratula}
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                          ⚡ <strong>Motivo / Debate:</strong> {aud.tipo} | 👤 Litigante: <strong>{aud.abogado}</strong>
+                          ⚡ <strong>Trámite:</strong> {aud.tramite}
                         </p>
                       </div>
                     </div>
@@ -344,13 +425,14 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '8px 14px' }} onClick={() => alert(`Preparando carpeta y minutas para la audiencia en ${aud.tribunal}`)}>
                         📂 Minuta Audiencia
                       </button>
-                      <button className="btn-primary" style={{ fontSize: '0.8rem', padding: '8px 14px' }} onClick={() => alert(`Conectando con estrado / Sala Zoom para ${aud.caso}`)}>
+                      <button className="btn-primary" style={{ fontSize: '0.8rem', padding: '8px 14px' }} onClick={() => alert(`Conectando con estrado / Sala Zoom para ${aud.caratula}`)}>
                         <span>Ingresar a Sala</span>
                         <ArrowRight size={14} />
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -388,7 +470,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                     <select 
                       value={tareaForm.casoRit} 
                       onChange={e => {
-                        const selected = MOCK_CASOS.find(c => c.rit === e.target.value);
+                        const selected = [...MOCK_CASOS, ...PJUD_CASOS].find(c => c.rit === e.target.value);
                         setTareaForm({
                           ...tareaForm,
                           casoRit: e.target.value,
@@ -399,7 +481,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg-raised)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                     >
                       <option value="ROL C-1869-2026">ROL C-1869-2026 - MEDINA con MORAGA (Temuco)</option>
-                      {MOCK_CASOS.map((c, idx) => (
+                      {[...MOCK_CASOS, ...PJUD_CASOS].map((c, idx) => (
                         <option key={idx} value={c.rit || `rol-${idx}`}>
                           {c.rit || 'Sin ROL'} - {c.caratula || 'Sin Carátula'}
                         </option>
@@ -501,7 +583,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
               >
                 <option value="ALL">📂 Todas las causas y pendientes</option>
                 <option value="ROL C-1869-2026">ROL C-1869-2026 - MEDINA con MORAGA</option>
-                {MOCK_CASOS.map((c, idx) => (
+                {[...MOCK_CASOS, ...PJUD_CASOS].map((c, idx) => (
                   <option key={idx} value={c.rit || c.id}>{c.rit} - {c.caratula}</option>
                 ))}
               </select>
@@ -569,7 +651,7 @@ export default function AgendaPlazos({ onSelectCaso }) {
                           <span 
                             onClick={() => {
                               if (onSelectCaso) {
-                                const c = MOCK_CASOS.find(caseItem => caseItem.rit === tarea.casoRit || caseItem.id === tarea.casoId);
+                                const c = [...MOCK_CASOS, ...PJUD_CASOS].find(caseItem => caseItem.rit === tarea.casoRit || caseItem.id === tarea.casoId);
                                 if (c) onSelectCaso(c);
                               }
                             }}

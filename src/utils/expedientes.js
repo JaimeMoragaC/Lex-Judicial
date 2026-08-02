@@ -140,12 +140,29 @@ export function siguienteCorrelativo(expedientes, prefijo = 'EXT') {
   return `${prefijo}-${String(siguiente).padStart(3, '0')}-${anio}`;
 }
 
-export function crearExpediente({ cliente, asunto, tipo = 'extrajudicial' }, expedientes) {
+export function crearExpediente({ cliente, asunto, tipo = 'extrajudicial' }, expedientes = []) {
+  const esAdmin = tipo === 'administrativo';
+  const esExtrajudicial = tipo === 'extrajudicial' || !tipo;
+  const prefijo = esAdmin ? 'ADM' : (esExtrajudicial ? 'EXT' : 'JUD');
+  const rolCorrelativo = siguienteCorrelativo(expedientes || [], prefijo);
+
   return {
-    id: siguienteCorrelativo(expedientes, tipo === 'administrativo' ? 'ADM' : 'EXT'),
+    id: rolCorrelativo,
+    rit: rolCorrelativo,
+    ritVinculado: rolCorrelativo,
+    caratula: asunto ? `${cliente || 'Mandante'} — ${asunto}` : `Asesoría Extrajudicial — ${cliente || 'Mandante'}`,
     cliente: cliente || 'Cliente sin identificar',
-    asunto: asunto || '',
-    tipo,
+    contraparte: 'En Reserva / Directa',
+    abogadoContraparte: 'No registrado',
+    asunto: asunto || 'Asesoría y Gestión Extrajudicial',
+    tipo: esAdmin ? 'administrativo' : (esExtrajudicial ? 'extrajudicial' : 'judicial'),
+    materia: esExtrajudicial ? 'Extrajudicial' : (esAdmin ? 'Administrativo' : 'Civil'),
+    tribunal: esExtrajudicial ? 'Gestión Directa / Notarial' : (esAdmin ? 'Sede Administrativa' : 'Juzgado Civil'),
+    numeroTribunal: '1',
+    ciudad: 'Temuco',
+    etapa: esExtrajudicial ? 'En Gestión Directa' : 'Tramitación Inicial',
+    estado: 'ACTIVO',
+    estadoVigencia: 'VIGENTE',
     creadoEn: new Date().toISOString(),
     gestiones: []
   };
@@ -181,23 +198,19 @@ export async function cargarExpedientes() {
       }
     }
 
-    const casosIAStr = localStorage.getItem('lexcontrol_casos_ia');
-    if (casosIAStr) {
-      const casosIA = JSON.parse(casosIAStr);
-      for (const c of casosIA) {
-        if (c.cliente && !serverExpedientes.some((e) => e.id === c.id || normalizar(e.cliente) === normalizar(c.cliente))) {
-          serverExpedientes.push({
-            id: c.id || `EXT-${Date.now()}`,
-            cliente: c.cliente,
-            asunto: c.asunto || c.caratula || 'gestión general',
-            tipo: 'extrajudicial',
-            creadoEn: new Date().toISOString(),
-            gestiones: []
-          });
-          migrados = true;
-        }
-      }
-    }
+    // NO se migra `lexcontrol_casos_ia` a expedientes del servidor.
+    //
+    // Acá había un bloque que, por cada causa creada por la IA, escribía un
+    // expediente en data/expedientes.json con `gestiones: []`. Dos problemas:
+    //
+    //  1. Es un error de categoría: una causa no es un expediente. Se creaban
+    //     contenedores vacíos que después aparecían en el radar anti-abandono como
+    //     causas reales (así llegaron los `caso-ia-*` con cliente "Interviniente").
+    //  2. Ensuciaba el servidor con datos del navegador, que es justo lo que
+    //     `data/expedientes.json` no debería contener.
+    //
+    // No se pierde nada: si una de esas causas tiene gestiones de verdad, entran
+    // igual por `lexcontrol_gestiones_*` en obtenerAgendaLocalStorage().
 
     if (migrados) {
       guardarExpedientes(serverExpedientes).catch(() => {});
@@ -209,6 +222,90 @@ export async function cargarExpedientes() {
   return serverExpedientes;
 }
 
+/**
+ * Expediente que corresponde a un caso, sea una causa de la planilla oficial o un
+ * expediente propio de la bitácora.
+ *
+ * La Bitácora vincula por ROL (`exp.id = causa.rit` y `ritVinculado = causa.rit`),
+ * así que se busca por las dos vías: el identificador interno y el rol.
+ */
+/**
+ * ¿Este ROL sirve para identificar una causa?
+ *
+ * 318 de las 1.557 causas del Excel oficial -el 20%- vienen con el rit literal
+ * "ROL " (la palabra sola, sin número). Usarlo como identificador hacía que esas
+ * 318 causas distintas colapsaran en un mismo expediente: la gestión de un cliente
+ * terminaba archivada en la carpeta de otro. Ya había pasado — la querella de
+ * Calbuco quedó dentro del expediente de GARAI/CAMPOS.
+ *
+ * Un rol de verdad tiene dígitos. Sin dígitos no identifica nada y hay que caer al
+ * id interno de la causa, que sí es único.
+ */
+export function ritUtilizable(rit) {
+  return /\d/.test(String(rit || ''));
+}
+
+/** El identificador con el que debe archivarse un caso: su ROL si sirve, si no su id. */
+export function claveDeCaso(caso) {
+  const rit = String(caso?.rit || caso?.ritVinculado || '').trim();
+  if (ritUtilizable(rit)) return rit;
+  return String(caso?.id || '').trim() || null;
+}
+
+export function expedienteDeCaso(caso, expedientes) {
+  const id = String(caso?.id || '').trim();
+  const rit = String(caso?.rit || caso?.ritVinculado || '').trim();
+  return (
+    expedientes.find(
+      (e) =>
+        (id && (e.id === id || e.ritVinculado === id)) ||
+        // Sólo se cruza por ROL cuando el ROL identifica de verdad.
+        (ritUtilizable(rit) && (e.ritVinculado === rit || e.id === rit))
+    ) || null
+  );
+}
+
+/**
+ * Guarda las gestiones de un caso EN EL SERVIDOR, creando el expediente si hace
+ * falta. Devuelve el expediente resultante.
+ *
+ * Existe porque la ficha del expediente (CasoDetailModal) guardaba sólo en
+ * localStorage: nada de lo registrado ahí llegaba a data/expedientes.json, y una
+ * limpieza del navegador -o la cuota agotada- se llevaba el trabajo. La Bitácora
+ * sí persistía en el servidor, de modo que el mismo dato sobrevivía o no según
+ * desde qué formulario se hubiera escrito. Ahora las dos vías terminan acá.
+ */
+export async function guardarGestionesDeCaso(caso, gestiones) {
+  const expedientes = await cargarExpedientes();
+  const siguientes = [...expedientes];
+  let exp = expedienteDeCaso(caso, siguientes);
+
+  if (!exp) {
+    const rit = String(caso?.rit || '').trim();
+    const clave = claveDeCaso(caso);
+    exp = crearExpediente(
+      {
+        cliente: caso?.caratula || caso?.cliente,
+        asunto: caso?.materia || caso?.asunto || '',
+        tipo: rit ? 'judicial' : 'extrajudicial'
+      },
+      siguientes
+    );
+    // Mismo criterio que la Bitácora: para una causa judicial el expediente se
+    // identifica por su ROL. Pero si el ROL no sirve (las 318 causas con "ROL "
+    // a secas), se usa el id interno: si no, todas caerían en el mismo expediente.
+    if (clave) {
+      exp.id = clave;
+      if (ritUtilizable(rit)) exp.ritVinculado = rit;
+    }
+    siguientes.push(exp);
+  }
+
+  exp.gestiones = gestiones;
+  await guardarExpedientes(siguientes);
+  return exp;
+}
+
 export async function guardarExpedientes(expedientes) {
   const res = await fetch(`${LEXCONTROL_API}/expedientes`, {
     method: 'POST',
@@ -217,4 +314,91 @@ export async function guardarExpedientes(expedientes) {
   });
   if (!res.ok) throw new Error(`No se pudo guardar: HTTP ${res.status}`);
   return res.json();
+}
+
+// Causas del catálogo PJUD (data/pjudCausesData.json): NO todas tienen un
+// expediente espejo -~630 de 2.437 no lo tienen-. eliminarExpediente() por sí
+// sola sólo tocaba expedientes.json, así que borrar una de esas causas cerraba
+// el modal como si hubiera funcionado, pero no pasaba nada.
+export async function cargarCausasPjud() {
+  const res = await fetch(`${LEXCONTROL_API}/data/pjudCausesData`);
+  if (!res.ok) throw new Error(`El servidor respondió HTTP ${res.status}`);
+  const data = await res.json();
+  return data.casos || [];
+}
+
+export async function guardarCausasPjud(causas) {
+  const res = await fetch(`${LEXCONTROL_API}/causas_pjud`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ causas })
+  });
+  if (!res.ok) throw new Error(`No se pudo guardar: HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function eliminarExpediente(idOrRit) {
+  if (!idOrRit) return;
+  const targetKey = String(idOrRit).trim();
+
+  let expedientes = [];
+  try {
+    expedientes = await cargarExpedientes();
+  } catch (e) {}
+
+  const filtrados = (expedientes || []).filter(
+    (e) =>
+      String(e.id || '').trim() !== targetKey &&
+      String(e.rit || '').trim() !== targetKey &&
+      String(e.ritVinculado || '').trim() !== targetKey
+  );
+
+  if (filtrados.length !== (expedientes || []).length) {
+    await guardarExpedientes(filtrados);
+  }
+
+  // Igual, pero del lado de las causas PJUD -por si esta causa nunca se
+  // espejó a un expediente-. Un fallo acá (ej. el sync recreó la causa justo
+  // ahora) no debe impedir que el borrado del lado de expedientes, que ya se
+  // aplicó arriba, quede igual.
+  try {
+    const causas = await cargarCausasPjud();
+    const causasFiltradas = (causas || []).filter(
+      (c) => String(c.id || '').trim() !== targetKey && String(c.rit || '').trim() !== targetKey
+    );
+    if (causasFiltradas.length !== (causas || []).length) {
+      await guardarCausasPjud(causasFiltradas);
+    }
+  } catch (e) {}
+
+  try {
+    const casosIA = JSON.parse(localStorage.getItem('lexcontrol_casos_ia') || '[]');
+    const casosIAFiltrados = casosIA.filter(
+      (c) =>
+        String(c.id || '').trim() !== targetKey &&
+        String(c.rit || '').trim() !== targetKey
+    );
+    localStorage.setItem('lexcontrol_casos_ia', JSON.stringify(casosIAFiltrados));
+
+    const mappingStr = localStorage.getItem('lexcontrol_extrajudicial_mapping');
+    if (mappingStr) {
+      const mapping = JSON.parse(mappingStr);
+      for (const [k, v] of Object.entries(mapping)) {
+        if (v === targetKey || k === targetKey) {
+          delete mapping[k];
+        }
+      }
+      localStorage.setItem('lexcontrol_extrajudicial_mapping', JSON.stringify(mapping));
+    }
+
+    Object.keys(localStorage).forEach((key) => {
+      if (key.includes(targetKey)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {}
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('lexcontrol_expedientes_updated'));
+  }
 }

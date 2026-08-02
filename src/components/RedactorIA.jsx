@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { MOCK_CASOS } from '../mockData';
+import { PJUD_CASOS } from '../pjudCausesData';
 import { LEXCONTROL_API } from '../apiBase';
 import { cargarExpedientes, guardarExpedientes } from '../utils/expedientes';
 
@@ -68,19 +69,19 @@ export default function RedactorIA({ onSelectCaso }) {
         setExpedientes(data);
         if (data.length > 0) {
           setCasoSeleccionado(data[0]);
-        } else if (MOCK_CASOS.length > 0) {
-          setCasoSeleccionado(MOCK_CASOS[0]);
+        } else if ([...MOCK_CASOS, ...PJUD_CASOS].length > 0) {
+          setCasoSeleccionado([...MOCK_CASOS, ...PJUD_CASOS][0]);
         }
       })
       .catch(() => {
-        if (MOCK_CASOS.length > 0) setCasoSeleccionado(MOCK_CASOS[0]);
+        if ([...MOCK_CASOS, ...PJUD_CASOS].length > 0) setCasoSeleccionado([...MOCK_CASOS, ...PJUD_CASOS][0]);
       });
   }, []);
 
   // Todos los casos disponibles (Causas PJUD + Expedientes Extrajudiciales)
   const todosLosCasos = React.useMemo(() => {
     const lista = [];
-    MOCK_CASOS.forEach((c) => {
+    [...MOCK_CASOS, ...PJUD_CASOS].forEach((c) => {
       lista.push({
         id: c.rit,
         rit: c.rit,

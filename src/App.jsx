@@ -13,9 +13,16 @@ import OmniSearch from './components/OmniSearch';
 import RadarPlazos from './components/RadarPlazos';
 import BuscadorTexto from './components/BuscadorTexto';
 import SubirDocumento from './components/SubirDocumento';
+import DocumentosPorRevisar from './components/DocumentosPorRevisar';
+import ArchivosAnalizados from './components/ArchivosAnalizados';
 import BitacoraOmnicanal from './components/BitacoraOmnicanal';
+import DuplicadosExpedientes from './components/DuplicadosExpedientes';
 import RedactorIA from './components/RedactorIA';
+import AsistenteFlotante from './components/AsistenteFlotante';
+import IngresoGestionModal from './components/IngresoGestionModal';
+import CrearExpedienteModal from './components/CrearExpedienteModal';
 import { MOCK_CASOS } from './mockData';
+import { PJUD_CASOS } from './pjudCausesData';
 import { CATALOGOS_CAIDOS } from './dataLoader';
 import { LEXCONTROL_API } from './apiBase';
 
@@ -39,7 +46,12 @@ function AvisoCatalogosCaidos() {
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // Inicio directo en Mi Día & Plazos
   const [selectedCasoForModal, setSelectedCasoForModal] = useState(null);
+  
+  // Estado para el modal heurístico de gestiones
+  const [ingresoGestionAbierto, setIngresoGestionAbierto] = useState(false);
+  const [ingresoGestionCasoRef, setIngresoGestionCasoRef] = useState('');
   const [selectedCasoForMatriz, setSelectedCasoForMatriz] = useState(null);
+  const [modalInitialTab, setModalInitialTab] = useState('resumen');
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('lexcontrol_theme') || 'dark';
@@ -50,31 +62,53 @@ export default function App() {
     localStorage.setItem('lexcontrol_theme', theme);
   }, [theme]);
 
-  // Limpiar cualquier gestión huérfana de pjud-caso- (bug previo)
+  // Estado para el modal de crear expedientes
+  const [crearExpedienteAbierto, setCrearExpedienteAbierto] = useState(false);
+
   React.useEffect(() => {
-    Object.keys(localStorage).forEach(k => {
-      if (k.startsWith('lexcontrol_gestiones_pjud-caso-') || k.startsWith('lexcontrol_vigencia_pjud-caso-')) {
-        localStorage.removeItem(k);
-      }
-    });
+    // Limpieza de datos en localStorage para reinicio completo del sistema
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('lexcontrol_gestiones_') || 
+            key.startsWith('lexcontrol_overrides_') || 
+            key.startsWith('lexcontrol_vigencia_') || 
+            key === 'lexcontrol_casos_ia' || 
+            key === 'lexcontrol_extrajudicial_mapping' || 
+            key.startsWith('lexcontrol_plazos_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch(e) {}
+
+    const handleOpenIngreso = (e) => {
+      setIngresoGestionCasoRef(e.detail?.casoRef || '');
+      setIngresoGestionAbierto(true);
+    };
+    const handleOpenCrearExpediente = () => {
+      setCrearExpedienteAbierto(true);
+    };
+
+    window.addEventListener('lexcontrol_open_ingreso_gestion', handleOpenIngreso);
+    window.addEventListener('lexcontrol_open_crear_expediente', handleOpenCrearExpediente);
+    return () => {
+      window.removeEventListener('lexcontrol_open_ingreso_gestion', handleOpenIngreso);
+      window.removeEventListener('lexcontrol_open_crear_expediente', handleOpenCrearExpediente);
+    };
   }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Navegar a la matriz de un caso en particular
   const handleOpenMatriz = (caso) => {
     setSelectedCasoForMatriz(caso);
     setActiveTab('matriz');
   };
 
-  // Navegar a expedientes
   const handleNavigateToCasos = () => {
     setActiveTab('casos');
   };
 
-  // Volver de matriz a expedientes
   const handleBackFromMatriz = () => {
     setSelectedCasoForMatriz(null);
     setActiveTab('casos');
@@ -85,10 +119,8 @@ export default function App() {
       <AvisoCatalogosCaidos />
       <OmniSearch onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />
       
-      {/* Barra Lateral de Navegación */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} theme={theme} toggleTheme={toggleTheme} />
 
-      {/* Contenido Principal */}
       <main className="main-content">
         {activeTab === 'dashboard' && (
           <Dashboard 
@@ -102,13 +134,18 @@ export default function App() {
               }
             }} 
             onNavigateToMatriz={() => {
-              setSelectedCasoForMatriz(MOCK_CASOS[0]); // Caso Temuco
+              setSelectedCasoForMatriz(MOCK_CASOS[0]);
               setActiveTab('matriz');
             }} 
+            onOpenCrearExpediente={() => setCrearExpedienteAbierto(true)}
           />
         )}
 
-        {activeTab === 'bitacora' && <BitacoraOmnicanal />}
+        {activeTab === 'bitacora' && <BitacoraOmnicanal onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />}
+
+        {activeTab === 'duplicados' && (
+          <DuplicadosExpedientes onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />
+        )}
 
         {activeTab === 'redactor' && (
           <RedactorIA onSelectCaso={(caso) => setSelectedCasoForModal(caso)} />
@@ -123,6 +160,11 @@ export default function App() {
         {activeTab === 'buscador' && <BuscadorTexto />}
 
         {activeTab === 'subir' && <SubirDocumento />}
+        {activeTab === 'documentos_pendientes' && <DocumentosPorRevisar />}
+
+        {activeTab === 'archivos_analizados' && (
+          <ArchivosAnalizados onNavigateToCaso={(caso) => setSelectedCasoForModal(caso)} />
+        )}
 
         {activeTab === 'proactivo' && (
           <AsistenteProactivo 
@@ -152,6 +194,7 @@ export default function App() {
           <CasosList 
             onSelectCaso={(caso) => setSelectedCasoForModal(caso)}
             onOpenMatriz={handleOpenMatriz}
+            onOpenCrearExpediente={() => setCrearExpedienteAbierto(true)}
           />
         )}
 
@@ -165,6 +208,7 @@ export default function App() {
         {activeTab === 'agenda' && (
           <AgendaPlazos 
             onSelectCaso={(caso) => setSelectedCasoForModal(caso)} 
+            onOpenCrearExpediente={() => setCrearExpedienteAbierto(true)}
           />
         )}
 
@@ -177,21 +221,63 @@ export default function App() {
             onOpenMatriz={handleOpenMatriz}
           />
         )}
-
-        {activeTab === 'smartdrive' && (
-          <SmartDriveSorter />
-        )}
       </main>
 
-      {/* Modal de Detalle de Caso */}
       {selectedCasoForModal && (
-        <CasoDetailModal 
-          caso={selectedCasoForModal} 
-          onClose={() => setSelectedCasoForModal(null)} 
+        <CasoDetailModal
+          caso={selectedCasoForModal}
+          initialTab={modalInitialTab}
+          onClose={() => setSelectedCasoForModal(null)}
           onOpenMatriz={handleOpenMatriz}
-          onSelectCaso={(c) => setSelectedCasoForModal(c)}
+          onSelectCaso={(c, tab) => {
+            setSelectedCasoForModal(c);
+            if (tab) setModalInitialTab(tab);
+          }}
         />
       )}
+
+      <IngresoGestionModal
+        abierto={ingresoGestionAbierto}
+        onClose={() => setIngresoGestionAbierto(false)}
+        initialCasoRef={ingresoGestionCasoRef}
+        onSave={async (gestion) => {
+          const { cargarExpedientes } = await import('./utils/expedientes');
+          const expList = await cargarExpedientes();
+          const ref = gestion.casoRef;
+          // Antes sólo miraba expList y MOCK_CASOS (siempre vacío): una causa que
+          // sólo existe en el catálogo PJUD -sin expediente espejo, ~630 de 2.437-
+          // no se encontraba y la gestión se descartaba en silencio, mientras el
+          // modal igual mostraba "Gestión Ingresada" como si hubiera funcionado.
+          const targetCaso =
+            expList.find(e => e.id === ref || e.rit === ref) ||
+            MOCK_CASOS.find(c => c.rit === ref || c.id === ref) ||
+            PJUD_CASOS.find(c => c.rit === ref || c.id === ref);
+
+          if (!targetCaso) {
+            throw new Error(`No encontré ningún expediente ni causa con la referencia "${ref}". La gestión no se guardó.`);
+          }
+
+          const existingGestionesStr = localStorage.getItem(`lexcontrol_gestiones_${targetCaso.id || targetCaso.rit}`);
+          let gestiones = existingGestionesStr ? JSON.parse(existingGestionesStr) : [];
+          gestiones.push(gestion);
+          localStorage.setItem(`lexcontrol_gestiones_${targetCaso.id || targetCaso.rit}`, JSON.stringify(gestiones));
+          window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+        }}
+      />
+
+      <CrearExpedienteModal
+        isOpen={crearExpedienteAbierto}
+        onClose={() => setCrearExpedienteAbierto(false)}
+        onExpedienteCreado={(nuevoExp) => {
+          setSelectedCasoForModal(nuevoExp);
+          setActiveTab('casos');
+        }}
+      />
+
+      <AsistenteFlotante onSelectCaso={(caso, tab) => {
+        setModalInitialTab(tab || 'resumen');
+        setSelectedCasoForModal(caso);
+      }} />
     </div>
   );
 }

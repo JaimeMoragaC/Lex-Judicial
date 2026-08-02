@@ -4,7 +4,7 @@
 // Los módulos que consumen esto usan top-level await: el grafo de módulos entero
 // espera a que lleguen los datos antes de que React monte, así que los componentes
 // siguen importando constantes sincrónicas y no necesitan estado de carga.
-import { LEXCONTROL_API } from './apiBase';
+import { LEXCONTROL_API } from './apiBase.js';
 
 // Catálogos que no se pudieron traer. La app lo consulta para avisar en pantalla
 // en vez de renderizar en blanco cuando el servidor local no está levantado.

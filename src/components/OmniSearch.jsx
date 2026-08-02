@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, FolderOpen, AlertCircle, Scale, ShieldAlert, CheckCircle, FileText, X, FileSearch } from 'lucide-react';
 import { REAL_DISK_DATA } from '../realDiskData';
 import { MOCK_CASOS } from '../mockData';
 import { PJUD_CASOS } from '../pjudCausesData';
+import { cargarExpedientes } from '../utils/expedientes';
 import { findDiscoFolder } from '../utils/folderMatcher';
 
 export default function OmniSearch({ onSelectCaso }) {
@@ -12,39 +13,42 @@ export default function OmniSearch({ onSelectCaso }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
 
-  const [extrajudicialCasos, setExtrajudicialCasos] = useState([]);
+  // Antes esto reconstruía los casos extrajudiciales desde una clave vieja de
+  // localStorage ("lexcontrol_extrajudicial_mapping"), de antes de que
+  // expedientes.json en el servidor fuera la fuente de verdad. Cualquier
+  // expediente creado por los caminos actuales -Bitácora Omnicanal, el
+  // chatbot, el modal de crear expediente- se guarda ahí y nunca tocaba esa
+  // clave vieja, así que Ctrl+K nunca los encontraba. Se reemplaza por la
+  // misma carga real que usa el resto de la app, en vez de mantener dos
+  // fuentes de "casos extrajudiciales" que pueden desincronizarse.
+  const [expedientesReales, setExpedientesReales] = useState([]);
 
   useEffect(() => {
-    try {
-      const mappingStr = localStorage.getItem('lexcontrol_extrajudicial_mapping');
-      if (mappingStr) {
-        const mapping = JSON.parse(mappingStr);
-        const synthCasos = Object.entries(mapping).map(([cliente, extId]) => ({
-          id: extId,
-          rit: extId,
-          rol: extId,
-          nuc: "N/A",
-          caratula: `Asesoría Extrajudicial - ${cliente}`,
-          cliente: cliente,
-          materia: "Extrajudicial",
-          tribunal: "Gestión Interna",
-          ciudad: "Gestión Interna",
-          fechaInicio: extId.split('-')[2] || "2026",
-          estadoPlazo: "VIGENTE",
-          etapa: "Asesoría Activa",
-          demandante: cliente,
-          demandado: "N/A",
-          proximaAudiencia: "",
-          resumenTeoriaCaso: "Carpeta de gestión extrajudicial generada automáticamente."
-        }));
-        setExtrajudicialCasos(synthCasos);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    cargarExpedientes()
+      .then(setExpedientesReales)
+      .catch((e) => console.error('No se pudieron cargar los expedientes para Ctrl+K:', e));
   }, []);
 
-  const baseCasos = [...MOCK_CASOS, ...PJUD_CASOS];
+  // Un mismo caso puede existir como expediente (rit espejo) Y como causa PJUD:
+  // se prioriza el expediente -tiene las gestiones y el estado que el abogado
+  // edita- y no se repite la causa si ya está cubierta por uno.
+  //
+  // Memoizado a propósito: `query` cambia en cada tecla que se escribe en el
+  // buscador, y sin esto el combine+dedupe de ~4.000 casos se repetía en cada
+  // letra -el mismo problema de fondo que hacía sentir lenta la Bitácora
+  // Omnicanal-. Sólo depende de expedientesReales: MOCK_CASOS y PJUD_CASOS son
+  // constantes del módulo, no cambian entre renders.
+  const baseCasos = useMemo(() => {
+    const vistos = new Set();
+    const combinados = [];
+    for (const caso of [...expedientesReales, ...MOCK_CASOS, ...PJUD_CASOS]) {
+      const clave = String(caso.rit || caso.id || '').trim().toUpperCase();
+      if (!clave || vistos.has(clave)) continue;
+      vistos.add(clave);
+      combinados.push(caso);
+    }
+    return combinados;
+  }, [expedientesReales]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -72,10 +76,9 @@ export default function OmniSearch({ onSelectCaso }) {
       return;
     }
     const q = query.toLowerCase();
-    const allCasos = [...baseCasos, ...extrajudicialCasos];
-    
+
     // Search across Rit, Caratula, Cliente, Contraparte
-    const matched = allCasos.filter(caso => {
+    const matched = baseCasos.filter(caso => {
       return (
         (caso.rit && caso.rit.toLowerCase().includes(q)) ||
         (caso.caratula && caso.caratula.toLowerCase().includes(q)) ||
@@ -83,10 +86,10 @@ export default function OmniSearch({ onSelectCaso }) {
         (caso.contraparte && caso.contraparte.toLowerCase().includes(q))
       );
     }).slice(0, 8); // Max 8 results
-    
+
     setResults(matched);
     setSelectedIndex(0);
-  }, [query, extrajudicialCasos]);
+  }, [query, baseCasos]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {

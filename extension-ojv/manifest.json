@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "LexControl OJV — Revisor de Estado Diario",
+  "version": "1.0.0",
+  "description": "Automatiza la revisión del Estado Diario del PJUD: recorre causas, descarga PDFs y reporta novedades.",
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://oficinajudicialvirtual.pjud.cl/*",
+    "https://*.pjud.cl/*",
+    "http://localhost:8888/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LexControl OJV"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://oficinajudicialvirtual.pjud.cl/*",
+        "https://*.pjud.cl/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content-styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

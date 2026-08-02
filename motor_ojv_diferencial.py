@@ -112,8 +112,10 @@ class MotorDiferencialOJV:
         registrar_log(f"📁 Usando perfil persistente: {perfil_dir}")
         try:
             with sync_playwright() as p:
+                chrome_bin = "/usr/bin/google-chrome" if os.path.exists("/usr/bin/google-chrome") else None
                 context = p.chromium.launch_persistent_context(
                     user_data_dir=perfil_dir,
+                    executable_path=chrome_bin,
                     headless=False,
                     viewport={"width": 1366, "height": 768},
                     args=["--no-sandbox", "--disable-blink-features=AutomationControlled", "--disable-infobars", "--no-first-run"]
@@ -125,31 +127,20 @@ class MotorDiferencialOJV:
                 """)
                 page.goto(url)
                 
-                print("⚡ Haciendo clic automático en 'Todos los servicios' -> 'Clave Poder Judicial'...")
-                try:
-                    page.get_by_text("Todos los servicios", exact=False).first.click(force=True, timeout=5000)
-                    page.wait_for_timeout(1000)
-                    page.get_by_text("Clave Poder Judicial", exact=False).first.click(force=True, timeout=5000)
-                except Exception as e_nav:
-                    print(f"Nota: Menú de inicio ya abierto o manual ({e_nav})")
-
                 print("\n" + "="*75)
-                print("🚨 ATENCIÓN JAIME: SE HA ABIERTO EL NAVEGADOR CHROMIUM EN TU PANTALLA.")
-                print("👉 1. Ingresa tu Clave o resuelve el CAPTCHA en el formulario web que se abrió.")
-                print("👉 2. ¡EN CUANTO ENTRES AL PORTAL, SUELTA EL MOUSE Y EL TECLADO!")
-                print("👉 3. El robot detectará tu ingreso privado y ASUMIRÁ EL CONTROL AUTOMÁTICO.")
+                print("🚨 ATENCIÓN JAIME: NAVEGADOR CONTINUO ACTIVO EN TU PANTALLA.")
+                print("👉 1. Ingresa tu Clave y resuelve el CAPTCHA.")
+                print("👉 2. Navega libremente por 'Mis Causas', 'Estado Diario', o cualquier sección.")
+                print("👉 3. El robot leerá en silencio todo lo que abras. La ventana PERMANECERÁ ABIERTA.")
+                print("👉 4. Cuando termines de revisar, simplemente CIERRA LA VENTANA de Chromium.")
                 print("="*75 + "\n")
                 
-                login_detectado = False
                 try:
-                    for seg in range(90):
+                    while True:
                         if len(context.pages) == 0 or page.is_closed():
+                            print("👋 Ventana de Chromium cerrada por el usuario. Guardando datos finales...")
                             break
-                        
-                        if seg % 5 == 0:
-                            print(f"⌛ [ESPERANDO TU LOGIN EN LA VENTANA - Seg {seg}/90] URL: '{page.url}' | Título: '{page.title()}'")
                             
-                        # Detectamos si el usuario ya ingresó al interior (excluyendo prueba CAPTCHA de Imperva)
                         url_actual = page.url.lower()
                         body_txt = ""
                         try:
@@ -157,89 +148,44 @@ class MotorDiferencialOJV:
                         except Exception:
                             pass
                             
-                        if "what code is in the image" not in body_txt and "human visitor" not in body_txt:
-                            if any(ruta in url_actual for ruta in ["miscausas", "bandeja", "escritorio", "interno", "unificada", "portal/", "session", "estadodiario"]):
-                                login_detectado = True
-                            elif any(w in body_txt for w in ["mi estado diario", "cerrar sesión", "cerrar sesion", "salida", "mis causas", "consulta unificada", "bienvenido"]):
-                                login_detectado = True
-                            elif any(page.locator(sel).count() > 0 for sel in ["text=Mi Estado Diario", "text=Estado Diario", "text=Estado diario", "text=Mis Estados Diarios", "text=Cerrar Sesión", "text=Salida", "[class*='logout']"]):
-                                login_detectado = True
-                            
-                        if login_detectado:
-                            print("\n" + "="*75)
-                            print("🤖 [LOGIN CORRECTO DETECTADO] ¡Sesión activa de Jaime Moraga C.!")
-                            print("👉 POR FAVOR HAZ CLIC TÚ MISMO EN 'MI ESTADO DIARIO' O EN TUS CAUSAS A LA IZQUIERDA CON TU MOUSE REAL.")
-                            print("👉 El robot esperará hasta 60 segundos en silencio a que abras tu sección para auditar y extraer los datos...")
-                            print("="*75)
-                            
-                            seccion_abierta = False
-                            for s in range(60):
-                                textos_total = page.content().lower() + " " + " ".join([f.content().lower() for f in page.frames])
-                                if any(w in textos_total for w in ["tribunal", "rol", "carátula", "caratula", "fecha resolución", "movimientos del día", "estados diarios"]):
-                                    seccion_abierta = True
-                                    print(f"✅ ¡Sección judicial abierta por Jaime detectada con éxito en segundo {s}!")
-                                    break
-                                time.sleep(1)
-
-                            page.wait_for_timeout(3000)
+                        # Si el usuario está en el portal privado, extraemos datos continuamente
+                        if any(ruta in url_actual for ruta in ["miscausas", "bandeja", "escritorio", "interno", "unificada", "portal/", "session", "estadodiario"]) or any(w in body_txt for w in ["mi estado diario", "cerrar sesión", "cerrar sesion", "salida", "mis causas"]):
                             foto_autonoma = "/home/jaime/Descargas/lex-control-casos/ojv_estado_diario_abierto.png"
-                            page.screenshot(path=foto_autonoma, full_page=True)
-                            print(f"📸 Foto de tu sección abierta capturada por el robot: {foto_autonoma}")
-                            
-                            # Recorrer las pestañas por cada tipo de tribunal con ritmo humano para evitar escudo WAF
-                            pestañas_tribunales = ["Civil", "Laboral", "Familia", "Cobranza", "Penal", "Corte de Apelaciones", "Corte Suprema", "Todos"]
-                            for pest in pestañas_tribunales:
-                                # Si aparece algún recuadro emergente de bloqueo (como [X] CLOSE o Cerrar), lo cerramos
-                                try:
-                                    for sel_c in ["text=CLOSE", "text=Close", "text=Cerrar", "[class*='close']"]:
-                                        if page.locator(sel_c).count() > 0 and page.locator(sel_c).first.is_visible():
-                                            print("   🛡️ Cerrando recuadro emergente del portal...")
-                                            page.locator(sel_c).first.click(timeout=2000)
-                                            page.wait_for_timeout(1500)
-                                except Exception:
-                                    pass
-
-                                try:
-                                    loc_pest = page.locator(f"text={pest}, [role='tab']:has-text('{pest}'), a:has-text('{pest}')")
-                                    if loc_pest.count() > 0 and loc_pest.first.is_visible():
-                                        print(f"   📂 Abriendo pestaña tribunal: [{pest}] (pausa humana)...")
-                                        loc_pest.first.click(timeout=3000)
-                                        page.wait_for_timeout(3000)  # Pausa humana de 3 segundos para que el WAF no bloquee
-                                except Exception:
-                                    pass
+                            try:
+                                page.screenshot(path=foto_autonoma, full_page=True)
+                            except Exception:
+                                pass
                                 
-                                # Extracción estricta de filas procesales en la pestaña actual (descartando encabezados y títulos)
-                                rows = page.locator("table tr, .row, .causa, [class*='item'], [class*='rol'], [class*='movimiento']").all()
-                                for r in rows[:30]:
-                                    try:
-                                        txt_r = r.inner_text().strip()
-                                        if txt_r and len(txt_r) > 10 and len(txt_r) < 400:
-                                            txt_low = txt_r.lower()
-                                            # PROHIBICIÓN ABSOLUTA DE CAPTURAR ENCABEZADOS DE TABLAS Y FILTROS DEL SISTEMA
-                                            if any(excl in txt_low for excl in ["corte suprema\ncorte", "fecha a buscar", "n° ingreso", "rolfechacaratulado", "buscar limpiar", "tribunal\ttrámite", "tipo recurso", "ingreso\tcaratulado", "corte apelaciones\ncivil", "año a buscar"]):
-                                                continue
-                                            # LA FILA DEBE TENER UNA ESTRUCTURA LEGÍTIMA DE CAUSA O ROL JURÍDICO (NÚMEROS O PARTES V/S)
-                                            if any(kw in txt_low for kw in ["v/s", " vs ", " c/ ", "rol ", "c-", "o-", "t-", "p-", "r-", "juzgado", "corte ", "tribunal"]) and any(c.isdigit() for c in txt_r):
-                                                if txt_r not in self.causas_online_capturadas:
-                                                    self.causas_online_capturadas.append(txt_r)
-                                                    print(f"      🌐 [RESOLUCIÓN LEGAL VERDADERA RECOGIDA]: {txt_r[:80]}...")
-                                    except Exception:
-                                        pass
-                            
-                            print(f"✅ ¡Auditoría online de Mi Estado Diario completa! Se capturaron {len(self.causas_online_capturadas)} movimientos en vivo.")
-                            break
-                            
-                        page.wait_for_timeout(1000)
-                except Exception:
-                    pass
+                            # Recopilación pasiva continua
+                            rows = page.locator("table tr, .row, .causa, [class*='item'], [class*='rol'], [class*='movimiento']").all()
+                            for r in rows[:40]:
+                                try:
+                                    txt_r = r.inner_text().strip()
+                                    if txt_r and len(txt_r) > 10 and len(txt_r) < 500:
+                                        txt_low = txt_r.lower()
+                                        if any(excl in txt_low for excl in ["corte suprema\ncorte", "fecha a buscar", "n° ingreso", "rolfechacaratulado", "buscar limpiar", "tribunal\ttrámite", "tipo recurso", "ingreso\tcaratulado", "corte apelaciones\ncivil", "año a buscar"]):
+                                            continue
+                                        if any(kw in txt_low for kw in ["v/s", " vs ", " c/ ", "rol ", "c-", "o-", "t-", "p-", "r-", "juzgado", "corte ", "tribunal"]) and any(c.isdigit() for c in txt_r):
+                                            if txt_r not in self.causas_online_capturadas:
+                                                self.causas_online_capturadas.append(txt_r)
+                                                print(f"      🌐 [REGISTRO LEGAL CAPTURADO EN VIVO]: {txt_r[:80]}...")
+                                except Exception:
+                                    pass
+                                    
+                            # Guardar cookies dinámicamente sin cerrar la sesión
+                            try:
+                                cookies = context.cookies()
+                                with open(ARCHIVO_COOKIES, "w", encoding="utf-8") as f:
+                                    json.dump({"cookies": cookies, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "metodo": "OPCION_A_PILOTO_AUTOMATICO", "total_causas_online": len(self.causas_online_capturadas)}, f, indent=2)
+                            except Exception:
+                                pass
+                                
+                        time.sleep(2)
+                except Exception as e_loop:
+                    print(f"Nota en ciclo de navegación: {e_loop}")
 
-                cookies = context.cookies()
-                with open(ARCHIVO_COOKIES, "w", encoding="utf-8") as f:
-                    json.dump({"cookies": cookies, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "metodo": "OPCION_A_PILOTO_AUTOMATICO", "total_causas_online": len(self.causas_online_capturadas)}, f, indent=2)
-                
-                registrar_log("✅ ¡SESIÓN Y CAUSAS ONLINE GUARDADAS CON ÉXITO!")
-                registrar_log(f"💾 Se capturaron {len(cookies)} cookies legítimas y {len(self.causas_online_capturadas)} registros de causas online.")
-                context.close()
+                registrar_log("✅ ¡SESIÓN Y CAUSAS ONLINE GUARDADAS AL CERRAR VENTANA!")
+                registrar_log(f"💾 Se capturaron {len(self.causas_online_capturadas)} registros de causas online.")
                 return True
         except Exception as e:
             registrar_log(f"❌ Error durante la validación humana: {e}")
