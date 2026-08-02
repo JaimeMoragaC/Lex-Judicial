@@ -544,91 +544,111 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         </div>
       </div>
 
-      {/* Pendientes de bitácora: no son plazos y no tienen vencimiento, así que no
-          van en el semáforo de arriba. Siguen abiertos hasta marcarse REALIZADO,
-          y lo que ordena es la antigüedad. */}
+      {/* Pendientes de bitácora — tabla estilo planilla con fechas y orden clicable */}
       {pendientes.length > 0 && (
-        <div className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
+        <div className="card card-static" style={{ overflow: 'hidden' }}>
           <div className="card-header row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
             <div className="row" style={{ gap: 'var(--space-2)' }}>
               <Flame size={20} color="var(--warn)" />
               <span className="card-title">Pendientes de bitácora ({pendientes.length})</span>
-            </div>
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
-              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>Ordenar por:</span>
-              <select
-                value={ordenPendientes}
-                onChange={(e) => setOrdenPendientes(e.target.value)}
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  padding: '3px 8px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="creacion_asc">Creación (más antigua primero)</option>
-                <option value="creacion_desc">Creación (más reciente primero)</option>
-                <option value="vencimiento_asc">Vencimiento (más próximo primero)</option>
-                <option value="vencimiento_desc">Vencimiento (más lejano primero)</option>
-              </select>
+              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>— Haz clic en una fila para abrir la ficha</span>
             </div>
           </div>
-          <div className="card-pad stack" style={{ gap: 'var(--space-2)' }}>
-            {pendientesOrdenados.slice(0, 12).map((g) => (
-              <div
-                key={g.id}
-                onClick={() => handleAbrirCasoDesdePlazo(g)}
-                title="Haz clic para abrir la ficha y marcarla REALIZADO"
-                className="row card-hover-click"
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderLeft: `4px solid ${g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--border-color)'}`,
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px', flexWrap: 'wrap' }}>
-                    <span className="mono" style={{ fontSize: 'var(--text-xs)', fontWeight: 'bold' }}>{g.casoRit}</span>
-                    {(g.notas || '').toUpperCase().includes('EN ESPERA') && (
-                      <span
-                        className="badge"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)', border: '1px solid rgba(139, 92, 246, 0.3)' }}
-                        title="Sin plazo propio: se espera que el tribunal resuelva"
-                      >
-                        <Gavel size={11} /> en espera del tribunal
-                      </span>
-                    )}
-                    {g.fueraDePlanilla && (
-                      <span className="badge badge-yellow" title={`Guardada bajo "${g.claveOriginal}", que no corresponde a ninguna causa de la planilla oficial`}>
-                        fuera de planilla
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: '500' }}>{g.titulo}</div>
-                  <div className="row" style={{ gap: 'var(--space-4)', marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                    <span>🗓️ <strong>Creada:</strong> {g.fechaCreacion || g.fechaMostrada || 'Sin fecha'}</span>
-                    <span>⏰ <strong>Vencimiento:</strong> {g.fechaVencimiento ? g.fechaVencimiento : 'Sin vencimiento'}</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right', minWidth: '90px' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: '700', fontFamily: 'monospace', color: g.diasPendiente >= 30 ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                    {g.etiquetaTiempo}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {pendientes.length > 12 && (
+          <div className="table-wrap">
+            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '120px' }}>Causa / ROL</th>
+                  <th>Gestión pendiente</th>
+                  <th
+                    style={{ width: '130px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                    onClick={() => setOrdenPendientes(ordenPendientes === 'creacion_asc' ? 'creacion_desc' : 'creacion_asc')}
+                    title="Haz clic para ordenar por fecha de creación"
+                  >
+                    Creada
+                    {' '}{ordenPendientes === 'creacion_asc' ? '▲' : ordenPendientes === 'creacion_desc' ? '▼' : ''}
+                  </th>
+                  <th
+                    style={{ width: '135px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                    onClick={() => setOrdenPendientes(ordenPendientes === 'vencimiento_asc' ? 'vencimiento_desc' : 'vencimiento_asc')}
+                    title="Haz clic para ordenar por fecha de vencimiento"
+                  >
+                    Vencimiento
+                    {' '}{ordenPendientes === 'vencimiento_asc' ? '▲' : ordenPendientes === 'vencimiento_desc' ? '▼' : ''}
+                  </th>
+                  <th style={{ width: '130px' }}>Antigüedad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendientesOrdenados.slice(0, 25).map((g) => {
+                  const colorBorde = g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--border-color)';
+                  return (
+                    <tr
+                      key={g.id}
+                      onClick={() => handleAbrirCasoDesdePlazo(g)}
+                      title="Haz clic para abrir la ficha y marcarla REALIZADO"
+                      style={{ cursor: 'pointer', borderLeft: `3px solid ${colorBorde}` }}
+                    >
+                      {/* Causa */}
+                      <td>
+                        <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+                          <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-xs)' }}>{g.casoRit}</span>
+                          {g.fueraDePlanilla && (
+                            <span className="badge badge-yellow" style={{ fontSize: '10px' }} title="Fuera de planilla">ext</span>
+                          )}
+                        </span>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2 }}>{g.caratulaMostrada}</div>
+                      </td>
+                      {/* Gestión */}
+                      <td style={{ maxWidth: 0 }}>
+                        <div style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          color: 'var(--text-primary)',
+                          fontWeight: 500,
+                          fontSize: 'var(--text-xs)'
+                        }}>
+                          {g.titulo}
+                        </div>
+                        {(g.notas || '').toUpperCase().includes('EN ESPERA') && (
+                          <span style={{ fontSize: '10px', color: 'var(--accent-purple)' }}>⚖️ en espera del tribunal</span>
+                        )}
+                      </td>
+                      {/* Fecha creación */}
+                      <td className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                        {g.fechaCreacion || g.fechaMostrada || '—'}
+                      </td>
+                      {/* Fecha vencimiento */}
+                      <td className="mono" style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                        {g.fechaVencimiento
+                          ? <strong style={{ color: 'var(--warn)' }}>{g.fechaVencimiento}</strong>
+                          : <span style={{ color: 'var(--text-muted)' }}>Sin vencimiento</span>
+                        }
+                      </td>
+                      {/* Antigüedad */}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <strong style={{
+                          fontFamily: 'monospace',
+                          fontSize: 'var(--text-xs)',
+                          color: g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--text-secondary)'
+                        }}>
+                          {g.etiquetaTiempo}
+                        </strong>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {pendientes.length > 25 && (
+            <div className="card-pad">
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-                y {pendientes.length - 12} más — están todas en el Radar de Plazos.
+                y {pendientes.length - 25} más — están todas en el Radar de Plazos.
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
