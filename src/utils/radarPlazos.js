@@ -319,9 +319,10 @@ export function obtenerAgendaLocalStorage() {
               const fVencIso = normalizarFechaIso(g.fechaVencimiento || g.vencimiento);
               const estadoNorm = (g.estado || '').trim().toUpperCase();
               const esRealizado = ['REALIZAD', 'COMPLETAD', 'TERMINAD', 'FALLADO', 'ARCHIVADO'].some((w) => estadoNorm.includes(w));
-              
-              if ((fIso || fVencIso) && !esRealizado) {
-                const targetFecha = fVencIso || fIso;
+              const targetFecha = fVencIso || fIso;
+              const esHoy = targetFecha === hoyLocal() || fIso === hoyLocal() || fVencIso === hoyLocal();
+
+              if ((fIso || fVencIso) && (!esRealizado || esHoy)) {
                 const tituloStr = g.titulo || g.tramite || g.actuacion || 'Gestión Pendiente';
                 plazosExtraidos.push({
                   id: g.id || `ls-gestion-${casoRit}-${idx}-${targetFecha}`,
@@ -334,7 +335,9 @@ export function obtenerAgendaLocalStorage() {
                   titulo: tituloStr,
                   descripcion: tituloStr,
                   asunto: tituloStr,
-                  naturaleza: NATURALEZA.PENDIENTE,
+                  naturaleza: esRealizado ? 'REALIZADO_HOY' : NATURALEZA.PENDIENTE,
+                  esRealizado: esRealizado,
+                  estado: g.estado || (esRealizado ? 'REALIZADO' : 'PENDIENTE'),
                   regimen: 'CPC',
                   fechaTramite: fIso,
                   fechaVencimiento: fVencIso || fIso,
@@ -705,29 +708,29 @@ function decorar(item, desde) {
   const estado = clasificar(item, desde);
   const habiles = habilesRestantes(item.fechaObjetivo, item.regimen, desde);
   const esFatal = item.naturaleza === NATURALEZA.FATAL;
-  const esPendiente = item.naturaleza === NATURALEZA.PENDIENTE;
+  const esRealizado = item.esRealizado || String(item.estado || '').toUpperCase().includes('REALIZAD');
+  const esPendiente = item.naturaleza === NATURALEZA.PENDIENTE && !esRealizado;
+  const esRealizadoHoy = esRealizado && (item.fechaObjetivo === desde || item.fechaTramite === desde || item.fechaVencimiento === desde);
+
   return {
     ...item,
-    estado,
+    estado: esRealizado ? 'REALIZADO' : estado,
     esPendiente,
-    // Un pendiente de bitácora no tiene estado de semáforo: no hay fecha que
-    // clasificar. Mostrarle "Vencido" o "Vence hoy" sería inventar un plazo.
-    etiquetaEstado: esPendiente ? 'Pendiente' : ETIQUETA_ESTADO[estado],
+    esRealizado,
+    esRealizadoHoy,
+    etiquetaEstado: esRealizado ? '✓ Realizado Hoy' : (esPendiente ? 'Pendiente' : ETIQUETA_ESTADO[estado]),
     habilesRestantes: habiles,
     diasPendiente: esPendiente ? diasTranscurridos(item.fechaObjetivo, desde) : null,
-    etiquetaTiempo: describirTiempo(item, estado, habiles, desde),
+    etiquetaTiempo: esRealizado ? '✓ Completado hoy' : describirTiempo(item, estado, habiles, desde),
     esFatal,
-    // Rojo o ámbar. Una sola definición de "esto no puede esperar".
-    esCritico: !esPendiente && (estado === 'VENCIDO' || estado === 'HOY' || estado === 'CRITICO'),
-    // La fecha ya viene resuelta: ninguna pantalla vuelve a decidir cuál de los
-    // campos de fecha es el que corresponde leer.
+    esCritico: !esRealizado && !esPendiente && (estado === 'VENCIDO' || estado === 'HOY' || estado === 'CRITICO'),
     fechaMostrada: item.fechaObjetivo,
     fechaCreacion: item.fechaTramite || item.fechaCreacion || item.fecha || item.fechaObjetivo || null,
     fechaVencimiento: item.fechaVencimiento || item.vencimiento || null,
     casoRit: item.casoRit || item.rit || item.rol || 'Sin ROL',
     titulo: item.actuacion || item.descripcion || item.asunto || 'Trámite procesal pendiente',
     caratulaMostrada: item.caratula || item.cliente || 'Carátula no especificada',
-    requiereAtencion: requiereAtencion(item, desde)
+    requiereAtencion: esRealizado ? esRealizadoHoy : requiereAtencion(item, desde)
   };
 }
 

@@ -247,6 +247,34 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     generarBriefing(r.atencion, r.pendientes);
   };
 
+  const handleToggleEstadoPlazo = (e, plazo) => {
+    e.stopPropagation();
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('lexcontrol_gestiones_')) {
+          const items = JSON.parse(localStorage.getItem(k) || '[]');
+          if (Array.isArray(items)) {
+            let modificado = false;
+            const nuevos = items.map(g => {
+              const coincide = (g.id && g.id === plazo.id) || (g.tramite === plazo.titulo || g.actuacion === plazo.titulo);
+              if (coincide) {
+                modificado = true;
+                const yaRealizada = String(g.estado || '').toUpperCase().includes('REALIZAD');
+                return { ...g, estado: yaRealizada ? 'PENDIENTE' : 'REALIZADO' };
+              }
+              return g;
+            });
+            if (modificado) {
+              localStorage.setItem(k, JSON.stringify(nuevos));
+            }
+          }
+        }
+      }
+    } catch(e) {}
+    window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
+  };
+
   const refrescarPlazos = () => {
     cargarAtencion({ causas: [...MOCK_CASOS, ...PJUD_CASOS] }).then(aplicarAtencion).catch(() => {});
   };
@@ -562,7 +590,8 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
           </div>
           <div className="card-pad stack" style={{ gap: 'var(--space-3)' }}>
             {atencion.map((plazo) => {
-              const isCritical = plazo.esCritico;
+              const isDone = plazo.esRealizado || String(plazo.estado || '').toUpperCase().includes('REALIZAD');
+              const isCritical = !isDone && plazo.esCritico;
               return (
                 <div
                   key={plazo.id}
@@ -571,27 +600,30 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                   style={{
                     padding: '12px 14px',
                     borderRadius: 'var(--radius-md)',
-                    background: isCritical ? 'rgba(207, 95, 87, 0.08)' : 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    borderLeft: isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)',
+                    background: isDone ? 'rgba(34, 197, 94, 0.12)' : (isCritical ? 'rgba(207, 95, 87, 0.08)' : 'var(--bg-secondary)'),
+                    border: isDone ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)',
+                    borderLeft: isDone ? '4px solid #22c55e' : (isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)'),
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                   className="row card-hover-click"
                 >
                   <div style={{ flex: 1 }}>
-                    <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: 'bold', color: isCritical ? 'var(--danger)' : 'var(--warn)', fontSize: 'var(--text-sm)' }}>
+                    <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 'bold', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontSize: 'var(--text-sm)' }}>
                         {plazo.casoRit}
                       </span>
                       <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>• {plazo.caratulaMostrada}</span>
-                      {/* Un plazo fatal se calculó bajo una regla procesal; una
-                          tarea sólo tiene la fecha que se le puso. La consecuencia
-                          de dejarlos pasar no es la misma. */}
-                      {!plazo.esFatal && (
-                        <span className="badge" title="Gestión de bitácora: la fecha es la Fecha Trámite que elegiste, no un cómputo procesal">
-                          Tarea
+                      {isDone ? (
+                        <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#22c55e', fontWeight: 'bold' }}>
+                          ✓ REALIZADO HOY
                         </span>
+                      ) : (
+                        !plazo.esFatal && (
+                          <span className="badge" title="Gestión de bitácora: la fecha es la Fecha Trámite que elegiste, no un cómputo procesal">
+                            Tarea
+                          </span>
+                        )
                       )}
                       {plazo.fueraDePlanilla && (
                         <span className="badge badge-yellow" title={`Guardada bajo "${plazo.claveOriginal}", que no corresponde a ninguna causa de la planilla oficial ni a un expediente propio. Suele ser una causa creada por la IA.`}>
@@ -599,20 +631,34 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: '600' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: isDone ? '#22c55e' : 'var(--text-primary)', fontWeight: '600', textDecoration: isDone ? 'line-through' : 'none' }}>
                       {plazo.titulo}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {plazo.esFatal ? 'Vence' : 'Trámite'}: {plazo.fechaMostrada} (Resp: Jaime Moraga C.)
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: isCritical ? 'var(--danger)' : 'var(--warn)', fontFamily: 'monospace' }}>
-                      {plazo.etiquetaTiempo}
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontFamily: 'monospace' }}>
+                      {isDone ? '✓ Completado' : plazo.etiquetaTiempo}
                     </span>
-                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '2px', fontWeight: '600' }}>
-                      📂 Abrir Ficha →
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleEstadoPlazo(e, plazo)}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '10px',
+                        borderRadius: '4px',
+                        border: isDone ? '1px solid #22c55e' : '1px solid var(--border-color)',
+                        background: isDone ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-primary)',
+                        color: isDone ? '#22c55e' : 'var(--text-secondary)',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                      title={isDone ? "Reabrir como pendiente" : "Marcar como realizada hoy"}
+                    >
+                      {isDone ? '✔ Realizado' : '◯ Marcar Realizado'}
+                    </button>
                   </div>
                 </div>
               );
