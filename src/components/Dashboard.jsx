@@ -717,71 +717,29 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* BLOQUE 1: 🔴 AUDIENCIAS PRÓXIMAS & VENCIMIENTOS FATALES (REALES, SIN MOCK) */}
-      {/* ========================================================================= */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)' }}>
-        {/* Tarjeta Audiencias Próximas */}
-        <div className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
-          <div className="card-header row" style={{ justifyContent: 'space-between' }}>
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
-              <Calendar size={20} color="var(--accent)" />
-              <span className="card-title">Audiencias Próximas (30 días)</span>
-            </div>
-            <span className="badge badge-gold">{audiencias.length} Confirmadas</span>
+      {/* SECCIÓN REQUIERE MI ATENCIÓN HOY (FILAS DE 4 TARJETAS CADA UNA) */}
+      <div id="seccion-atencion-hoy" className="card card-static stack" style={{ gap: 'var(--space-3)', padding: '16px' }}>
+        <div className="card-header row" style={{ justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+          <div className="row" style={{ gap: 'var(--space-2)' }}>
+            <Flame size={22} color="var(--danger)" />
+            <span className="card-title" style={{ fontSize: '1.05rem', fontWeight: '800' }}>
+              Requiere mi atención hoy {cargandoReal ? '(cargando…)' : `(${atencion.length})`}
+            </span>
           </div>
-          <div className="card-pad stack" style={{ gap: 'var(--space-3)', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
-            {audiencias.length === 0 && (
-              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', margin: 0 }}>
-                No hay audiencias con fecha confirmada por el tribunal en los próximos {DIAS_AUDIENCIAS} días.
-                Sólo entran acá las que un documento analizado trajo con fecha explícita -nunca una adivinada-.
-              </p>
-            )}
-            {audiencias.map((aud) => (
-              <div
-                key={aud.id}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderLeft: '4px solid var(--accent)'
-                }}
-                className="row"
-              >
-                <div style={{ flex: 1 }}>
-                  <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
-                      {aud.hora ? `${aud.hora} — ${aud.fecha}` : aud.fecha}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                    {aud.casoRit} — {aud.caratula}
-                  </div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    🏛️ {aud.tribunal || 'Tribunal no especificado'} — {aud.tramite}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <span className="badge badge-red">⚠️ Urgencia Procesal</span>
         </div>
 
-        {/* Tarjeta Plazos Fatales que Vencen */}
-        <div id="seccion-atencion-hoy" className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
-          <div className="card-header row" style={{ justifyContent: 'space-between' }}>
-            <div className="row" style={{ gap: 'var(--space-2)' }}>
-              <Flame size={20} color="var(--danger)" />
-              {/* Mientras carga NO se muestra "(0)": un cero se lee como "no tienes
-                  nada que hacer", que es la afirmación más peligrosa que puede hacer
-                  esta pantalla si todavía no sabe la respuesta. */}
-              <span className="card-title">
-                Requiere mi atención hoy {cargandoReal ? '(cargando…)' : `(${atencion.length})`}
-              </span>
-            </div>
-            <span className="badge badge-red">⚠️ Urgencia Procesal</span>
+        {atencion.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            🎉 No hay plazos fatales ni gestiones urgentes registradas para el día de hoy.
           </div>
-          <div className="card-pad stack" style={{ gap: 'var(--space-3)', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gap: '14px',
+            marginTop: '8px'
+          }}>
             {atencion.map((plazo) => {
               const isDone = plazo.esRealizado || String(plazo.estado || '').toUpperCase().includes('REALIZAD');
               const isCritical = !isDone && plazo.esCritico;
@@ -791,55 +749,55 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                   onClick={() => handleAbrirCasoDesdePlazo(plazo)}
                   title="Haz clic para abrir la ficha completa de este expediente"
                   style={{
-                    padding: '12px 14px',
-                    borderRadius: 'var(--radius-md)',
+                    padding: '14px',
+                    borderRadius: '12px',
                     background: isDone ? 'rgba(34, 197, 94, 0.12)' : (isCritical ? 'rgba(207, 95, 87, 0.08)' : 'var(--bg-secondary)'),
                     border: isDone ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)',
                     borderLeft: isDone ? '4px solid #22c55e' : (isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)'),
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
                   }}
-                  className="row card-hover-click"
+                  className="card-hover-click"
                 >
-                  <div style={{ flex: 1 }}>
-                    <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '2px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 'bold', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontSize: 'var(--text-sm)' }}>
+                  <div className="stack" style={{ gap: '6px' }}>
+                    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="mono" style={{ fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontSize: '0.88rem' }}>
                         {plazo.casoRit}
                       </span>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>• {plazo.caratulaMostrada}</span>
                       {isDone ? (
-                        <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#22c55e', fontWeight: 'bold' }}>
+                        <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#22c55e', fontWeight: 'bold', fontSize: '10px' }}>
                           ✓ REALIZADO HOY
                         </span>
                       ) : (
                         !plazo.esFatal && (
-                          <span className="badge" title="Gestión de bitácora: la fecha es la Fecha Trámite que elegiste, no un cómputo procesal">
+                          <span className="badge" style={{ fontSize: '10px' }}>
                             Tarea
                           </span>
                         )
                       )}
-                      {plazo.fueraDePlanilla && (
-                        <span className="badge badge-yellow" title={`Guardada bajo "${plazo.claveOriginal}", que no corresponde a ninguna causa de la planilla oficial ni a un expediente propio. Suele ser una causa creada por la IA.`}>
-                          fuera de planilla
-                        </span>
-                      )}
                     </div>
-                    <div style={{ fontSize: 'var(--text-xs)', color: isDone ? '#22c55e' : 'var(--text-primary)', fontWeight: '600', textDecoration: isDone ? 'line-through' : 'none' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {plazo.caratulaMostrada}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: isDone ? '#22c55e' : 'var(--text-primary)', fontWeight: '700', textDecoration: isDone ? 'line-through' : 'none', marginTop: '2px' }}>
                       {plazo.titulo}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                      {plazo.esFatal ? 'Vence' : 'Trámite'}: {plazo.fechaMostrada} (Resp: Jaime Moraga C.)
-                    </div>
                   </div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontFamily: 'monospace' }}>
+
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontFamily: 'monospace' }}>
                       {isDone ? '✓ Completado' : plazo.etiquetaTiempo}
                     </span>
                     <button
                       type="button"
                       onClick={(e) => handleToggleEstadoPlazo(e, plazo)}
                       style={{
-                        padding: '2px 8px',
+                        padding: '3px 8px',
                         fontSize: '10px',
                         borderRadius: '4px',
                         border: isDone ? '1px solid #22c55e' : '1px solid var(--border-color)',
@@ -857,6 +815,52 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* SECCIÓN AUDIENCIAS PRÓXIMAS */}
+      <div className="card card-static stack" style={{ gap: 'var(--space-3)', padding: '16px' }}>
+        <div className="card-header row" style={{ justifyContent: 'space-between' }}>
+          <div className="row" style={{ gap: 'var(--space-2)' }}>
+            <Calendar size={20} color="var(--accent)" />
+            <span className="card-title" style={{ fontSize: '1.05rem', fontWeight: '800' }}>Audiencias Próximas (30 días)</span>
+          </div>
+          <span className="badge badge-gold">{audiencias.length} Confirmadas</span>
+        </div>
+        <div className="card-pad stack" style={{ gap: 'var(--space-3)', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
+          {audiencias.length === 0 && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', margin: 0 }}>
+              No hay audiencias con fecha confirmada por el tribunal en los próximos {DIAS_AUDIENCIAS} días.
+              Sólo entran acá las que un documento analizado trajo con fecha explícita -nunca una adivinada-.
+            </p>
+          )}
+          {audiencias.map((aud) => (
+            <div
+              key={aud.id}
+              style={{
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderLeft: '4px solid var(--accent)'
+              }}
+              className="row"
+            >
+              <div style={{ flex: 1 }}>
+                <div className="row" style={{ gap: 'var(--space-2)', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>
+                    {aud.hora ? `${aud.hora} — ${aud.fecha}` : aud.fecha}
+                  </span>
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {aud.casoRit} — {aud.caratula}
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  🏛️ {aud.tribunal || 'Tribunal no especificado'} — {aud.tramite}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
