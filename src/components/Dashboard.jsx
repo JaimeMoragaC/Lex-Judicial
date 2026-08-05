@@ -524,7 +524,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
       {/* BARRA KPI DE CONTROL EJECUTIVO LEGAL */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         gap: '14px',
         marginBottom: '6px'
       }}>
@@ -736,7 +736,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         ) : (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
             gap: '14px',
             marginTop: '8px'
           }}>
