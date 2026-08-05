@@ -705,22 +705,40 @@ const FeedInteracciones = memo(function FeedInteracciones({
 
     const parseFechaStr = (str) => {
       if (!str) return null;
-      const s = String(str).trim();
-      const partes = s.split('/');
+      const s = String(str).trim().toLowerCase();
+      const MESES = {
+        enero: 0, ene: 0, febrero: 1, feb: 1, marzo: 2, mar: 2, abril: 3, abr: 3,
+        mayo: 4, may: 4, junio: 5, jun: 5, julio: 6, jul: 6, agosto: 7, ago: 7,
+        septiembre: 8, sep: 8, setiembre: 8, octubre: 9, oct: 9, noviembre: 10, nov: 10, diciembre: 11, dic: 11
+      };
+      for (const [mNombre, mIndex] of Object.entries(MESES)) {
+        if (s.includes(mNombre)) {
+          const nums = s.match(/\d+/g);
+          if (nums && nums.length >= 1) {
+            const d = parseInt(nums[0], 10);
+            const y = nums.length >= 2 ? parseInt(nums[nums.length - 1], 10) : new Date().getFullYear();
+            const yearFinal = y < 100 ? 2000 + y : y;
+            if (!isNaN(d) && !isNaN(yearFinal)) return new Date(yearFinal, mIndex, d);
+          }
+        }
+      }
+      const partes = s.split(/[/.\-\s]+/);
       if (partes.length === 3) {
-        const d = parseInt(partes[0], 10);
-        const m = parseInt(partes[1], 10) - 1;
-        const y = parseInt(partes[2], 10);
+        let d, m, y;
+        if (partes[0].length === 4) {
+          y = parseInt(partes[0], 10);
+          m = parseInt(partes[1], 10) - 1;
+          d = parseInt(partes[2], 10);
+        } else {
+          d = parseInt(partes[0], 10);
+          m = parseInt(partes[1], 10) - 1;
+          y = parseInt(partes[2], 10);
+          if (y < 100) y += 2000;
+        }
         if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
       }
-      const partesDash = s.split('-');
-      if (partesDash.length === 3) {
-        const y = parseInt(partesDash[0], 10);
-        const m = parseInt(partesDash[1], 10) - 1;
-        const d = parseInt(partesDash[2], 10);
-        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
-      }
-      return null;
+      const dt = new Date(str);
+      return isNaN(dt.getTime()) ? null : dt;
     };
 
     const colManana = [];
