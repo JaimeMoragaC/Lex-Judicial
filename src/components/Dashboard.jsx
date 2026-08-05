@@ -729,7 +729,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
             </div>
             <span className="badge badge-gold">{audiencias.length} Confirmadas</span>
           </div>
-          <div className="card-pad stack" style={{ gap: 'var(--space-3)' }}>
+          <div className="card-pad stack" style={{ gap: 'var(--space-3)', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
             {audiencias.length === 0 && (
               <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', margin: 0 }}>
                 No hay audiencias con fecha confirmada por el tribunal en los próximos {DIAS_AUDIENCIAS} días.
@@ -780,7 +780,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
             </div>
             <span className="badge badge-red">⚠️ Urgencia Procesal</span>
           </div>
-          <div className="card-pad stack" style={{ gap: 'var(--space-3)' }}>
+          <div className="card-pad stack" style={{ gap: 'var(--space-3)', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
             {atencion.map((plazo) => {
               const isDone = plazo.esRealizado || String(plazo.estado || '').toUpperCase().includes('REALIZAD');
               const isCritical = !isDone && plazo.esCritico;
