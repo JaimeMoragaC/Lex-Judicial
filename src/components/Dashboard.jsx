@@ -58,6 +58,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   const [pendientes, setPendientes] = useState([]);
   const [ordenPendientes, setOrdenPendientes] = useState('creacion_asc');
   const [modoVistaPendientes, setModoVistaPendientes] = useState('kanban'); // 'kanban' | 'tabla'
+  const [temaKanban, setTemaKanban] = useState('claro'); // 'claro' | 'oscuro'
   const pendientesOrdenados = useMemo(() => ordenarPendientes(pendientes, ordenPendientes), [pendientes, ordenPendientes]);
 
   const kanbanPendientesData = useMemo(() => {
@@ -869,8 +870,26 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>— Haz clic en cualquier tarjeta para abrir la causa</span>
             </div>
 
-            {/* Selector de Vista: Kanban (3 Col) vs Planilla */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Selector de Vista: Kanban (3 Col) vs Planilla y Tema Kanban */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setTemaKanban(temaKanban === 'claro' ? 'oscuro' : 'claro')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  background: temaKanban === 'claro' ? '#fef3c7' : 'rgba(255,255,255,0.06)',
+                  color: temaKanban === 'claro' ? '#b45309' : 'var(--text-secondary)',
+                  border: temaKanban === 'claro' ? '1px solid #fde68a' : '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+                title="Cambiar paleta de colores del Kanban"
+              >
+                {temaKanban === 'claro' ? '☀️ Colores Claros Pastel' : '🌙 Colores Oscuros Neón'}
+              </button>
+
               <button
                 type="button"
                 onClick={() => setModoVistaPendientes('kanban')}
@@ -908,20 +927,34 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
 
           {modoVistaPendientes === 'kanban' ? (
             /* TABLERO KANBAN DE 3 COLUMNAS EN MI DÍA / DASHBOARD */
-            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', background: 'var(--bg-secondary)' }}>
+            <div style={{
+              padding: '16px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '16px',
+              background: temaKanban === 'claro' ? '#f8fafc' : 'var(--bg-secondary)'
+            }}>
               {/* COLUMNA 1: GESTIONES DE MAÑANA */}
-              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(234, 179, 8, 0.2)', paddingBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.88rem', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                background: temaKanban === 'claro' ? '#fffbeb' : 'var(--bg-primary)',
+                borderRadius: '12px',
+                border: temaKanban === 'claro' ? '1px solid #fde68a' : '1px solid rgba(234, 179, 8, 0.3)',
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: temaKanban === 'claro' ? '1px solid #fcd34d' : '1px solid rgba(234, 179, 8, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: temaKanban === 'claro' ? '#b45309' : 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     🌅 Mañana ({kanbanPendientesData.colManana.length})
                   </strong>
-                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.2)', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '8px', background: temaKanban === 'claro' ? '#fef3c7' : 'rgba(234, 179, 8, 0.2)', color: temaKanban === 'claro' ? '#d97706' : 'var(--accent-gold)', fontWeight: 'bold' }}>
                     Urgente
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
                   {kanbanPendientesData.colManana.length === 0 ? (
-                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: temaKanban === 'claro' ? '#92400e' : 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                       Sin gestiones para mañana
                     </div>
                   ) : (
@@ -933,25 +966,28 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         style={{
                           padding: '12px',
                           borderRadius: '10px',
-                          background: 'var(--bg-secondary)',
-                          borderLeft: '4px solid var(--accent-gold)',
+                          background: temaKanban === 'claro' ? '#ffffff' : 'var(--bg-secondary)',
+                          borderLeft: '4px solid #f59e0b',
+                          border: temaKanban === 'claro' ? '1px solid #fde68a' : '1px solid var(--border-color)',
+                          boxShadow: temaKanban === 'claro' ? '0 2px 8px rgba(217, 119, 6, 0.12)' : 'none',
+                          cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '6px'
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: temaKanban === 'claro' ? '#d97706' : 'var(--accent-cyan)' }}>
                             {g.casoRit || g.rit || 'Expediente'}
                           </span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '0.7rem', color: temaKanban === 'claro' ? '#b45309' : 'var(--accent-gold)', fontWeight: 'bold' }}>
                             📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '700', color: temaKanban === 'claro' ? '#0f172a' : 'var(--text-primary)' }}>
                           {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '0.72rem', color: temaKanban === 'claro' ? '#475569' : 'var(--text-muted)' }}>
                           {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
                         </div>
                       </div>
@@ -961,18 +997,26 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
               </div>
 
               {/* COLUMNA 2: GESTIONES EN LO QUE QUEDA DE LA SEMANA */}
-              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.88rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                background: temaKanban === 'claro' ? '#f3e8ff' : 'var(--bg-primary)',
+                borderRadius: '12px',
+                border: temaKanban === 'claro' ? '1px solid #e9d5ff' : '1px solid rgba(168, 85, 247, 0.3)',
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: temaKanban === 'claro' ? '1px solid #d8b4fe' : '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: temaKanban === 'claro' ? '#7e22ce' : '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     📅 Resto de la Semana ({kanbanPendientesData.colRestoSemana.length})
                   </strong>
-                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '8px', background: temaKanban === 'claro' ? '#fae8ff' : 'rgba(168, 85, 247, 0.2)', color: temaKanban === 'claro' ? '#9333ea' : '#c084fc', fontWeight: 'bold' }}>
                     Semana
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
                   {kanbanPendientesData.colRestoSemana.length === 0 ? (
-                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: temaKanban === 'claro' ? '#6b21a8' : 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                       Sin gestiones esta semana
                     </div>
                   ) : (
@@ -984,9 +1028,10 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         style={{
                           padding: '12px',
                           borderRadius: '10px',
-                          background: 'var(--bg-secondary)',
-                          borderLeft: '4px solid #c084fc',
-                          border: '1px solid var(--border-color)',
+                          background: temaKanban === 'claro' ? '#ffffff' : 'var(--bg-secondary)',
+                          borderLeft: '4px solid #a855f7',
+                          border: temaKanban === 'claro' ? '1px solid #e9d5ff' : '1px solid var(--border-color)',
+                          boxShadow: temaKanban === 'claro' ? '0 2px 8px rgba(168, 85, 247, 0.12)' : 'none',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
@@ -994,17 +1039,17 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: temaKanban === 'claro' ? '#7e22ce' : 'var(--accent-cyan)' }}>
                             {g.casoRit || g.rit || 'Expediente'}
                           </span>
-                          <span style={{ fontSize: '0.7rem', color: '#c084fc', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '0.7rem', color: temaKanban === 'claro' ? '#9333ea' : '#c084fc', fontWeight: 'bold' }}>
                             📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '700', color: temaKanban === 'claro' ? '#0f172a' : 'var(--text-primary)' }}>
                           {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '0.72rem', color: temaKanban === 'claro' ? '#475569' : 'var(--text-muted)' }}>
                           {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
                         </div>
                       </div>
@@ -1014,18 +1059,26 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
               </div>
 
               {/* COLUMNA 3: RESTO DE PENDIENTES */}
-              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(74, 163, 199, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(74, 163, 199, 0.2)', paddingBottom: '8px' }}>
-                  <strong style={{ fontSize: '0.88rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                background: temaKanban === 'claro' ? '#e0f2fe' : 'var(--bg-primary)',
+                borderRadius: '12px',
+                border: temaKanban === 'claro' ? '1px solid #bae6fd' : '1px solid rgba(74, 163, 199, 0.3)',
+                padding: '14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: temaKanban === 'claro' ? '1px solid #7dd3fc' : '1px solid rgba(74, 163, 199, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: temaKanban === 'claro' ? '#0369a1' : 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     📋 Resto de Pendientes ({kanbanPendientesData.colDemasPendientes.length})
                   </strong>
-                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(74, 163, 199, 0.2)', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '8px', background: temaKanban === 'claro' ? '#bae6fd' : 'rgba(74, 163, 199, 0.2)', color: temaKanban === 'claro' ? '#0284c7' : 'var(--accent-cyan)', fontWeight: 'bold' }}>
                     General
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
                   {kanbanPendientesData.colDemasPendientes.length === 0 ? (
-                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: temaKanban === 'claro' ? '#075985' : 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                       No hay más pendientes registradas
                     </div>
                   ) : (
@@ -1037,9 +1090,10 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         style={{
                           padding: '12px',
                           borderRadius: '10px',
-                          background: 'var(--bg-secondary)',
-                          borderLeft: '4px solid var(--accent-cyan)',
-                          border: '1px solid var(--border-color)',
+                          background: temaKanban === 'claro' ? '#ffffff' : 'var(--bg-secondary)',
+                          borderLeft: '4px solid #0ea5e9',
+                          border: temaKanban === 'claro' ? '1px solid #bae6fd' : '1px solid var(--border-color)',
+                          boxShadow: temaKanban === 'claro' ? '0 2px 8px rgba(14, 165, 233, 0.12)' : 'none',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
@@ -1047,17 +1101,17 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: temaKanban === 'claro' ? '#0369a1' : 'var(--accent-cyan)' }}>
                             {g.casoRit || g.rit || 'Expediente'}
                           </span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '0.7rem', color: temaKanban === 'claro' ? '#0284c7' : 'var(--text-secondary)', fontWeight: 'bold' }}>
                             📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '700', color: temaKanban === 'claro' ? '#0f172a' : 'var(--text-primary)' }}>
                           {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '0.72rem', color: temaKanban === 'claro' ? '#475569' : 'var(--text-muted)' }}>
                           {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
                         </div>
                       </div>
