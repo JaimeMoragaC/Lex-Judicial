@@ -2244,6 +2244,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <th style={{ padding: '10px 12px' }}>Trámite / Providencia Judicial</th>
                       <th style={{ padding: '10px 12px' }}>Origen / Magistratura</th>
                       <th style={{ padding: '10px 12px', width: '100px' }}>Estado</th>
+                      <th style={{ padding: '10px 12px', width: '140px', textAlign: 'center' }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2252,6 +2253,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       const realIndex = isGhost ? null : (gestionesList[0]._isGhost ? index - 1 : index);
                       const venc = obtenerVencimientoGestion(g, caso);
                       const esPendiente = g.estado === 'URGENTE' || (g.estado || '').includes('PENDIENTE') || isGhost;
+                      const yaRealizada = String(g.estado || '').toUpperCase().includes('REALIZAD');
                       return (
                         <tr
                           key={index}
@@ -2291,16 +2293,54 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                             {g.origen || 'Juzgado'}
                           </td>
                           <td style={{ padding: '10px 12px' }}>
-                            <span style={{
-                              padding: '3px 8px',
-                              borderRadius: '10px',
-                              fontSize: '0.7rem',
-                              fontWeight: 'bold',
-                              background: g.estado === 'REALIZADO' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                              color: g.estado === 'REALIZADO' ? 'var(--ok)' : 'var(--warning)'
-                            }}>
-                              {g.estado === 'REALIZADO' ? 'REALIZADO' : 'PENDIENTE'}
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (realIndex !== null) handleToggleEstadoGestion(realIndex);
+                              }}
+                              style={{
+                                padding: '3px 8px',
+                                borderRadius: '10px',
+                                fontSize: '0.7rem',
+                                fontWeight: 'bold',
+                                background: yaRealizada ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                                color: yaRealizada ? 'var(--ok)' : 'var(--warning)',
+                                cursor: 'pointer'
+                              }}
+                              title="Haz clic para alternar entre REALIZADO y PENDIENTE"
+                            >
+                              {yaRealizada ? '✓ REALIZADO' : '◯ PENDIENTE'}
                             </span>
+                          </td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            {realIndex !== null && (
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: '4px 8px', fontSize: '0.72rem', color: 'var(--info)' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditGestion(realIndex, g);
+                                  }}
+                                  title="Editar gestión"
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: '4px 8px', fontSize: '0.72rem', color: 'var(--danger)', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteGestion(realIndex);
+                                  }}
+                                  title="Eliminar gestión de este expediente"
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
