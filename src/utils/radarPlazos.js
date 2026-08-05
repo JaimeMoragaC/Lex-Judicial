@@ -37,19 +37,41 @@ export function normalizarFechaIso(f) {
   if (!f) return '';
   const s = String(f).trim();
   if (s.includes('T')) return s.split('T')[0];
-  if (s.includes('-')) {
-    const parts = s.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const matchNum = s.match(/^(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})/);
+  if (matchNum) {
+    let [, p1, p2, p3] = matchNum;
+    if (p1.length === 4) {
+      return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
+    }
+    let y = p3;
+    if (y.length === 2) y = '20' + y;
+    return `${y}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
+  }
+
+  const MESES = {
+    enero: '01', ene: '01', febrero: '02', feb: '02', marzo: '03', mar: '03', abril: '04', abr: '04',
+    mayo: '05', may: '05', junio: '06', jun: '06', julio: '07', jul: '07', agosto: '08', ago: '08',
+    septiembre: '09', sep: '09', setiembre: '09', octubre: '10', oct: '10', noviembre: '11', nov: '11', diciembre: '12', dic: '12'
+  };
+  const strLower = s.toLowerCase();
+  for (const [mNombre, mNum] of Object.entries(MESES)) {
+    if (strLower.includes(mNombre)) {
+      const nums = s.match(/\d+/g);
+      if (nums && nums.length >= 1) {
+        const d = nums[0].padStart(2, '0');
+        let y = nums.length >= 2 ? nums[nums.length - 1] : String(new Date().getFullYear());
+        if (y.length === 2) y = '20' + y;
+        return `${y}-${mNum}-${d}`;
+      }
     }
   }
-  if (s.includes('/')) {
-    const parts = s.split('/');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-    }
+
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
   return s;
 }
@@ -800,13 +822,17 @@ export async function cargarAtencion({ causas = [], expedientes = null, desde = 
   //   atencion    -> lo que tiene fecha y esa fecha es hoy (o el fatal se acerca).
   //   pendientes  -> bitácora sin fecha de vencimiento, ordenada por antigüedad.
   //   recordatorios -> trámites con fecha propia que todavía no llega.
-  const conFecha = todos.filter((i) => !i.esPendiente);
-  const atencion = conFecha.filter((i) => i.requiereAtencion);
-  const resto = conFecha.filter((i) => !i.requiereAtencion);
+  const atencion = todos.filter((i) => {
+    if (i.esRealizado) return i.esRealizadoHoy;
+    const esHoy = (i.fechaObjetivo === desde || i.fechaTramite === desde || i.fechaVencimiento === desde);
+    if (esHoy) return true;
+    return !i.esPendiente && i.requiereAtencion;
+  });
+  const resto = todos.filter((i) => !atencion.includes(i) && !i.esPendiente);
   const recordatorios = resto.filter((i) => !i.esFatal);
-  // Lo más viejo primero: si algo lleva tres semanas sin hacerse, va arriba.
+
   const pendientes = todos
-    .filter((i) => i.esPendiente)
+    .filter((i) => !i.esRealizado)
     .sort((a, b) => String(a.fechaObjetivo).localeCompare(String(b.fechaObjetivo)));
 
   return {

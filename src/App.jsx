@@ -263,13 +263,22 @@ export default function App() {
           // Corregir gestiones creadas anteriormente que hayan quedado guardadas con REALIZADO
           gestiones = gestiones.map(g => (g.estado === 'REALIZADO' ? { ...g, estado: 'PENDIENTE' } : g));
 
+          const { normalizarFechaIso } = await import('./utils/radarPlazos');
+          const fIsoNorm = normalizarFechaIso(gestion.fechaVencimiento || gestion.fecha || new Date().toISOString().split('T')[0]);
+
           gestiones.push({
+            id: `ls-gestion-${ref}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             ...gestion,
             casoRit: targetCaso.rit || ref,
             casoCaratula: targetCaso.caratula || targetCaso.cliente || '',
-            fechaVencimiento: gestion.fechaVencimiento || gestion.fecha,
-            fechaMostrada: gestion.fechaMostrada || gestion.fecha,
-            titulo: gestion.titulo || gestion.tramite || gestion.descripcion
+            fecha: fIsoNorm,
+            fechaIso: fIsoNorm,
+            fechaVencimiento: fIsoNorm,
+            fechaMostrada: fIsoNorm,
+            titulo: gestion.titulo || gestion.tramite || gestion.descripcion,
+            tramite: gestion.tramite || gestion.titulo || gestion.descripcion,
+            actuacion: gestion.tramite || gestion.titulo || gestion.descripcion,
+            estado: gestion.estado || 'PENDIENTE'
           });
 
           if (clave) localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(gestiones));
