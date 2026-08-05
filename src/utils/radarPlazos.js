@@ -824,8 +824,9 @@ export async function cargarAtencion({ causas = [], expedientes = null, desde = 
   //   recordatorios -> trámites con fecha propia que todavía no llega.
   const atencion = todos.filter((i) => {
     if (i.esRealizado) return i.esRealizadoHoy;
-    const esHoy = (i.fechaObjetivo === desde || i.fechaTramite === desde || i.fechaVencimiento === desde);
-    if (esHoy) return true;
+    const fVencIso = normalizarFechaIso(i.fechaVencimiento || i.vencimiento);
+    const esVencimientoHoy = fVencIso === desde;
+    if (esVencimientoHoy) return true;
     return !i.esPendiente && i.requiereAtencion;
   });
   const resto = todos.filter((i) => !atencion.includes(i) && !i.esPendiente);
