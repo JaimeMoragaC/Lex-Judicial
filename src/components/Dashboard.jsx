@@ -520,6 +520,174 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         </div>
       </div>
 
+      {/* BARRA KPI DE CONTROL EJECUTIVO LEGAL */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+        gap: '14px',
+        marginBottom: '6px'
+      }}>
+        {/* KPI 1: Plazos y Atención Hoy */}
+        <div 
+          onClick={() => {
+            const el = document.getElementById('seccion-atencion-hoy');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(185, 28, 28, 0.04))',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '14px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          className="card-hover-click"
+        >
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(239, 68, 68, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Flame size={24} color="#ef4444" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#ef4444', lineHeight: 1 }}>
+              {atencion.filter(a => !a.esRealizado).length}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: '700', marginTop: '4px' }}>
+              Atención Urgente Hoy
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 2: Audiencias Confirmadas */}
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(29, 78, 216, 0.04))',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '14px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          className="card-hover-click"
+        >
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(59, 130, 246, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Calendar size={24} color="#3b82f6" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#3b82f6', lineHeight: 1 }}>
+              {audiencias.length}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: '700', marginTop: '4px' }}>
+              Audiencias (30 días)
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 3: Pendientes en Bitácora (Kanban) */}
+        <div 
+          onClick={() => {
+            const el = document.getElementById('seccion-kanban-pendientes');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{
+            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(126, 34, 206, 0.04))',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            borderRadius: '14px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          className="card-hover-click"
+        >
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(168, 85, 247, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <Clock size={24} color="#c084fc" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#c084fc', lineHeight: 1 }}>
+              {pendientes.length}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: '700', marginTop: '4px' }}>
+              Tareas en Kanban
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 4: Providencias Recientes OJV */}
+        <div 
+          style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(4, 120, 87, 0.04))',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            borderRadius: '14px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          className="card-hover-click"
+        >
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <FileText size={24} color="#10b981" />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#10b981', lineHeight: 1 }}>
+              {(historialPartes[0] && historialPartes[0].movimientos) ? historialPartes[0].movimientos.length : 0}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: '700', marginTop: '4px' }}>
+              Novedades OJV Hoy
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Briefing matutino en prosa (IA local, redactado a partir del semáforo real) */}
       {(briefing || cargandoBriefing) && (
         <div
@@ -599,7 +767,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         </div>
 
         {/* Tarjeta Plazos Fatales que Vencen */}
-        <div className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
+        <div id="seccion-atencion-hoy" className="card card-static stack" style={{ gap: 'var(--space-3)' }}>
           <div className="card-header row" style={{ justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 'var(--space-2)' }}>
               <Flame size={20} color="var(--danger)" />
@@ -693,7 +861,7 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
 
       {/* Pendientes de bitácora — Tablero Kanban de 3 Columnas o Tabla estilo Planilla */}
       {pendientes.length > 0 && (
-        <div className="card card-static" style={{ overflow: 'hidden' }}>
+        <div id="seccion-kanban-pendientes" className="card card-static" style={{ overflow: 'hidden' }}>
           <div className="card-header row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
             <div className="row" style={{ gap: 'var(--space-2)' }}>
               <Flame size={20} color="var(--warn)" />
