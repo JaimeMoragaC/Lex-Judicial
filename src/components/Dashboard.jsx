@@ -743,73 +743,107 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
             {atencion.map((plazo) => {
               const isDone = plazo.esRealizado || String(plazo.estado || '').toUpperCase().includes('REALIZAD');
               const isCritical = !isDone && plazo.esCritico;
+
+              const bgGrad = isDone
+                ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(21, 128, 61, 0.04))'
+                : (isCritical
+                    ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(185, 28, 28, 0.04))'
+                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(180, 83, 9, 0.04))');
+
+              const borderColor = isDone
+                ? 'rgba(34, 197, 94, 0.35)'
+                : (isCritical ? 'rgba(239, 68, 68, 0.35)' : 'rgba(245, 158, 11, 0.35)');
+
+              const iconBg = isDone
+                ? 'rgba(34, 197, 94, 0.22)'
+                : (isCritical ? 'rgba(239, 68, 68, 0.22)' : 'rgba(245, 158, 11, 0.22)');
+
+              const mainColor = isDone
+                ? '#22c55e'
+                : (isCritical ? '#ef4444' : '#f59e0b');
+
               return (
                 <div
                   key={plazo.id}
                   onClick={() => handleAbrirCasoDesdePlazo(plazo)}
                   title="Haz clic para abrir la ficha completa de este expediente"
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    background: isDone ? 'rgba(34, 197, 94, 0.12)' : (isCritical ? 'rgba(207, 95, 87, 0.08)' : 'var(--bg-secondary)'),
-                    border: isDone ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--border-color)',
-                    borderLeft: isDone ? '4px solid #22c55e' : (isCritical ? '4px solid var(--danger)' : '4px solid var(--warn)'),
-                    cursor: 'pointer',
+                    background: bgGrad,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '14px',
+                    padding: '12px 14px',
                     display: 'flex',
-                    flexDirection: 'column',
-                    justify: 'space-between',
-                    gap: '4px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                    alignItems: 'center',
+                    gap: '12px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
                   className="card-hover-click"
                 >
-                  <div className="stack" style={{ gap: '2px' }}>
-                    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="mono" style={{ fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontSize: '0.82rem' }}>
-                        {plazo.casoRit}
-                      </span>
-                      {isDone ? (
-                        <span className="badge" style={{ background: 'rgba(34, 197, 94, 0.25)', color: '#22c55e', fontWeight: 'bold', fontSize: '9px', padding: '1px 5px' }}>
-                          ✓ REALIZADO HOY
-                        </span>
-                      ) : (
-                        !plazo.esFatal && (
-                          <span className="badge" style={{ fontSize: '9px', padding: '1px 5px' }}>
-                            Tarea
-                          </span>
-                        )
-                      )}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {plazo.caratulaMostrada}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: isDone ? '#22c55e' : 'var(--text-primary)', fontWeight: '700', textDecoration: isDone ? 'line-through' : 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {plazo.titulo}
-                    </div>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: iconBg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {isDone ? (
+                      <CheckCircle2 size={22} color={mainColor} />
+                    ) : (
+                      <Flame size={22} color={mainColor} />
+                    )}
                   </div>
 
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '4px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: isDone ? '#22c55e' : (isCritical ? 'var(--danger)' : 'var(--warn)'), fontFamily: 'monospace' }}>
-                      {isDone ? '✓ Completado' : plazo.etiquetaTiempo}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleEstadoPlazo(e, plazo)}
-                      style={{
-                        padding: '1px 6px',
-                        fontSize: '9px',
-                        borderRadius: '4px',
-                        border: isDone ? '1px solid #22c55e' : '1px solid var(--border-color)',
-                        background: isDone ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-primary)',
-                        color: isDone ? '#22c55e' : 'var(--text-secondary)',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
-                      title={isDone ? "Reabrir como pendiente" : "Marcar como realizada hoy"}
-                    >
-                      {isDone ? '✔ Realizado' : '◯ Marcar Realizado'}
-                    </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                      <span className="mono" style={{ fontSize: '0.85rem', fontWeight: '900', color: mainColor }}>
+                        {plazo.casoRit}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '800', color: mainColor, fontFamily: 'monospace' }}>
+                        {isDone ? '✓ REALIZADO' : plazo.etiquetaTiempo}
+                      </span>
+                    </div>
+
+                    <div style={{
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      color: isDone ? '#22c55e' : 'var(--text-primary)',
+                      textDecoration: isDone ? 'line-through' : 'none',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {plazo.titulo}
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {plazo.caratulaMostrada}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleEstadoPlazo(e, plazo)}
+                        style={{
+                          padding: '2px 7px',
+                          fontSize: '9px',
+                          borderRadius: '6px',
+                          border: `1px solid ${borderColor}`,
+                          background: isDone ? 'rgba(34, 197, 94, 0.25)' : 'var(--bg-surface)',
+                          color: isDone ? '#22c55e' : 'var(--text-primary)',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                        title={isDone ? "Reabrir como pendiente" : "Marcar como realizada hoy"}
+                      >
+                        {isDone ? '✔ Realizado' : '◯ Marcar'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
