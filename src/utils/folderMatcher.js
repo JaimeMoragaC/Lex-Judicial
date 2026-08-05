@@ -1,7 +1,33 @@
 import { REAL_DISK_DATA } from '../realDiskData';
 
-export function findDiscoFolder(casoObj) {
+export function findDiscoFolder(casoObj, expedientesServidor = []) {
   if (!casoObj) return null;
+
+  // MÉTODO 0 (PRIORIDAD MÁXIMA): Carpeta física asignada manualmente
+  let carpetaFisicaAsignada = casoObj.carpetaFisica || null;
+  if (!carpetaFisicaAsignada && Array.isArray(expedientesServidor) && expedientesServidor.length > 0) {
+    const id = String(casoObj.id || '').trim();
+    const rit = String(casoObj.rit || casoObj.ritVinculado || '').trim();
+    const exp = expedientesServidor.find(e => (id && (e.id === id || e.ritVinculado === id)) || (rit && (e.ritVinculado === rit || e.id === rit)));
+    if (exp && exp.carpetaFisica) {
+      carpetaFisicaAsignada = exp.carpetaFisica;
+    }
+  }
+
+  if (carpetaFisicaAsignada) {
+    const folderName = carpetaFisicaAsignada.split('/').pop() || 'Carpeta Vinculada';
+    const foundInReal = REAL_DISK_DATA.find(d => d.path === carpetaFisicaAsignada || d.folderName.trim().toLowerCase() === folderName.toLowerCase());
+    if (foundInReal) {
+      return { ...foundInReal, path: carpetaFisicaAsignada };
+    }
+    return {
+      folderName: folderName,
+      path: carpetaFisicaAsignada,
+      documentosGenerales: casoObj.documentosGenerales || [],
+      causas: []
+    };
+  }
+
   const cliente = casoObj.cliente || '';
   
   // MÉTODO 1 (PRIORITARIO): Extraer nombre exacto de carpeta desde la marca 📁 inyectada por importar_excel_pjud.py

@@ -57,7 +57,66 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
   // Pendientes de bitácora: trabajo sin fecha de vencimiento o con vencimiento abierto.
   const [pendientes, setPendientes] = useState([]);
   const [ordenPendientes, setOrdenPendientes] = useState('creacion_asc');
+  const [modoVistaPendientes, setModoVistaPendientes] = useState('kanban'); // 'kanban' | 'tabla'
   const pendientesOrdenados = useMemo(() => ordenarPendientes(pendientes, ordenPendientes), [pendientes, ordenPendientes]);
+
+  const kanbanPendientesData = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    const finSemana = new Date(hoy);
+    const dayOfWeek = hoy.getDay(); // 0 es Domingo
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    finSemana.setDate(finSemana.getDate() + daysUntilSunday);
+    finSemana.setHours(23, 59, 59, 999);
+
+    const parseFechaStr = (str) => {
+      if (!str) return null;
+      const s = String(str).trim();
+      const partes = s.split('/');
+      if (partes.length === 3) {
+        const d = parseInt(partes[0], 10);
+        const m = parseInt(partes[1], 10) - 1;
+        const y = parseInt(partes[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      const partesDash = s.split('-');
+      if (partesDash.length === 3) {
+        const y = parseInt(partesDash[0], 10);
+        const m = parseInt(partesDash[1], 10) - 1;
+        const d = parseInt(partesDash[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      return null;
+    };
+
+    const colManana = [];
+    const colRestoSemana = [];
+    const colDemasPendientes = [];
+
+    pendientes.forEach((g) => {
+      const targetFechaStr = g.fechaVencimiento || g.vencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha;
+      const targetDate = parseFechaStr(targetFechaStr);
+
+      if (targetDate) {
+        targetDate.setHours(0, 0, 0, 0);
+        if (targetDate.getTime() === manana.getTime()) {
+          colManana.push(g);
+        } else if (targetDate > manana && targetDate <= finSemana) {
+          colRestoSemana.push(g);
+        } else {
+          colDemasPendientes.push(g);
+        }
+      } else {
+        colDemasPendientes.push(g);
+      }
+    });
+
+    return { colManana, colRestoSemana, colDemasPendientes };
+  }, [pendientes]);
   const [expedientesReales, setExpedientesReales] = useState([]);
   const [cargandoReal, setCargandoReal] = useState(true);
   // Sólo audiencias con fecha Y hora fijada por el tribunal -no cualquier
@@ -544,104 +603,304 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
         </div>
       </div>
 
-      {/* Pendientes de bitácora — tabla estilo planilla con fechas y orden clicable */}
+      {/* Pendientes de bitácora — Tablero Kanban de 3 Columnas o Tabla estilo Planilla */}
       {pendientes.length > 0 && (
         <div className="card card-static" style={{ overflow: 'hidden' }}>
           <div className="card-header row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
             <div className="row" style={{ gap: 'var(--space-2)' }}>
               <Flame size={20} color="var(--warn)" />
               <span className="card-title">Pendientes de bitácora ({pendientes.length})</span>
-              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>— Haz clic en una fila para abrir la ficha</span>
+              <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>— Haz clic en cualquier tarjeta para abrir la causa</span>
+            </div>
+
+            {/* Selector de Vista: Kanban (3 Col) vs Planilla */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setModoVistaPendientes('kanban')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  background: modoVistaPendientes === 'kanban' ? 'rgba(74, 163, 199, 0.2)' : 'transparent',
+                  color: modoVistaPendientes === 'kanban' ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                  border: modoVistaPendientes === 'kanban' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+              >
+                📊 Tablero Kanban (3 Col)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoVistaPendientes('tabla')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  background: modoVistaPendientes === 'tabla' ? 'rgba(74, 163, 199, 0.2)' : 'transparent',
+                  color: modoVistaPendientes === 'tabla' ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                  border: modoVistaPendientes === 'tabla' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+              >
+                📋 Vista Planilla
+              </button>
             </div>
           </div>
-          <div className="table-wrap">
-            <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ width: '120px' }}>Causa / ROL</th>
-                  <th>Gestión pendiente</th>
-                  <th
-                    style={{ width: '130px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-                    onClick={() => setOrdenPendientes(ordenPendientes === 'creacion_asc' ? 'creacion_desc' : 'creacion_asc')}
-                    title="Haz clic para ordenar por fecha de creación"
-                  >
-                    Creada
-                    {' '}{ordenPendientes === 'creacion_asc' ? '▲' : ordenPendientes === 'creacion_desc' ? '▼' : ''}
-                  </th>
-                  <th
-                    style={{ width: '135px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-                    onClick={() => setOrdenPendientes(ordenPendientes === 'vencimiento_asc' ? 'vencimiento_desc' : 'vencimiento_asc')}
-                    title="Haz clic para ordenar por fecha de vencimiento"
-                  >
-                    Vencimiento
-                    {' '}{ordenPendientes === 'vencimiento_asc' ? '▲' : ordenPendientes === 'vencimiento_desc' ? '▼' : ''}
-                  </th>
-                  <th style={{ width: '130px' }}>Antigüedad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendientesOrdenados.slice(0, 25).map((g) => {
-                  const colorBorde = g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--border-color)';
-                  return (
-                    <tr
-                      key={g.id}
-                      onClick={() => handleAbrirCasoDesdePlazo(g)}
-                      title="Haz clic para abrir la ficha y marcarla REALIZADO"
-                      style={{ cursor: 'pointer', borderLeft: `3px solid ${colorBorde}` }}
-                    >
-                      {/* Causa */}
-                      <td>
-                        <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
-                          <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-xs)' }}>{g.casoRit}</span>
-                          {g.fueraDePlanilla && (
-                            <span className="badge badge-yellow" style={{ fontSize: '10px' }} title="Fuera de planilla">ext</span>
-                          )}
-                        </span>
-                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2 }}>{g.caratulaMostrada}</div>
-                      </td>
-                      {/* Gestión */}
-                      <td style={{ maxWidth: 0 }}>
-                        <div style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          color: 'var(--text-primary)',
-                          fontWeight: 500,
-                          fontSize: 'var(--text-xs)'
-                        }}>
-                          {g.titulo}
+
+          {modoVistaPendientes === 'kanban' ? (
+            /* TABLERO KANBAN DE 3 COLUMNAS EN MI DÍA / DASHBOARD */
+            <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', background: 'var(--bg-secondary)' }}>
+              {/* COLUMNA 1: GESTIONES DE MAÑANA */}
+              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(234, 179, 8, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🌅 Mañana ({kanbanPendientesData.colManana.length})
+                  </strong>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.2)', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                    Urgente
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
+                  {kanbanPendientesData.colManana.length === 0 ? (
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      Sin gestiones para mañana
+                    </div>
+                  ) : (
+                    kanbanPendientesData.colManana.map((g) => (
+                      <div
+                        key={g.id}
+                        onClick={() => handleAbrirCasoDesdePlazo(g)}
+                        className="feed-item-clickable"
+                        style={{
+                          padding: '12px',
+                          borderRadius: '10px',
+                          background: 'var(--bg-secondary)',
+                          borderLeft: '4px solid var(--accent-gold)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                            {g.casoRit || g.rit || 'Expediente'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                            📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
+                          </span>
                         </div>
-                        {(g.notas || '').toUpperCase().includes('EN ESPERA') && (
-                          <span style={{ fontSize: '10px', color: 'var(--accent-purple)' }}>⚖️ en espera del tribunal</span>
-                        )}
-                      </td>
-                      {/* Fecha creación */}
-                      <td className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                        {g.fechaCreacion || g.fechaMostrada || '—'}
-                      </td>
-                      {/* Fecha vencimiento */}
-                      <td className="mono" style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
-                        {g.fechaVencimiento
-                          ? <strong style={{ color: 'var(--warn)' }}>{g.fechaVencimiento}</strong>
-                          : <span style={{ color: 'var(--text-muted)' }}>Sin vencimiento</span>
-                        }
-                      </td>
-                      {/* Antigüedad */}
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <strong style={{
-                          fontFamily: 'monospace',
-                          fontSize: 'var(--text-xs)',
-                          color: g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--text-secondary)'
-                        }}>
-                          {g.etiquetaTiempo}
-                        </strong>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* COLUMNA 2: GESTIONES EN LO QUE QUEDA DE LA SEMANA */}
+              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📅 Resto de la Semana ({kanbanPendientesData.colRestoSemana.length})
+                  </strong>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontWeight: 'bold' }}>
+                    Semana
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
+                  {kanbanPendientesData.colRestoSemana.length === 0 ? (
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      Sin gestiones esta semana
+                    </div>
+                  ) : (
+                    kanbanPendientesData.colRestoSemana.map((g) => (
+                      <div
+                        key={g.id}
+                        onClick={() => handleAbrirCasoDesdePlazo(g)}
+                        className="feed-item-clickable"
+                        style={{
+                          padding: '12px',
+                          borderRadius: '10px',
+                          background: 'var(--bg-secondary)',
+                          borderLeft: '4px solid #c084fc',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                            {g.casoRit || g.rit || 'Expediente'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#c084fc', fontWeight: 'bold' }}>
+                            📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* COLUMNA 3: RESTO DE PENDIENTES */}
+              <div style={{ background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid rgba(74, 163, 199, 0.3)', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(74, 163, 199, 0.2)', paddingBottom: '8px' }}>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📋 Resto de Pendientes ({kanbanPendientesData.colDemasPendientes.length})
+                  </strong>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(74, 163, 199, 0.2)', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>
+                    General
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto' }}>
+                  {kanbanPendientesData.colDemasPendientes.length === 0 ? (
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No hay más pendientes registradas
+                    </div>
+                  ) : (
+                    kanbanPendientesData.colDemasPendientes.map((g) => (
+                      <div
+                        key={g.id}
+                        onClick={() => handleAbrirCasoDesdePlazo(g)}
+                        className="feed-item-clickable"
+                        style={{
+                          padding: '12px',
+                          borderRadius: '10px',
+                          background: 'var(--bg-secondary)',
+                          borderLeft: '4px solid var(--accent-cyan)',
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="mono" style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                            {g.casoRit || g.rit || 'Expediente'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+                            📅 {g.fechaVencimiento || g.fechaObjetivo || g.fechaTramite || g.fechaMostrada || g.fecha || 'Sin plazo'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          {g.titulo || g.actuacion || g.tramite || g.descripcion || 'Gestión Pendiente'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {g.caratulaMostrada || g.caratula || g.cliente || g.asunto || ''}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* VISTA TABLA PLANILLA */
+            <div className="table-wrap">
+              <table className="table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '120px' }}>Causa / ROL</th>
+                    <th>Gestión pendiente</th>
+                    <th
+                      style={{ width: '130px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                      onClick={() => setOrdenPendientes(ordenPendientes === 'creacion_asc' ? 'creacion_desc' : 'creacion_asc')}
+                      title="Haz clic para ordenar por fecha de creación"
+                    >
+                      Creada
+                      {' '}{ordenPendientes === 'creacion_asc' ? '▲' : ordenPendientes === 'creacion_desc' ? '▼' : ''}
+                    </th>
+                    <th
+                      style={{ width: '135px', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                      onClick={() => setOrdenPendientes(ordenPendientes === 'vencimiento_asc' ? 'vencimiento_desc' : 'vencimiento_asc')}
+                      title="Haz clic para ordenar por fecha de vencimiento"
+                    >
+                      Vencimiento
+                      {' '}{ordenPendientes === 'vencimiento_asc' ? '▲' : ordenPendientes === 'vencimiento_desc' ? '▼' : ''}
+                    </th>
+                    <th style={{ width: '130px' }}>Antigüedad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendientesOrdenados.slice(0, 25).map((g) => {
+                    const colorBorde = g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--border-color)';
+                    return (
+                      <tr
+                        key={g.id}
+                        onClick={() => handleAbrirCasoDesdePlazo(g)}
+                        title="Haz clic para abrir la ficha y marcarla REALIZADO"
+                        style={{ cursor: 'pointer', borderLeft: `3px solid ${colorBorde}` }}
+                      >
+                        {/* Causa */}
+                        <td>
+                          <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+                            <span className="mono" style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-xs)' }}>{g.casoRit}</span>
+                            {g.fueraDePlanilla && (
+                              <span className="badge badge-yellow" style={{ fontSize: '10px' }} title="Fuera de planilla">ext</span>
+                            )}
+                          </span>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2 }}>{g.caratulaMostrada}</div>
+                        </td>
+                        {/* Gestión */}
+                        <td style={{ maxWidth: 0 }}>
+                          <div style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: 'var(--text-primary)',
+                            fontWeight: 500,
+                            fontSize: 'var(--text-xs)'
+                          }}>
+                            {g.titulo}
+                          </div>
+                          {(g.notas || '').toUpperCase().includes('EN ESPERA') && (
+                            <span style={{ fontSize: '10px', color: 'var(--accent-purple)' }}>⚖️ en espera del tribunal</span>
+                          )}
+                        </td>
+                        {/* Fecha creación */}
+                        <td className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                          {g.fechaCreacion || g.fechaMostrada || '—'}
+                        </td>
+                        {/* Fecha vencimiento */}
+                        <td className="mono" style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                          {g.fechaVencimiento
+                            ? <strong style={{ color: 'var(--warn)' }}>{g.fechaVencimiento}</strong>
+                            : <span style={{ color: 'var(--text-muted)' }}>Sin vencimiento</span>
+                          }
+                        </td>
+                        {/* Antigüedad */}
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <strong style={{
+                            fontFamily: 'monospace',
+                            fontSize: 'var(--text-xs)',
+                            color: g.diasPendiente >= 30 ? 'var(--danger)' : g.diasPendiente >= 7 ? 'var(--warn)' : 'var(--text-secondary)'
+                          }}>
+                            {g.etiquetaTiempo}
+                          </strong>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           {pendientes.length > 25 && (
             <div className="card-pad">
               <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>

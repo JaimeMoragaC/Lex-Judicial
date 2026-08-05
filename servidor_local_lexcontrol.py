@@ -2543,6 +2543,57 @@ class LexControlFileHandler(BaseHTTPRequestHandler):
         elif parsed_url.path == "/expedientes":
             self._responder_json({"expedientes": catalogos.cargar_expedientes()})
 
+        # ENDPOINT 13b: /listar_directorios_disco (Explorador interactivo de carpetas de disco duro)
+        elif parsed_url.path in ["/listar_directorios_disco", "/api/listar_directorios_disco"]:
+            try:
+                query_params = urllib.parse.parse_qs(parsed_url.query)
+                ruta_solicitada = query_params.get("path", [None])[0]
+
+                default_base = "/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023"
+                if not ruta_solicitada or not os.path.exists(ruta_solicitada):
+                    if os.path.exists(default_base):
+                        ruta_actual = default_base
+                    elif os.path.exists("/media/jaime"):
+                        ruta_actual = "/media/jaime"
+                    else:
+                        ruta_actual = str(Path.home())
+                else:
+                    ruta_actual = os.path.abspath(os.path.expanduser(ruta_solicitada))
+
+                subcarpetas = []
+                padre = os.path.dirname(ruta_actual) if ruta_actual != "/" else None
+
+                try:
+                    with os.scandir(ruta_actual) as it:
+                        for entry in it:
+                            if entry.is_dir(follow_symlinks=False) and not entry.name.startswith("."):
+                                subcarpetas.append({
+                                    "nombre": entry.name,
+                                    "path": entry.path
+                                })
+                except Exception as e_scan:
+                    print(f"⚠️ Error escaneando {ruta_actual}: {e_scan}")
+
+                subcarpetas.sort(key=lambda x: x["nombre"].lower())
+
+                atajos = []
+                for p in [default_base, "/media/jaime", str(Path.home() / "Descargas"), str(Path.home())]:
+                    if os.path.exists(p) and p not in [a["path"] for a in atajos]:
+                        atajos.append({"nombre": os.path.basename(p) or p, "path": p})
+
+                self._responder_json({
+                    "status": "ok",
+                    "rutaActual": ruta_actual,
+                    "padre": padre,
+                    "subcarpetas": subcarpetas,
+                    "totalSubcarpetas": len(subcarpetas),
+                    "atajos": atajos
+                })
+            except Exception as e:
+                print(f"⚠️ Error en explorador de directorios: {e}")
+                self._responder_json({"error": str(e)}, 500)
+            return
+
         # ENDPOINT 13b: /expedientes_duplicados (candidatos a fusión: exactos por
         # ROL + probables por nombre de cliente parecido + carátula parecida)
         elif parsed_url.path == "/expedientes_duplicados":
@@ -3299,43 +3350,207 @@ BITÁCORA (más reciente primero):
                 self._responder_json({"status": "error", "error": str(e)}, 500)
             return
 
-        # ENDPOINT 10: /generar_escrito_ia (Redactor Forense de Escritos Judiciales)
+        # ENDPOINT 10: /generar_escrito_ia (Redactor Forense de Escritos Judiciales basado en RAG)
         elif parsed_url.path == "/generar_escrito_ia":
             try:
                 content_length = int(self.headers.get('Content-Length', 0))
                 post_data = self.rfile.read(content_length)
                 payload = json.loads(post_data.decode('utf-8'))
-                
+
                 caso = payload.get("caso", {})
                 tipo_escrito = payload.get("tipo_escrito", "Solicitud Procesal")
                 instruccion = payload.get("instruccion", "")
-                modo = payload.get("modo", "ia")  # 'ia' o 'heuristico'
-                
-                caratula = caso.get("caratula") or caso.get("cliente") or "PARTE ACTORA con PARTE DEMANDADA"
-                tribunal = caso.get("tribunal", "JUZGADO CORRESPONDIENTE")
+                modo = payload.get("modo", "heuristico")
+
+                caratula_raw = caso.get("caratula") or caso.get("cliente") or gestion.get("expedienteAsunto") or gestion.get("expedienteCliente") or "PARTE ACTORA con PARTE DEMANDADA"
+                # Regla 2: Carátula limpia sin mención a Expediente en Disco
+                caratula = re.sub(r'📁?\s*\(Expediente en Disco:[^)]*\)', '', caratula_raw, flags=re.IGNORECASE).strip()
+                caratula = re.sub(r'📁?\s*Expediente en Disco:[^\n]*', '', caratula, flags=re.IGNORECASE).strip()
+                if not caratula: caratula = "PARTE ACTORA con PARTE DEMANDADA"
+
+                tribunal_raw = caso.get("tribunal") or gestion.get("origen") or "Calbuco"
                 rit = caso.get("rit") or caso.get("rol") or caso.get("id") or "C-2026"
                 materia = caso.get("materia", "Derecho Procesal Chileno")
+                cliente = caso.get("cliente", "")
 
-                # MODO HEURÍSTICO 100% LOCAL (SIN IA NI INTERNET)
-                if modo == "heuristico":
-                    snippet_base = ""
+                # Regla 1: Formateo limpio del nombre del tribunal (ej: S. J. L. DE CALBUCO, S. J. L. DE GARANTÍA DE OSORNO)
+                def limpiar_nombre_tribunal(t):
+                    if not t or t.strip() == "": return "S. J. L."
+                    t_clean = t.strip()
+                    t_clean = re.sub(r'^\s*S\.?\s*J\.?\s*L\.?\s*(DE|DEL)?\s*', '', t_clean, flags=re.IGNORECASE).strip()
+                    t_clean = re.sub(r'(Juzgado\s+de\s*)+', 'Juzgado de ', t_clean, flags=re.IGNORECASE).strip()
+                    t_up = t_clean.upper()
+                    if t_up.startswith('JUZGADO DE GARANTÍA DE'):
+                        comuna = t_up.split('JUZGADO DE GARANTÍA DE')[-1].strip()
+                        return f'S. J. L. DE GARANTÍA DE {comuna}'
+                    if t_up.startswith('JUZGADO DE LETRAS DE'):
+                        comuna = t_up.split('JUZGADO DE LETRAS DE')[-1].strip()
+                        return f'S. J. L. DE LETRAS DE {comuna}'
+                    if t_up.startswith('JUZGADO DE LETRAS Y GARANTÍA DE'):
+                        comuna = t_up.split('JUZGADO DE LETRAS Y GARANTÍA DE')[-1].strip()
+                        return f'S. J. L. DE LETRAS Y GARANTÍA DE {comuna}'
+                    if t_up.startswith('JUZGADO DE '):
+                        sub = t_up[len('JUZGADO DE '):].strip()
+                        return f'S. J. L. DE {sub}'
+                    return f'S. J. L. DE {t_up}'
+
+                encabezado_tribunal = limpiar_nombre_tribunal(tribunal_raw)
+
+                # Limpiar instrucción de cualquier referencia a expediente en disco
+                instruccion = re.sub(r'📁?\s*\(Expediente en Disco:[^)]*\)', '', instruccion, flags=re.IGNORECASE).strip()
+
+                # 🔍 RAG INJECTOR: Extraer el texto COMPLETO de los ESCRITOS JUDICIALES reales del estudio (12.900 docs)
+                precedentes_reales = []
+                db_path = BASE_DIR / "data" / "indice_texto.sqlite"
+                if db_path.exists():
                     try:
-                        db_path = BASE_DIR / "data" / "indice_texto.sqlite"
-                        if db_path.exists():
-                            con_fts = sqlite3.connect(db_path)
-                            kw = re.sub(r'[^a-zA-Z0-9\s]', '', tipo_escrito + " " + materia).strip()
-                            kw_query = " OR ".join([w for w in kw.split() if len(w) > 3][:3])
-                            if kw_query:
-                                res = con_fts.execute("SELECT snippet(textos, 3, '', '', '...', 30) FROM textos WHERE contenido MATCH ? LIMIT 1", (kw_query,)).fetchone()
-                                if res: snippet_base = res[0]
-                            con_fts.close()
-                    except Exception:
-                        pass
+                        con_fts = sqlite3.connect(db_path)
+                        kw_clean = re.sub(r'[^a-zA-Z0-9\s]', '', f"{tipo_escrito} {materia} {caratula} {cliente}").strip()
+                        palabras = [w for w in kw_clean.split() if len(w) > 3][:4]
 
-                    txt_antecedentes = f"ANTECEDENTES EXTRAÍDOS DE LA BASE DEL ESTUDIO:\n{snippet_base}" if snippet_base else ""
-                    escrito_heuristico = f"""EN LO PRINCIPAL: {tipo_escrito.upper()}.
+                        sql_rag = """SELECT nombre, carpeta, contenido 
+                                     FROM textos 
+                                     WHERE (contenido LIKE '%EN LO PRINCIPAL%' OR contenido LIKE '%S. J. L.%' OR contenido LIKE '%POR TANTO%' OR contenido LIKE '%JAIME MORAGA%')
+                                       AND (nombre LIKE ? OR contenido LIKE ?)
+                                       AND NOT (contenido LIKE '%POLICIA DE INVESTIGACIONES%' OR contenido LIKE '%DECLARACION POLICIAL%' OR contenido LIKE '%ANEXO N°%' OR contenido LIKE '%DECLARACION DE TESTIGO%' OR contenido LIKE '%HOJA DE ATENCION%')
+                                     LIMIT 3"""
 
-S. J. L. ({tribunal.upper()})
+                        kw_primario = palabras[0] if palabras else "escrito"
+                        rows = con_fts.execute(sql_rag, (f"%{kw_primario}%", f"%{kw_primario}%")).fetchall()
+
+                        if not rows:
+                            sql_fallback = """SELECT nombre, carpeta, contenido 
+                                              FROM textos 
+                                              WHERE (contenido LIKE '%EN LO PRINCIPAL%' OR contenido LIKE '%S. J. L.%')
+                                                AND NOT (contenido LIKE '%POLICIA DE INVESTIGACIONES%' OR contenido LIKE '%DECLARACION POLICIAL%' OR contenido LIKE '%ANEXO N°%' OR contenido LIKE '%DECLARACION DE TESTIGO%')
+                                              LIMIT 3"""
+                            rows = con_fts.execute(sql_fallback).fetchall()
+
+                        for r in rows:
+                            txt = r[2].strip()
+                            if len(txt) > 3000:
+                                txt = txt[:3000] + "\n[...recortado para RAG...]"
+                            precedentes_reales.append({
+                                "nombre": r[0],
+                                "carpeta": r[1],
+                                "texto": txt
+                            })
+                        con_fts.close()
+                    except Exception as e_fts:
+                        print(f"⚠️ Error RAG FTS5: {e_fts}")
+
+                txt_precedentes_estudio = ""
+                if precedentes_reales:
+                    txt_precedentes_estudio = "\n\n".join([
+                        f"=== PRECEDENTE HISTÓRICO REAL DEL ESTUDIO: {p['nombre']} (Carpeta: {p['carpeta']}) ===\n{p['texto']}"
+                        for p in precedentes_reales
+                    ])
+
+                escrito_final = ""
+
+                prompt_ollama = f"""Eres el redactor jurídico senior del Estudio Jurídico Jaime Moraga Carrasco.
+Redacta un ESCRITO JUDICIAL COMPLETO, FORMAL Y RIGUROSO conforme al Derecho Procesal Chileno (CPC / CPP).
+
+DATOS DE LA NUEVA CAUSA:
+- TIPO DE ESCRITO: {tipo_escrito}
+- CARÁTULA: {caratula}
+- ROL / RIT: {rit}
+- TRIBUNAL: {encabezado_tribunal}
+- MATERIA: {materia}
+- INSTRUCCIONES / ANTECEDENTES: {instruccion}
+
+ESCRITOS HISTÓRICOS REALES DE LA BASE DE DATOS DEL ESTUDIO QUE DEBES USAR DE BASE Y PLANTILLA:
+{txt_precedentes_estudio if txt_precedentes_estudio else 'Usa la doctrina y formato procesal estándar de Chile.'}
+
+REGLAS OBLIGATORIAS E INVIOLABLES:
+1. NUNCA UTILICES LA EXPRESIÓN 'ES JUSTICIA' NI AL FINAL NI EN NINGUNA PARTE DEL ESCRITO. (Regla chilena moderna).
+2. NUNCA MENCIONES '📁 (Expediente en Disco: ...)' ni textos de archivos internos.
+3. El encabezado del tribunal debe ser exactamente: {encabezado_tribunal}
+4. La carátula debe ser completa: "{caratula}"
+5. Incluye Sumas (EN LO PRINCIPAL: ...; EN EL OTROSÍ: ...).
+6. Individualización formal: JAIME MARCELO MORAGA CARRASCO, abogado, por la parte correspondiente en autos caratulados "{caratula}", ROL {rit}...
+7. Devuelve ÚNICAMENTE el texto limpio del escrito formateado en texto plano.
+"""
+
+                # 1. INTENTAR GENERACIÓN LOCAL CON OLLAMA (qwen3 / llama3.1 / mistral)
+                try:
+                    for modelo_ollama in ["qwen3:4b-instruct-2507-q4_K_M", "llama3.1:8b", "mistral:latest"]:
+                        try:
+                            req_ollama = urllib.request.Request(
+                                f"{OLLAMA_HOST}/api/generate",
+                                data=json.dumps({"model": modelo_ollama, "prompt": prompt_ollama, "stream": False}).encode("utf-8"),
+                                headers={"Content-Type": "application/json"}
+                            )
+                            with urllib.request.urlopen(req_ollama, timeout=12) as res_o:
+                                res_json = json.loads(res_o.read().decode("utf-8"))
+                                resp_text = res_json.get("response", "").strip()
+                                if len(resp_text) > 150 and not "lo siento" in resp_text.lower():
+                                    escrito_final = resp_text
+                                    print(f"🤖 [OLLAMA LOCAL] Escrito generado con éxito usando {modelo_ollama}")
+                                    break
+                        except Exception:
+                            continue
+                except Exception as e_ollama:
+                    print(f"⚠️ Ollama local no respondió: {e_ollama}")
+
+                # 2. SI MODO ES 'ia' Y HAY CLAVE DE GEMINI, PROBAR GEMINI API
+                if not escrito_final and modo == "ia" and GEMINI_API_KEY:
+                    try:
+                        url_g = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                        gemini_payload = {
+                            "contents": [{"parts": [{"text": prompt_ollama}]}],
+                            "generationConfig": {"temperature": 0.2}
+                        }
+                        req_g = urllib.request.Request(url_g, data=json.dumps(gemini_payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+                        with urllib.request.urlopen(req_g, timeout=25) as response_g:
+                            res_g = json.loads(response_g.read().decode('utf-8'))
+                            escrito_final = res_g['candidates'][0]['content']['parts'][0]['text']
+                    except Exception as e_g:
+                        print(f"⚠️ Gemini API falló: {e_g}")
+
+                # 3. VERIFICAR ESCRITOS PROCESALES FORMALES POR TIPO DE ESCRITO (Especialización Procesal Chilena)
+                if not escrito_final or "declaracion" in escrito_final.lower() or "policia" in escrito_final.lower():
+                    t_low = (tipo_escrito + " " + instruccion).lower()
+
+                    if "cierre" in t_low or "apercibimiento" in t_low or "247" in t_low:
+                        escrito_final = f"""EN LO PRINCIPAL: SOLICITA SE FIJE AUDIENCIA DE APERCIBIMIENTO DE CIERRE DE LA INVESTIGACIÓN (ART. 247 DEL CÓDIGO PROCESAL PENAL); EN EL OTROSÍ: FORMA DE NOTIFICACIÓN.
+
+{encabezado_tribunal}
+
+JAIME MARCELO MORAGA CARRASCO, abogado patrocinante por la defensa en los autos RIT {rit}, caratulados "{caratula}", a S.S. respetuosamente digo:
+
+Que encontrándose vencido en exceso el plazo judicial fijado por S.S. para la investigación, sin que el Ministerio Público haya formulado acusación ni comunicado la decisión de no formalizar ni declarado el cierre de la investigación, vengo en solicitar a S.S. se sirva citar a las partes a una audiencia a fin de apercibir al Fiscal a cargo para que proceda al cierre de la investigación, conforme a lo previsto en el artículo 247 del Código Procesal Penal.
+
+FUNDAMENTOS DE HECHO Y DE DERECHO:
+1. En las presentes actuaciones se formalizó la investigación fijándose un plazo determinado para la realización de las diligencias.
+2. Habiendo transcurrido íntegramente dicho término, el ente fiscal no ha hecho uso de las facultades procesales ni ha cerrado la investigación.
+3. El artículo 247 inciso primero del Código Procesal Penal dispone: "Transcurrido el plazo fijado para la investigación o su prórroga... el juez, a solicitud de cualquiera de los intervinientes, citará a una audiencia para apercibir al fiscal a que cierre la investigación."
+
+POR TANTO,
+A S.S. RUEGO acceder a lo solicitado, citando a las partes a la brevedad a audiencia de apercibimiento de cierre de investigación conforme al artículo 247 del Código Procesal Penal.
+
+OTROSÍ: Sírvase S.S. tener presente que señalo como forma de notificación la casilla de correo electrónico institucional registrada en autos."""
+
+                    elif "reposic" in t_low or "181" in t_low:
+                        escrito_final = f"""EN LO PRINCIPAL: RECURSO DE REPOSICIÓN; EN EL OTROSÍ: SUBSIDIO DE APELACIÓN.
+
+{encabezado_tribunal}
+
+JAIME MARCELO MORAGA CARRASCO, abogado por la parte correspondiente en los autos caratulados "{caratula}", ROL/RIT {rit}, a S.S. respetuosamente digo:
+
+Que estando dentro de plazo legal, vengo en interponer recurso de reposición en contra de la resolución de fecha reciente que no dio lugar a lo solicitado por esta parte, solicitando se sirva enmendarla por contrario imperio y resolver en su lugar acoger nuestra petición.
+
+POR TANTO,
+A S.S. RUEGO acceder a la reposición deducida.
+
+OTROSÍ: En el evento de no acogerse la reposición deducida, vengo en interponer recurso de apelación en su subsidio para ante la Ilma. Corte de Apelaciones respectiva."""
+
+                    elif precedentes_reales:
+                        escrito_final = f"/* ESCRITO BASADO EN PRECEDENTE HISTÓRICO REAL DEL ESTUDIO: {precedentes_reales[0]['nombre']} */\n\n" + precedentes_reales[0]["texto"]
+                    else:
+                        escrito_final = f"""EN LO PRINCIPAL: {tipo_escrito.upper()}.
+
+{encabezado_tribunal}
 
 JAIME MARCELO MORAGA CARRASCO, abogado, por la parte correspondiente en los autos caratulados "{caratula}", ROL/RIT {rit}, a S.S. respetuosamente digo:
 
@@ -3344,116 +3559,279 @@ Que por este acto vengo en solicitar {tipo_escrito.lower()} conforme a las norma
 FUNDAMENTOS DE HECHO Y DE DERECHO:
 {instruccion if instruccion else 'Que habiendo transcurrido el plazo legal sin que existan diligencias pendientes, corresponde dar curso progresivo a los autos.'}
 
-{txt_antecedentes}
-
 POR TANTO,
-A S.S. RUEGO acceder a lo solicitado y proveer de conformidad.
+A S.S. RUEGO acceder a lo solicitado y proveer de conformidad."""
 
-ES JUSTICIA."""
+                # 🛑 REGLAS FINALES DE LIMPIEZA INVIOLABLES:
+                # 1. Eliminar cualquier mención a "📁 (Expediente en Disco:...)"
+                escrito_final = re.sub(r'📁?\s*\(Expediente en Disco:[^)]*\)', '', escrito_final, flags=re.IGNORECASE).strip()
+                escrito_final = re.sub(r'📁?\s*Expediente en Disco:[^\n]*', '', escrito_final, flags=re.IGNORECASE).strip()
 
-                    self.send_response(200)
-                    self._send_cors_headers()
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"status": "ok", "escrito": escrito_heuristico, "modo": "heuristico_local"}, ensure_ascii=False).encode('utf-8'))
-                    return
+                # 2. ELIMINAR PARA SIEMPRE LA EXPRESIÓN "ES JUSTICIA"
+                escrito_final = re.sub(r'\n+\s*ES JUSTICIA\.?\s*$', '', escrito_final, flags=re.IGNORECASE).strip()
+                escrito_final = re.sub(r'\bES JUSTICIA\.?\b', '', escrito_final, flags=re.IGNORECASE).strip()
 
-                # 🔍 RAG INJECTOR: Buscar automáticamente precedentes históricos en los 12.870 documentos del estudio
-                precedentes_contexto = ""
-                try:
-                    db_path = BASE_DIR / "data" / "indice_texto.sqlite"
-                    if db_path.exists():
-                        con_fts = sqlite3.connect(db_path)
-                        # Limpiar palabras clave para la consulta FTS5
-                        kw = re.sub(r'[^a-zA-Z0-9\s]', '', tipo_escrito + " " + materia).strip()
-                        kw_query = " OR ".join([w for w in kw.split() if len(w) > 3][:4])
-                        if kw_query:
-                            res_fts = con_fts.execute(
-                                "SELECT nombre, carpeta, snippet(textos, 3, '', '', '...', 25) FROM textos WHERE contenido MATCH ? LIMIT 3",
-                                (kw_query,)
-                            ).fetchall()
-                            if res_fts:
-                                precedentes_contexto = "\n".join([f"• [{r[0]} - Carpeta {r[1]}]: {r[2]}" for r in res_fts])
-                        con_fts.close()
-                except Exception as e_fts:
-                    print(f"⚠️ Aviso RAG FTS5: {e_fts}")
-
-                prompt = f"""
-Eres un distinguido abogado litigante chileno y redactor judicial forense senior.
-Redacta un ESCRITO JUDICIAL COMPLETO, FORMAL Y RIGUROSO conforme al Código de Procedimiento Civil (CPC) o Código Procesal Penal (CPP) chileno según corresponda.
-
-DATOS DE LA CAUSA:
-- CARÁTULA: {caratula}
-- ROL / RIT: {rit}
-- TRIBUNAL: {tribunal}
-- MATERIA: {materia}
-
-TIPO DE ESCRITO: {tipo_escrito}
-INSTRUCCIÓN ESPECÍFICA DEL ABOGADO:
-{instruccion}
-
-PRECEDENTES Y ESTILO HISTÓRICO RECOLECTADO DE LOS 12.870 DOCUMENTOS DEL ESTUDIO:
-{precedentes_contexto if precedentes_contexto else 'No hay precedentes idénticos, redactar según doctrina general chilena.'}
-
-REGLAS DE FORMATO Y CONTENIDO DEL ESCRITO:
-1. Usa la fundamentación jurídica, tono institucional y petitorios de los precedentes del estudio indicados arriba como guía.
-2. Incluye las Sumas oficiales (EN LO PRINCIPAL: ..., EN EL PRIMER OTROSÍ: ...).
-3. Dirígete a la Autoridad Judicial formalmente (S. J. L. de Garantía / Civil / Letras / Trabajo / Ilma. Corte).
-4. Presentación formal del abogado (JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados...).
-5. Fundamentos de hecho y de derecho claros, rigurosos y citando artículos de leyes chilenas aplicables (ej: Art. 152 CPC, Art. 159 CPP, Art. 40 CPC, etc.).
-6. Petitorio formal en mayúsculas (POR TANTO, A S.S. RUEGO / PIDO...).
-7. Devuelve ÚNICAMENTE el texto limpio del escrito formateado en texto plano listo para copiar y pegar a Word u OJV.
-"""
-
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-                gemini_payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "temperature": 0.2
-                    }
-                }
-                
-                escrito_texto = ""
-                for intento in range(2):
-                    try:
-                        data = json.dumps(gemini_payload).encode('utf-8')
-                        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
-                        with urllib.request.urlopen(req, timeout=25) as response:
-                            res = json.loads(response.read().decode('utf-8'))
-                            escrito_texto = res['candidates'][0]['content']['parts'][0]['text']
-                            break
-                    except Exception as e_g:
-                        print(f"⚠️ Intento {intento+1} Redactor IA falló: {e_g}")
-                        if intento == 0:
-                            time.sleep(1)
-
-                if not escrito_texto:
-                    escrito_texto = f"""EN LO PRINCIPAL: {tipo_escrito.upper()}.
-
-S. J. L. ({tribunal.upper()})
-
-JAIME MARCELO MORAGA CARRASCO, por la parte correspondiente en los autos caratulados "{caratula}", ROL {rit}, a S.S. respetuosamente digo:
-
-Que por este acto vengo en solicitar {instruccion.lower() if instruccion else 'el impulso procesal correspondiente en la presente causa'}.
-
-POR TANTO,
-A S.S. RUEGO acceder a lo solicitado y proveer de conformidad.
-
-ES JUSTICIA."""
-
-                self.send_response(200)
-                self._send_cors_headers()
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "ok", "escrito": escrito_texto}, ensure_ascii=False).encode('utf-8'))
+                self._responder_json({"status": "ok", "escrito": escrito_final, "modo": modo})
             except Exception as e:
                 print(f"⚠️ Error generando escrito IA: {e}")
-                self.send_response(500)
-                self._send_cors_headers()
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "error": str(e)}).encode('utf-8'))
+                self._responder_json({"error": str(e)}, 500)
             return
+
+
+
+
+        # ENDPOINT 11: /exportar_dossier_notebooklm (Empaquetar expediente completo para Google NotebookLM)
+        elif parsed_url.path in ["/exportar_dossier_notebooklm", "/api/exportar_dossier_notebooklm"]:
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode('utf-8'))
+
+                caso = payload.get("caso", {})
+                gestiones = payload.get("gestiones", [])
+
+                rit = caso.get("rit") or caso.get("rol") or "C-2026"
+                caratula = caso.get("caratula") or caso.get("cliente") or "PARTE ACTORA con PARTE DEMANDADA"
+                tribunal = caso.get("tribunal", "JUZGADO CORRESPONDIENTE")
+                materia = caso.get("materia", "Derecho Procesal Chileno")
+
+                clean_rit = re.sub(r'[^a-zA-Z0-9_-]', '_', rit)
+                filename = f"Dossier_NotebookLM_ROL_{clean_rit}.md"
+                file_path = os.path.join("/tmp", filename)
+
+                contenido_md = f"""# DOSSIER LEGAL COMPLETO PARA GOOGLE NOTEBOOKLM
+
+## DATOS DEL EXPEDIENTE
+- **Causa ROL / RIT:** {rit}
+- **Carátula:** {caratula}
+- **Tribunal:** {tribunal}
+- **Materia:** {materia}
+- **Fecha de Compilación:** {time.strftime('%d/%m/%Y %H:%M:%S')}
+
+---
+
+## HISTORIAL DE GESTIONES Y ACTUACIONES PROCESALES ({len(gestiones)} registros)
+
+"""
+                for i, g in enumerate(gestiones, 1):
+                    tramite = g.get("tramite") or g.get("textoOriginal") or "Gestión procesal"
+                    fecha = g.get("fecha", "")
+                    cuaderno = g.get("cuaderno", "Principal")
+                    folio = g.get("folio", "")
+                    obs = g.get("observaciones") or g.get("textoOriginal") or ""
+
+                    contenido_md += f"### {i}. {tramite}\n"
+                    contenido_md += f"- **Fecha:** {fecha}\n"
+                    contenido_md += f"- **Cuaderno:** {cuaderno} | **Folio:** {folio}\n"
+                    if obs:
+                        contenido_md += f"- **Detalle / Resumen:** {obs}\n"
+                    contenido_md += "\n---\n\n"
+
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(contenido_md)
+
+                print(f"📓 [NOTEBOOKLM] Dossier exportado con éxito: {file_path}")
+                self._responder_json({
+                    "status": "ok",
+                    "ruta": file_path,
+                    "filename": filename,
+                    "url_notebooklm": "https://notebooklm.google.com",
+                    "mensaje": f"Dossier exportado en {file_path}. Listo para subir a Google NotebookLM."
+                })
+            except Exception as e:
+                print(f"⚠️ Error exportando dossier NotebookLM: {e}")
+                self._responder_json({"error": str(e)}, 500)
+            return
+
+        # ENDPOINT 12: /vincular_carpeta_caso (Vincular o cambiar manualmente la carpeta física en disco duro)
+        elif parsed_url.path in ["/vincular_carpeta_caso", "/api/vincular_carpeta_caso"]:
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode('utf-8'))
+
+                caso_id = payload.get("id") or payload.get("rit") or payload.get("rol")
+                nueva_carpeta = payload.get("nuevaCarpeta", "").strip()
+
+                if not caso_id or not nueva_carpeta:
+                    self._responder_json({"error": "Debe especificar la causa y la nueva ruta de la carpeta física"}, 400)
+                    return
+
+                # Normalizar ruta expandiendo ~ si aplica
+                if nueva_carpeta.startswith("~"):
+                    nueva_carpeta = os.path.expanduser(nueva_carpeta)
+
+                # Escanear archivos en la nueva carpeta física
+                docs_generales = []
+                if os.path.exists(nueva_carpeta) and os.path.isdir(nueva_carpeta):
+                    try:
+                        for entry in os.scandir(nueva_carpeta):
+                            if entry.is_file(follow_symlinks=False) and not entry.name.startswith("."):
+                                st = entry.stat()
+                                sz = st.st_size
+                                sz_str = f"{sz // 1024} KB" if sz < 1048576 else f"{round(sz / 1048576, 1)} MB"
+                                mtime_str = time.strftime('%d/%m/%Y %H:%M', time.localtime(st.st_mtime))
+                                docs_generales.append({
+                                    "name": entry.name,
+                                    "path": entry.path,
+                                    "size": sz_str,
+                                    "fecha": mtime_str
+                                })
+                    except Exception as e_scan:
+                        print(f"⚠️ Error escaneando carpeta vinculada: {e_scan}")
+
+                expedientes = catalogos.cargar_expedientes()
+                exp_encontrado = None
+                for e in expedientes:
+                    if e.get("id") == caso_id or e.get("ritVinculado") == caso_id or e.get("rit") == caso_id:
+                        e["carpetaFisica"] = nueva_carpeta
+                        e["documentosGenerales"] = docs_generales
+                        exp_encontrado = e
+                        break
+
+                if not exp_encontrado:
+                    # Crear o vincular expediente si aún no estaba en expedientes.json
+                    exp_encontrado = {
+                        "id": caso_id,
+                        "rit": caso_id,
+                        "ritVinculado": caso_id,
+                        "cliente": payload.get("cliente") or payload.get("caratula") or "Caso Vinculado",
+                        "caratula": payload.get("caratula") or "Caso Vinculado",
+                        "carpetaFisica": nueva_carpeta,
+                        "documentosGenerales": docs_generales,
+                        "creadoEn": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                        "gestiones": []
+                    }
+                    expedientes.append(exp_encontrado)
+
+                catalogos.guardar_expedientes(expedientes)
+                print(f"📂 [VÍNCULO DE CARPETA] Asignada carpeta física '{nueva_carpeta}' ({len(docs_generales)} archivos) a la causa {caso_id}")
+
+                self._responder_json({
+                    "status": "ok",
+                    "id": caso_id,
+                    "carpetaFisica": nueva_carpeta,
+                    "documentosGenerales": docs_generales,
+                    "mensaje": f"Carpeta vinculada correctamente: {nueva_carpeta}"
+                })
+            except Exception as e:
+                print(f"⚠️ Error vinculando carpeta física: {e}")
+                self._responder_json({"error": str(e)}, 500)
+            return
+
+        # ENDPOINT 13: /listar_directorios_disco (Explorador interactivo de carpetas de disco duro)
+        elif parsed_url.path in ["/listar_directorios_disco", "/api/listar_directorios_disco"]:
+            try:
+                ruta_solicitada = None
+                if parsed_qs.get("path"):
+                    ruta_solicitada = parsed_qs.get("path")[0]
+
+                default_base = "/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023"
+                if not ruta_solicitada or not os.path.exists(ruta_solicitada):
+                    if os.path.exists(default_base):
+                        ruta_actual = default_base
+                    elif os.path.exists("/media/jaime"):
+                        ruta_actual = "/media/jaime"
+                    else:
+                        ruta_actual = str(Path.home())
+                else:
+                    ruta_actual = os.path.abspath(os.path.expanduser(ruta_solicitada))
+
+                subcarpetas = []
+                padre = os.path.dirname(ruta_actual) if ruta_actual != "/" else None
+
+                try:
+                    with os.scandir(ruta_actual) as it:
+                        for entry in it:
+                            if entry.is_dir(follow_symlinks=False) and not entry.name.startswith("."):
+                                subcarpetas.append({
+                                    "nombre": entry.name,
+                                    "path": entry.path
+                                })
+                except Exception as e_scan:
+                    print(f"⚠️ Error escaneando {ruta_actual}: {e_scan}")
+
+                subcarpetas.sort(key=lambda x: x["nombre"].lower())
+
+                atajos = []
+                for p in [default_base, "/media/jaime", str(Path.home() / "Descargas"), str(Path.home())]:
+                    if os.path.exists(p) and p not in [a["path"] for a in atajos]:
+                        atajos.append({"nombre": os.path.basename(p) or p, "path": p})
+
+                self._responder_json({
+                    "status": "ok",
+                    "rutaActual": ruta_actual,
+                    "padre": padre,
+                    "subcarpetas": subcarpetas,
+                    "totalSubcarpetas": len(subcarpetas),
+                    "atajos": atajos
+                })
+            except Exception as e:
+                print(f"⚠️ Error en explorador de directorios: {e}")
+                self._responder_json({"error": str(e)}, 500)
+            return
+
+        # ENDPOINT: /abrir_libreoffice (Guarda el escrito borrador y lo abre en LibreOffice Writer nativo)
+        elif parsed_url.path in ["/abrir_libreoffice", "/api/abrir_libreoffice"]:
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode('utf-8'))
+
+                escrito = payload.get("escrito", "").strip()
+                titulo = payload.get("titulo", "Escrito Procesal")
+                rit = payload.get("rit") or payload.get("rol") or "C-2026"
+                caratula = payload.get("caratula", "")
+
+                if not escrito:
+                    self._responder_json({"error": "No hay contenido para abrir en LibreOffice"}, 400)
+                    return
+
+                clean_rit = re.sub(r'[^a-zA-Z0-9_-]', '_', rit)
+                timestamp = int(time.time())
+                filename = f"Escrito_{clean_rit}_{timestamp}.docx"
+                file_path = os.path.join("/tmp", filename)
+
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(escrito)
+
+                env = dict(os.environ)
+                if "DISPLAY" not in env:
+                    env["DISPLAY"] = ":0"
+
+                candidatos_lo = [
+                    "/opt/libreoffice24.8/program/swriter",
+                    "/opt/libreoffice24.8/program/soffice",
+                ]
+                for p in glob.glob("/opt/libreoffice*/program/swriter") + glob.glob("/opt/libreoffice*/program/soffice"):
+                    if p not in candidatos_lo:
+                        candidatos_lo.append(p)
+                candidatos_lo.extend(["libreoffice", "soffice", "xdg-open"])
+
+                cmd = ["libreoffice", "--writer", file_path]
+                for c in candidatos_lo:
+                    if c.startswith("/") and os.path.isfile(c):
+                        if "soffice" in c and "swriter" not in c:
+                            cmd = [c, "--writer", file_path]
+                        else:
+                            cmd = [c, file_path]
+                        break
+
+                subprocess.Popen(cmd, env=env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+                print(f"🖊️ [LIBREOFFICE WRITER] Iniciado nativo con orden: {cmd} -> {file_path}")
+                self._responder_json({
+                    "status": "ok",
+                    "ruta": file_path,
+                    "mensaje": f"Abriendo en LibreOffice Writer: {filename}"
+                })
+            except Exception as e:
+                print(f"⚠️ Error abriendo LibreOffice: {e}")
+                self._responder_json({"error": str(e)}, 500)
+            return
+
+
+
 
         # ENDPOINT: /subir_documento (Guardar archivo subido en carpeta del cliente e indexar en SQLite FTS5)
         elif parsed_url.path == "/subir_documento":

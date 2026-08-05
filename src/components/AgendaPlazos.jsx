@@ -26,13 +26,20 @@ import { cargarAtencion, audienciasProximas } from '../utils/radarPlazos.js';
 import { cargarTareas, guardarTareas, nuevaTarea } from '../utils/tareas.js';
 import { cargarExpedientes } from '../utils/expedientes.js';
 import PremiumCalendar from './PremiumCalendar';
+import ModalRedactarDocumento from './ModalRedactarDocumento.jsx';
+
 
 /** Ventana de "Audiencias Confirmadas en Tribunales": hoy + este tanto de días. */
 const DIAS_AUDIENCIAS = 30;
 
 export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
   const [activeTab, setActiveTab] = useState('agenda');
+  const [modoVistaTareas, setModoVistaTareas] = useState('kanban'); // 'kanban' | 'lista'
   const [tareasList, setTareasList] = useState([]);
+  const [showRedactarModal, setShowRedactarModal] = useState(false);
+  const [redactarModalGestion, setRedactarModalGestion] = useState(null);
+  const [redactarModalCaso, setRedactarModalCaso] = useState(null);
+
   // Plazos REALES, por la misma vía que el Dashboard, el Radar y la Sidebar.
   //
   // Antes esta pantalla pintaba MOCK_PLAZOS_FATALES, que se derivaba únicamente de
@@ -157,6 +164,64 @@ export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
   });
 
   const tareasActivasCount = tareasList.filter(t => !t.completada).length;
+
+  const kanbanTareasData = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    const finSemana = new Date(hoy);
+    const dayOfWeek = hoy.getDay();
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    finSemana.setDate(finSemana.getDate() + daysUntilSunday);
+    finSemana.setHours(23, 59, 59, 999);
+
+    const parseFechaStr = (str) => {
+      if (!str) return null;
+      const s = String(str).trim();
+      const partes = s.split('/');
+      if (partes.length === 3) {
+        const d = parseInt(partes[0], 10);
+        const m = parseInt(partes[1], 10) - 1;
+        const y = parseInt(partes[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      const partesDash = s.split('-');
+      if (partesDash.length === 3) {
+        const y = parseInt(partesDash[0], 10);
+        const m = parseInt(partesDash[1], 10) - 1;
+        const d = parseInt(partesDash[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      return null;
+    };
+
+    const colManana = [];
+    const colRestoSemana = [];
+    const colDemasPendientes = [];
+
+    tareasFiltradas.forEach((tarea) => {
+      if (tarea.completada) return;
+      const targetDate = parseFechaStr(tarea.fechaVencimiento);
+
+      if (targetDate) {
+        targetDate.setHours(0, 0, 0, 0);
+        if (targetDate.getTime() === manana.getTime()) {
+          colManana.push(tarea);
+        } else if (targetDate > manana && targetDate <= finSemana) {
+          colRestoSemana.push(tarea);
+        } else {
+          colDemasPendientes.push(tarea);
+        }
+      } else {
+        colDemasPendientes.push(tarea);
+      }
+    });
+
+    return { colManana, colRestoSemana, colDemasPendientes };
+  }, [tareasFiltradas]);
 
   return (
     <div className="animate-fade-in">
@@ -570,7 +635,7 @@ export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
             </div>
           )}
 
-          {/* Barra de Filtros y Búsqueda */}
+          {/* Barra de Filtros, Selector de Vista & Búsqueda */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
@@ -599,19 +664,287 @@ export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
               </select>
             </div>
 
+            {/* CONMUTADOR DE MODO KANBAN VS LISTA */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setModoVistaTareas('kanban')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  background: modoVistaTareas === 'kanban' ? 'rgba(74, 163, 199, 0.2)' : 'transparent',
+                  color: modoVistaTareas === 'kanban' ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                  border: modoVistaTareas === 'kanban' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+              >
+                📊 Tablero Kanban (3 Col)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoVistaTareas('lista')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  background: modoVistaTareas === 'lista' ? 'rgba(74, 163, 199, 0.2)' : 'transparent',
+                  color: modoVistaTareas === 'lista' ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                  border: modoVistaTareas === 'lista' ? '1px solid var(--accent-cyan)' : '1px solid var(--border-color)',
+                  cursor: 'pointer'
+                }}
+              >
+                📋 Vista Lista
+              </button>
+            </div>
+
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Mostrando <strong>{tareasFiltradas.length}</strong> de <strong>{tareasList.length}</strong> tareas registradas
             </div>
           </div>
 
-          {/* Lista de Tarjetas de Tareas */}
-          {tareasFiltradas.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
-              <ListTodo size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
-              <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', margin: 0 }}>No hay tareas o pendientes procesales que coincidan con los filtros.</p>
+          {/* RENDERIZADO MODO TABLERO KANBAN DE 3 COLUMNAS */}
+          {modoVistaTareas === 'kanban' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {/* COLUMNA 1: GESTIONES / PENDIENTES DE MAÑANA */}
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(234, 179, 8, 0.2)', paddingBottom: '10px' }}>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🌅 Mañana ({kanbanTareasData.colManana.length})
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.2)', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                    Urgente
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '120px' }}>
+                  {kanbanTareasData.colManana.length === 0 ? (
+                    <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      Sin pendientes para mañana
+                    </div>
+                  ) : (
+                    kanbanTareasData.colManana.map((tarea) => {
+                      const indexInList = tareasList.findIndex(t => t.id === tarea.id);
+                      return (
+                        <div
+                          key={tarea.id}
+                          className="glass-card"
+                          style={{
+                            padding: '14px',
+                            borderRadius: '10px',
+                            borderLeft: '4px solid var(--accent-gold)',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                              {tarea.casoRit}
+                            </span>
+                            <button
+                              onClick={() => handleToggleCompletada(indexInList)}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                              title="Marcar como completada"
+                            >
+                              <Square size={18} color="var(--text-muted)" />
+                            </button>
+                          </div>
+                          <h5 style={{ fontSize: '0.88rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                            {tarea.titulo}
+                          </h5>
+                          {tarea.notas && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, fontStyle: 'italic' }}>
+                              "{tarea.notas}"
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                              📅 {tarea.fechaVencimiento}
+                            </span>
+                            <button
+                              className="btn-secondary"
+                              style={{ padding: '3px 8px', fontSize: '0.72rem', color: 'var(--accent-color, #4aa3c7)' }}
+                              onClick={() => {
+                                setRedactarModalGestion({ tramite: tarea.titulo, textoOriginal: tarea.notas });
+                                setRedactarModalCaso({ rit: tarea.casoRit, caratula: tarea.casoCaratula });
+                                setShowRedactarModal(true);
+                              }}
+                            >
+                              ✍️ Redactar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* COLUMNA 2: GESTIONES EN LO QUE QUEDA DE LA SEMANA */}
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '10px' }}>
+                  <strong style={{ fontSize: '0.95rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📅 Resto de la Semana ({kanbanTareasData.colRestoSemana.length})
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontWeight: 'bold' }}>
+                    Esta Semana
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '120px' }}>
+                  {kanbanTareasData.colRestoSemana.length === 0 ? (
+                    <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      Sin pendientes en lo que queda de semana
+                    </div>
+                  ) : (
+                    kanbanTareasData.colRestoSemana.map((tarea) => {
+                      const indexInList = tareasList.findIndex(t => t.id === tarea.id);
+                      return (
+                        <div
+                          key={tarea.id}
+                          className="glass-card"
+                          style={{
+                            padding: '14px',
+                            borderRadius: '10px',
+                            borderLeft: '4px solid #c084fc',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                              {tarea.casoRit}
+                            </span>
+                            <button
+                              onClick={() => handleToggleCompletada(indexInList)}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                              title="Marcar como completada"
+                            >
+                              <Square size={18} color="var(--text-muted)" />
+                            </button>
+                          </div>
+                          <h5 style={{ fontSize: '0.88rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                            {tarea.titulo}
+                          </h5>
+                          {tarea.notas && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, fontStyle: 'italic' }}>
+                              "{tarea.notas}"
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#c084fc', fontWeight: 'bold' }}>
+                              📅 {tarea.fechaVencimiento}
+                            </span>
+                            <button
+                              className="btn-secondary"
+                              style={{ padding: '3px 8px', fontSize: '0.72rem', color: 'var(--accent-color, #4aa3c7)' }}
+                              onClick={() => {
+                                setRedactarModalGestion({ tramite: tarea.titulo, textoOriginal: tarea.notas });
+                                setRedactarModalCaso({ rit: tarea.casoRit, caratula: tarea.casoCaratula });
+                                setShowRedactarModal(true);
+                              }}
+                            >
+                              ✍️ Redactar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* COLUMNA 3: TODAS LAS DEMÁS PENDIENTES */}
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(74, 163, 199, 0.3)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(74, 163, 199, 0.2)', paddingBottom: '10px' }}>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📋 Resto de Pendientes ({kanbanTareasData.colDemasPendientes.length})
+                  </strong>
+                  <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '8px', background: 'rgba(74, 163, 199, 0.2)', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>
+                    General
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '120px' }}>
+                  {kanbanTareasData.colDemasPendientes.length === 0 ? (
+                    <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No hay más pendientes registradas
+                    </div>
+                  ) : (
+                    kanbanTareasData.colDemasPendientes.map((tarea) => {
+                      const indexInList = tareasList.findIndex(t => t.id === tarea.id);
+                      return (
+                        <div
+                          key={tarea.id}
+                          className="glass-card"
+                          style={{
+                            padding: '14px',
+                            borderRadius: '10px',
+                            borderLeft: '4px solid var(--accent-cyan)',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                              {tarea.casoRit}
+                            </span>
+                            <button
+                              onClick={() => handleToggleCompletada(indexInList)}
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                              title="Marcar como completada"
+                            >
+                              <Square size={18} color="var(--text-muted)" />
+                            </button>
+                          </div>
+                          <h5 style={{ fontSize: '0.88rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                            {tarea.titulo}
+                          </h5>
+                          {tarea.notas && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, fontStyle: 'italic' }}>
+                              "{tarea.notas}"
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
+                              📅 {tarea.fechaVencimiento || 'Sin plazo'}
+                            </span>
+                            <button
+                              className="btn-secondary"
+                              style={{ padding: '3px 8px', fontSize: '0.72rem', color: 'var(--accent-color, #4aa3c7)' }}
+                              onClick={() => {
+                                setRedactarModalGestion({ tramite: tarea.titulo, textoOriginal: tarea.notas });
+                                setRedactarModalCaso({ rit: tarea.casoRit, caratula: tarea.casoCaratula });
+                                setShowRedactarModal(true);
+                              }}
+                            >
+                              ✍️ Redactar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            /* Lista Estándar de Tarjetas de Tareas */
+            tareasFiltradas.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
+                <ListTodo size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', margin: 0 }}>No hay tareas o pendientes procesales que coincidan con los filtros.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {tareasFiltradas.map((tarea) => {
                 const indexInList = tareasList.findIndex(t => t.id === tarea.id);
                 const isCritica = tarea.prioridad === 'CRITICA';
@@ -690,6 +1023,18 @@ export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '8px 12px', fontSize: '0.78rem', color: 'var(--accent-color, #4aa3c7)', borderColor: 'rgba(74, 163, 199, 0.4)' }}
+                        onClick={() => {
+                          setRedactarModalGestion({ tramite: tarea.titulo, textoOriginal: tarea.notas });
+                          setRedactarModalCaso({ rit: tarea.casoRit, caratula: tarea.casoCaratula });
+                          setShowRedactarModal(true);
+                        }}
+                        title="Redactar escrito procesal en LibreOffice Writer"
+                      >
+                        ✍️ Redactar
+                      </button>
                       <button 
                         className="btn-secondary" 
                         style={{ padding: '8px 12px', fontSize: '0.78rem', color: 'var(--info)', borderColor: 'rgba(96, 165, 250, 0.3)' }} 
@@ -711,9 +1056,18 @@ export default function AgendaPlazos({ onSelectCaso, onOpenCrearExpediente }) {
                 );
               })}
             </div>
-          )}
+          )
+        )}
         </div>
       )}
+
+      <ModalRedactarDocumento
+        isOpen={showRedactarModal}
+        onClose={() => setShowRedactarModal(false)}
+        gestion={redactarModalGestion}
+        caso={redactarModalCaso}
+      />
     </div>
   );
 }
+

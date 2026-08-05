@@ -51,7 +51,9 @@ import { MOCK_CASOS } from '../mockData';
 import { PJUD_CASOS } from '../pjudCausesData';
 import { LEXCONTROL_API } from '../apiBase.js';
 import { cargarPlazos, guardarPlazos, normalizarFechaIso, hoyLocal } from '../utils/radarPlazos.js';
-import { cargarExpedientes, guardarExpedientes, expedienteDeCaso, guardarGestionesDeCaso, eliminarExpediente } from '../utils/expedientes.js';
+import { cargarExpedientes, guardarExpedientes, expedienteDeCaso, guardarGestionesDeCaso, eliminarExpediente, claveDeCaso } from '../utils/expedientes.js';
+import ModalRedactarDocumento from './ModalRedactarDocumento.jsx';
+
 
 function extraerCiudad(caso) {
   if (!caso) return 'Sin ciudad asignada';
@@ -93,6 +95,104 @@ export default function CasoDetailModal({ caso: casoProp, onClose, onOpenMatriz,
   const [subVistaPlanilla, setSubVistaPlanilla] = useState(() => (initialTab === 'gestiones' ? 'gestiones' : 'expedientes'));
   const [vistaModal, setVistaModal] = useState(() => (Array.isArray(casoProp) && casoProp.length > 1 ? 'planilla' : 'ficha'));
   const [modoVistaGestiones, setModoVistaGestiones] = useState('planilla');
+  const [showRedactarModal, setShowRedactarModal] = useState(false);
+  const [redactarModalGestion, setRedactarModalGestion] = useState(null);
+  const [exportandoNotebook, setExportandoNotebook] = useState(false);
+  const [showCambiarCarpeta, setShowCambiarCarpeta] = useState(false);
+  const [nuevaRutaCarpeta, setNuevaRutaCarpeta] = useState('');
+  const [guardandoCarpeta, setGuardandoCarpeta] = useState(false);
+  const [expedientesServidor, setExpedientesServidor] = useState([]);
+
+  const [browserRutaActual, setBrowserRutaActual] = useState('');
+  const [browserPadre, setBrowserPadre] = useState(null);
+  const [browserSubcarpetas, setBrowserSubcarpetas] = useState([]);
+  const [browserAtajos, setBrowserAtajos] = useState([]);
+  const [browserCargando, setBrowserCargando] = useState(false);
+  const [browserFiltro, setBrowserFiltro] = useState('');
+
+  const cargarNavegadorDirectorios = async (pathSolicitado) => {
+    setBrowserCargando(true);
+    try {
+      const url = `${LEXCONTROL_API}/listar_directorios_disco${pathSolicitado ? `?path=${encodeURIComponent(pathSolicitado)}` : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setBrowserRutaActual(data.rutaActual);
+        setBrowserPadre(data.padre);
+        setBrowserSubcarpetas(data.subcarpetas || []);
+        setBrowserAtajos(data.atajos || []);
+        setNuevaRutaCarpeta(data.rutaActual);
+      }
+    } catch (e) {
+      console.warn("Error cargando directorios:", e);
+    } finally {
+      setBrowserCargando(false);
+    }
+  };
+
+  const handleVincularCarpeta = async (rutaAUsar) => {
+    const rutaFinal = typeof rutaAUsar === 'string' ? rutaAUsar : (nuevaRutaCarpeta || browserRutaActual);
+    if (!rutaFinal || !rutaFinal.trim()) {
+      alert("Por favor ingresa o selecciona la ruta de la carpeta física.");
+      return;
+    }
+    setGuardandoCarpeta(true);
+    try {
+      const casoTarget = caso;
+      if (!casoTarget) throw new Error("No hay expediente activo seleccionado.");
+
+      const res = await fetch(`${LEXCONTROL_API}/vincular_carpeta_caso`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: casoTarget.id || casoTarget.rit,
+          rit: casoTarget.rit || casoTarget.rol,
+          cliente: casoTarget.cliente,
+          caratula: casoTarget.caratula,
+          nuevaCarpeta: rutaFinal.trim()
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        alert(`✅ Ubicación de carpeta en disco vinculada con éxito:\n\n${data.carpetaFisica}`);
+        setShowCambiarCarpeta(false);
+        const expsActualizados = await cargarExpedientes().catch(() => []);
+        setExpedientesServidor(expsActualizados);
+        refrescarDiscoData().catch(() => {});
+      } else {
+        alert(`Error al vincular carpeta: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`Error al vincular carpeta: ${err.message}`);
+    } finally {
+      setGuardandoCarpeta(false);
+    }
+  };
+
+  const handleExportarNotebookLM = async () => {
+    setExportandoNotebook(true);
+    try {
+      const casoTarget = caso;
+      const gestiones = customGestiones || (casoTarget ? casoTarget.gestiones : []);
+      const res = await fetch(`${LEXCONTROL_API}/exportar_dossier_notebooklm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caso: casoTarget, gestiones })
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        alert(`✅ Dossier compilado con éxito para Google NotebookLM!\n\nArchivo de origen generado: ${data.ruta}\n\nSe abrirá https://notebooklm.google.com en una nueva pestaña. Simplemente arrastra el archivo ${data.filename} para generar tu podcast en audio o análisis interactivo.`);
+        window.open('https://notebooklm.google.com', '_blank');
+      } else {
+        alert(`Error exportando a NotebookLM: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`Error al conectar con backend local: ${err.message}`);
+    } finally {
+      setExportandoNotebook(false);
+    }
+  };
+
 
   useEffect(() => {
     if (Array.isArray(casoProp) && casoProp.length > 1) {
@@ -126,7 +226,8 @@ export default function CasoDetailModal({ caso: casoProp, onClose, onOpenMatriz,
     const result = [];
     listaCasos.forEach((c, cIdx) => {
       let gList = [];
-      const overrideGest = localStorage.getItem(`lexcontrol_gestiones_${c.id || c.rit}`);
+      const clave = claveDeCaso(c);
+      const overrideGest = clave ? localStorage.getItem(`lexcontrol_gestiones_${clave}`) : null;
       if (overrideGest) {
         try { gList = JSON.parse(overrideGest); } catch(e) {}
       } else if (c.gestiones && Array.isArray(c.gestiones)) {
@@ -619,7 +720,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
     const legacy = () => {
       try {
-        const saved = localStorage.getItem(`lexcontrol_gestiones_${caso.id || caso.rit}`);
+        const clave = claveDeCaso(caso);
+        const saved = clave ? localStorage.getItem(`lexcontrol_gestiones_${clave}`) : null;
         const parsed = saved ? JSON.parse(saved) : null;
         if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
@@ -634,6 +736,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
     Promise.all([cargarExpedientes(), refrescarDiscoData().catch(() => false)])
       .then(([expedientes]) => {
         if (cancelado) return;
+        setExpedientesServidor(expedientes || []);
         const exp = expedienteDeCaso(caso, expedientes);
         if (exp && Array.isArray(exp.gestiones) && exp.gestiones.length > 0) {
           setCustomGestiones(exp.gestiones);
@@ -768,23 +871,16 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
       if (caso) {
         caso.gestiones = updated;
-        // Al servidor, no a localStorage: esto es lo que hace que la gestión
-        // sobreviva a una limpieza del navegador o a la cuota agotada.
-        await guardarGestionesDeCaso(caso, updated);
-
-        // Notificamos globalmente para que el Dashboard y el Radar recolecten
-        // las gestiones actualizadas automáticamente sin generar duplicados.
+        const clave = claveDeCaso(caso);
+        if (clave) {
+          try { localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(updated)); } catch(e) {}
+        }
+        guardarGestionesDeCaso(caso, updated).catch(() => {});
         window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
       }
 
       setShowGestionModal(false);
 
-      // Se ofrece tanto al crear como al editar: es habitual que un trámite
-      // traiga aparejado otro de inmediato (ej. "se presenta demanda" -> "se
-      // solicita exhorto"), y eso vale igual si la gestión que se acaba de
-      // guardar era nueva o una que ya existía. El diálogo es propio -no
-      // window.confirm()-, para que se vea parte del sistema y no una alerta
-      // del navegador.
       setConfirmarConexaInfo({
         tramite: gestionToSave.tramite,
         folioSiguiente: updated.length + 1,
@@ -810,39 +906,28 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       folio: `Folio ${info.folioSiguiente}`,
       cuaderno: info.cuaderno,
       origen: info.origen,
-      estado: 'PENDIENTE (POR HACER)'
+      estado: 'PENDIENTE'
     });
     setConfirmarConexaInfo(null);
     setShowGestionModal(true);
   };
 
-  /**
-   * Alterna PENDIENTE <-> REALIZADO.
-   *
-   * El botón que llama a esto existía en la tabla pero la función no estaba escrita
-   * en ninguna parte: hacer clic lanzaba un ReferenceError. Importa más de lo que
-   * parece, porque marcar REALIZADO es lo ÚNICO que saca una gestión de "Pendientes
-   * de bitácora" — sin esto, un pendiente no se podía cerrar nunca.
-   *
-   * Se escribe 'REALIZADO' exacto: así lo compara esta tabla, y radarPlazos.js lo
-   * reconoce por prefijo ('REALIZAD').
-   */
   const handleToggleEstadoGestion = async (index) => {
     const actual = customGestiones[index];
     if (!actual) return;
     const yaRealizada = String(actual.estado || '').toUpperCase().includes('REALIZAD');
     const updated = customGestiones.map((g, i) =>
-      i === index ? { ...g, estado: yaRealizada ? 'PENDIENTE (POR HACER)' : 'REALIZADO' } : g
+      i === index ? { ...g, estado: yaRealizada ? 'PENDIENTE' : 'REALIZADO' } : g
     );
     setCustomGestiones(updated);
     if (caso) {
       caso.gestiones = updated;
-      try {
-        await guardarGestionesDeCaso(caso, updated);
-        window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
-      } catch (err) {
-        alert('No se pudo guardar el cambio de estado: ' + err.message);
+      const clave = claveDeCaso(caso);
+      if (clave) {
+        try { localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(updated)); } catch(e) {}
       }
+      guardarGestionesDeCaso(caso, updated).catch(() => {});
+      window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
     }
   };
 
@@ -852,12 +937,12 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
     setCustomGestiones(updated);
     if (caso) {
       caso.gestiones = updated;
-      try {
-        await guardarGestionesDeCaso(caso, updated);
-        window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
-      } catch (err) {
-        alert("No se pudo eliminar en el servidor: " + err.message);
+      const clave = claveDeCaso(caso);
+      if (clave) {
+        try { localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(updated)); } catch(e) {}
       }
+      guardarGestionesDeCaso(caso, updated).catch(() => {});
+      window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
     }
   };
 
@@ -896,7 +981,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
 
 
   // 2. Vincular Documentos y Expediente en Disco Local (usa función centralizada)
-  const discoFolder = findDiscoFolder(caso);
+  const discoFolder = useMemo(() => findDiscoFolder(caso, expedientesServidor), [caso, expedientesServidor]);
 
   const ultimaGestionPendiente = gestionesList.find(g => g.estado && (g.estado.includes('PENDIENTE') || g.estado === 'URGENTE'));
 
@@ -908,7 +993,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
           id: `doc-disk-${idx}`,
           nombre: doc.name || `Documento_Forense_${idx+1}.pdf`,
           tipo: "Archivo de Trabajo / Expediente Local",
-          fecha: "Sincronizado Disco Duro",
+          fecha: doc.fecha || doc.mtime || doc.date || "Sincronizado Disco Duro",
           tamano: doc.size || "Archivo Local",
           path: doc.path || `${discoFolder.path}/${doc.name || 'doc.pdf'}`,
           origen: "Disco Duro Local (/Casos2023)"
@@ -929,7 +1014,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     id: `doc-disk-causa-${c.folderName}-${idx}`,
                     nombre: doc.name || `Expediente_Doc_${idx+1}.pdf`,
                     tipo: cat.nombre || "Expediente Judicial",
-                    fecha: "Sincronizado Disco Duro",
+                    fecha: doc.fecha || doc.mtime || doc.date || "Sincronizado Disco Duro",
                     tamano: doc.size || "Archivo Local",
                     path: doc.path,
                     origen: `Carpeta: ${c.folderName}`
@@ -1150,10 +1235,10 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       backgroundColor: esModoFlotante ? 'transparent' : 'rgba(10, 15, 29, 0.82)',
       backdropFilter: esModoFlotante ? 'none' : 'blur(8px)',
       display: 'flex',
-      alignItems: esModoFlotante ? 'flex-start' : 'center',
-      justifyContent: esModoFlotante ? (vistaModal === 'planilla' ? 'center' : 'flex-end') : 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
       zIndex: 850,
-      padding: esModoFlotante ? '70px 24px 24px 24px' : '20px',
+      padding: '20px',
       pointerEvents: esModoFlotante ? 'none' : 'auto'
     }}
     onClick={esModoFlotante ? undefined : onClose}
@@ -1161,11 +1246,11 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       <div 
         className="glass-card animate-fade-in" 
         style={{
-          width: '100%',
-          maxWidth: vistaModal === 'planilla' ? (esModoFlotante ? '1280px' : '1400px') : (esModoFlotante ? '1000px' : '1200px'),
-          maxHeight: esModoFlotante ? 'calc(100vh - 90px)' : '92vh',
+          width: '90vw',
+          maxWidth: '1240px',
+          maxHeight: '85vh',
           overflowY: 'auto',
-          padding: '28px 32px',
+          padding: '24px 28px',
           backgroundColor: 'var(--bg-modal)',
           border: '1px solid var(--border-hover)',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.75)',
@@ -1185,26 +1270,37 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '8px 14px',
               marginBottom: '16px',
-              marginTop: '-12px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              borderRadius: '6px',
-              border: '1px dashed rgba(255, 255, 255, 0.18)',
+              marginTop: '-10px',
+              background: 'rgba(74, 163, 199, 0.15)',
+              borderRadius: '8px',
+              border: '1px solid var(--accent-cyan)',
               cursor: isDragging ? 'grabbing' : 'grab',
               userSelect: 'none',
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 600
+              color: 'var(--accent-cyan)',
+              fontSize: '12px',
+              fontWeight: 700
             }}
             title="Haz clic y arrastra para mover la ventana por cualquier lugar de la pantalla"
           >
-            <GripHorizontal size={14} />
+            <GripHorizontal size={16} />
             <span>Mover ventana por la pantalla (arrastra aquí)</span>
           </div>
         )}
         {/* Botones de Control de la Ventana */}
         <div style={{ position: 'absolute', top: '24px', right: '24px', display: 'flex', gap: '8px', alignItems: 'center', zIndex: 10 }}>
+          {esModoFlotante && (posicionFlotante.x !== 0 || posicionFlotante.y !== 0) && (
+            <button
+              onClick={() => setPosicionFlotante({ x: 0, y: 0 })}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)' }}
+              title="Volver a centrar la ventana en la pantalla"
+            >
+              <RotateCcw size={13} />
+              <span>Re-centrar</span>
+            </button>
+          )}
           {listaCasos.length > 1 && (
             <button
               onClick={() => setVistaModal(vistaModal === 'planilla' ? 'ficha' : 'planilla')}
@@ -1226,7 +1322,11 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
             </button>
           )}
           <button
-            onClick={() => setEsModoFlotante(!esModoFlotante)}
+            onClick={() => {
+              const proxFlotante = !esModoFlotante;
+              setEsModoFlotante(proxFlotante);
+              if (!proxFlotante) setPosicionFlotante({ x: 0, y: 0 });
+            }}
             className="btn-secondary"
             style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
             title={esModoFlotante ? "Expandir a pantalla completa" : "Modo Ventana Flotante (sin ocultar el Dashboard)"}
@@ -1320,7 +1420,6 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <th style={{ padding: '12px 14px' }}>Trámite / Providencia Judicial</th>
                       <th style={{ padding: '12px 14px', width: '160px' }}>Origen / Magistratura</th>
                       <th style={{ padding: '12px 14px', width: '100px' }}>Estado</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'center', width: '120px' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1379,7 +1478,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                             background: g.estado === 'REALIZADO' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
                             color: g.estado === 'REALIZADO' ? 'var(--ok)' : 'var(--warning)'
                           }}>
-                            {g.estado || 'REALIZADO'}
+                            {g.estado === 'REALIZADO' ? 'REALIZADO' : 'PENDIENTE'}
                           </span>
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'center' }}>
@@ -1880,6 +1979,16 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     <Mic size={18} color="#8b5cf6" />
                     <span>Estudio Alegatos</span>
                   </button>
+                  <button
+                    onClick={handleExportarNotebookLM}
+                    disabled={exportandoNotebook}
+                    className="btn-secondary"
+                    style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#4ade80' }}
+                    title="Exportar causa completa y abrir Google NotebookLM"
+                  >
+                    <BookOpen size={18} color="#4ade80" />
+                    <span>{exportandoNotebook ? 'Exportando...' : '📓 Exportar NotebookLM'}</span>
+                  </button>
                   <button onClick={() => setActiveTab('vinculadas')} className="btn-secondary" style={{ padding: '12px', fontSize: '0.8rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', background: 'rgba(201,148,70,0.06)', border: '1px solid rgba(201,148,70,0.2)' }}>
                     <Link2 size={18} color="var(--accent-gold)" />
                     <span>Causas Conexas ({linkedCases.length})</span>
@@ -2135,7 +2244,6 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                       <th style={{ padding: '10px 12px' }}>Trámite / Providencia Judicial</th>
                       <th style={{ padding: '10px 12px' }}>Origen / Magistratura</th>
                       <th style={{ padding: '10px 12px', width: '100px' }}>Estado</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center', width: '150px' }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2191,30 +2299,8 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                               background: g.estado === 'REALIZADO' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)',
                               color: g.estado === 'REALIZADO' ? 'var(--ok)' : 'var(--warning)'
                             }}>
-                              {g.estado || 'REALIZADO'}
+                              {g.estado === 'REALIZADO' ? 'REALIZADO' : 'PENDIENTE'}
                             </span>
-                          </td>
-                          <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            {realIndex !== null && (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleToggleEstadoGestion(realIndex); }}
-                                  className="btn-secondary"
-                                  style={{ padding: '3px 8px', fontSize: '0.7rem', borderRadius: '4px', marginRight: '6px' }}
-                                  title="Alternar Estado PENDIENTE / REALIZADO"
-                                >
-                                  {g.estado === 'REALIZADO' ? '↩ Pendiente' : '✓ Realizado'}
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteGestion(realIndex); }}
-                                  className="btn-secondary"
-                                  style={{ padding: '3px 8px', fontSize: '0.7rem', borderRadius: '4px', color: 'var(--danger)', borderColor: 'rgba(248, 113, 113, 0.3)' }}
-                                  title="Eliminar actuación"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </>
-                            )}
                           </td>
                         </tr>
                       );
@@ -2285,6 +2371,14 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                     </span>
                     {!isGhost ? (
                       <>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--accent-color, #4aa3c7)', borderColor: 'rgba(74, 163, 199, 0.4)' }}
+                          onClick={() => { setRedactarModalGestion(g); setShowRedactarModal(true); }}
+                          title="Redactar documento en LibreOffice Writer"
+                        >
+                          ✍️ Redactar
+                        </button>
                         <button className="btn-secondary" style={{ padding: '6px 10px', fontSize: '0.75rem' }} onClick={() => alert(`Abriendo PDF del ${g.folio} en visor judicial digital...`)} title="Ver Escrito">
                           <Eye size={14} />
                         </button>
@@ -2306,6 +2400,7 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                         </button>
                       </>
                     ) : (
+
                       <button 
                         className="btn-primary" 
                         style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--alert-red)' }} 
@@ -2340,21 +2435,192 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                   </span>
                 )}
               </div>
-              <button 
-                className="btn-primary" 
-                style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'var(--alert-green)' }} 
-                onClick={() => {
-                  if (discoFolder && discoFolder.path) {
-                    abrirArchivoFisico(discoFolder.path);
-                  } else {
-                    alert("No existe carpeta local vinculada a este caso en /Casos2023.");
-                  }
-                }}
-              >
-                <FolderOpen size={15} />
-                <span>Abrir Carpeta Nativa Linux</span>
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn-primary" 
+                  style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'var(--alert-green)' }} 
+                  onClick={() => {
+                    if (discoFolder && discoFolder.path) {
+                      abrirArchivoFisico(discoFolder.path);
+                    } else {
+                      alert("No existe carpeta local vinculada a este caso.");
+                    }
+                  }}
+                >
+                  <FolderOpen size={15} />
+                  <span>Abrir Carpeta Nativa Linux</span>
+                </button>
+
+                <button 
+                  className="btn-secondary" 
+                  style={{ fontSize: '0.75rem', padding: '6px 12px', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)' }} 
+                  onClick={() => {
+                    const prox = !showCambiarCarpeta;
+                    setShowCambiarCarpeta(prox);
+                    if (prox) {
+                      const initialPath = (discoFolder && discoFolder.path) || '/media/jaime/c11cad3b-6d38-462a-9c2e-49c33f1f6c18/Casos2023';
+                      cargarNavegadorDirectorios(initialPath);
+                    }
+                  }}
+                  title="Explorar el disco duro para elegir la carpeta física de esta causa"
+                >
+                  <Edit3 size={14} />
+                  <span>{showCambiarCarpeta ? "Cerrar Navegador" : "📂 Cambiar Ubicación de Carpeta"}</span>
+                </button>
+              </div>
             </div>
+
+            {/* NAVEGADOR VISUAL DE DISCO DURO EN TONO CLARO */}
+            {showCambiarCarpeta && (
+              <div className="animate-fade-in" style={{ padding: '22px', borderRadius: '16px', background: '#ffffff', border: '2px solid #0284c7', marginBottom: '24px', boxShadow: '0 12px 36px rgba(0,0,0,0.18)', color: '#0f172a' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                  <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FolderOpen size={22} color="#0284c7" /> Explorador de Disco Duro &amp; Selección de Carpeta Destino
+                  </h4>
+                  <button
+                    className="btn-primary"
+                    style={{ padding: '9px 18px', fontSize: '0.85rem', background: '#10b981', color: '#ffffff', fontWeight: '800', borderRadius: '8px', border: 'none', boxShadow: '0 3px 10px rgba(16,185,129,0.3)', cursor: 'pointer' }}
+                    onClick={() => handleVincularCarpeta(nuevaRutaCarpeta || browserRutaActual)}
+                    disabled={guardandoCarpeta}
+                  >
+                    ✔ Vincular Carpeta Actual
+                  </button>
+                </div>
+
+                {/* ATAJOS RÁPIDOS */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '800' }}>Atajos Rápidos:</span>
+                  {browserAtajos.map((atajo, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => cargarNavegadorDirectorios(atajo.path)}
+                      style={{
+                        padding: '5px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        borderRadius: '6px',
+                        background: browserRutaActual === atajo.path ? '#e0f2fe' : '#f1f5f9',
+                        border: '1px solid ' + (browserRutaActual === atajo.path ? '#0284c7' : '#cbd5e1'),
+                        color: browserRutaActual === atajo.path ? '#0369a1' : '#334155',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📁 {atajo.nombre}
+                    </button>
+                  ))}
+                </div>
+
+                {/* BARRA DE RUTA CON NAVEGACIÓN PADRE Y ENTRADA MANUAL */}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  {browserPadre && (
+                    <button
+                      type="button"
+                      onClick={() => cargarNavegadorDirectorios(browserPadre)}
+                      style={{ padding: '8px 14px', fontSize: '0.8rem', whiteSpace: 'nowrap', background: '#e2e8f0', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}
+                      title="Subir a carpeta padre (..)"
+                    >
+                      ⬆️ Subir Nivel
+                    </button>
+                  )}
+
+                  <div style={{ flex: 1, minWidth: '300px', display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 14px' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', marginRight: '8px', fontWeight: '800' }}>Ruta:</span>
+                    <input
+                      type="text"
+                      value={nuevaRutaCarpeta}
+                      onChange={(e) => setNuevaRutaCarpeta(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') cargarNavegadorDirectorios(nuevaRutaCarpeta); }}
+                      placeholder="/media/jaime/..."
+                      style={{ flex: 1, background: 'transparent', border: 'none', color: '#0369a1', fontSize: '0.88rem', fontFamily: 'var(--font-mono)', fontWeight: '700', outline: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => cargarNavegadorDirectorios(nuevaRutaCarpeta)}
+                      style={{ background: '#0284c7', border: 'none', color: '#ffffff', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700' }}
+                      title="Ir a la ruta tipeada"
+                    >
+                      🔍 Ir
+                    </button>
+                  </div>
+                </div>
+
+                {/* FILTRO RÁPIDO DE SUBCARPETAS */}
+                <div style={{ marginBottom: '12px' }}>
+                  <input
+                    type="text"
+                    value={browserFiltro}
+                    onChange={(e) => setBrowserFiltro(e.target.value)}
+                    placeholder={`Escribe el nombre del cliente para buscar entre las ${browserSubcarpetas.length} subcarpetas...`}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontSize: '0.85rem', fontWeight: '600' }}
+                  />
+                </div>
+
+                {/* REJILLA DE SUBCARPETAS CON NAVEGACIÓN O SELECCIÓN DIRECTA */}
+                <div style={{ maxHeight: '280px', overflowY: 'auto', background: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', padding: '10px' }}>
+                  {browserCargando ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.88rem', fontWeight: '600' }}>
+                      ⏳ Escaneando subcarpetas de disco duro...
+                    </div>
+                  ) : browserSubcarpetas.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.88rem', fontWeight: '600' }}>
+                      No hay más subcarpetas en este directorio.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '10px' }}>
+                      {browserSubcarpetas
+                        .filter(sub => !browserFiltro || sub.nombre.toLowerCase().includes(browserFiltro.toLowerCase()))
+                        .map((sub, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              padding: '10px 14px',
+                              borderRadius: '8px',
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: '10px',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.borderColor = '#0284c7'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                          >
+                            <span
+                              onClick={() => cargarNavegadorDirectorios(sub.path)}
+                              style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}
+                              title={`Abrir subcarpeta ${sub.nombre}`}
+                            >
+                              📁 {sub.nombre}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleVincularCarpeta(sub.path)}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: '0.75rem',
+                                borderRadius: '6px',
+                                background: '#059669',
+                                border: 'none',
+                                color: '#ffffff',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                boxShadow: '0 2px 4px rgba(5,150,105,0.2)'
+                              }}
+                              title={`Vincular esta causa a la carpeta ${sub.nombre}`}
+                            >
+                              ✔ Elegir
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {documentosList.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px dashed rgba(255,255,255,0.1)', marginBottom: '24px' }}>
@@ -2362,59 +2628,88 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
                 <h4 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', margin: '0 0 8px 0' }}>No hay archivos locales indexados</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, maxWidth: '500px', marginLeft: 'auto', marginRight: 'auto' }}>
                   Esta causa no tiene una carpeta física vinculada en el disco duro (/Casos2023) o la carpeta está vacía. 
-                  El sistema busca automáticamente coincidencias exactas o nombres de clientes/contrapartes.
+                  Usa el navegador de arriba para vincular la carpeta correcta.
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                {documentosList.map((doc) => (
-                  <div key={doc.id} className="glass-card" style={{ 
-                    padding: '20px', 
-                    borderRadius: '14px', 
-                    background: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '16px',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                      <div style={{ padding: '10px', borderRadius: '10px', background: doc.nombre && doc.nombre.endsWith('.pdf') ? 'rgba(207, 95, 87, 0.1)' : 'rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>
-                        <FileText size={22} color={doc.nombre && doc.nombre.endsWith('.pdf') ? 'var(--danger)' : '#3b82f6'} />
-                      </div>
-                      <div style={{ overflow: 'hidden' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {doc.nombre}
-                        </span>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
-                            {doc.tipo}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            • {doc.tamano}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px', fontStyle: 'italic' }}>
-                          {doc.origen}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="btn-secondary" style={{ padding: '8px', borderRadius: '8px' }} title="Previsualizar Archivo" onClick={() => abrirArchivoFisico(doc.path)}>
-                        <Eye size={16} />
-                      </button>
-                      <button className="btn-secondary" style={{ padding: '8px', borderRadius: '8px' }} title="Descargar al equipo" onClick={() => abrirArchivoFisico(doc.path)}>
-                        <Download size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ maxHeight: '410px', overflowY: 'auto', overflowX: 'auto', borderRadius: '14px', border: '2px solid #cbd5e1', background: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginBottom: '24px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 5, background: '#f1f5f9' }}>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1', color: '#1e293b' }}>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', fontSize: '0.85rem' }}>Documento / Nombre del Archivo</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', fontSize: '0.85rem' }}>Fecha Subido / Modificado</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', fontSize: '0.85rem' }}>Carpeta u Origen</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', fontSize: '0.85rem' }}>Tamaño</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', fontSize: '0.85rem', textAlign: 'right' }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documentosList.map((doc, idx) => {
+                      const isPdf = doc.nombre && doc.nombre.toLowerCase().endsWith('.pdf');
+                      const isWord = doc.nombre && (doc.nombre.toLowerCase().endsWith('.doc') || doc.nombre.toLowerCase().endsWith('.docx'));
+                      return (
+                        <tr
+                          key={doc.id || idx}
+                          onClick={() => abrirArchivoFisico(doc.path)}
+                          style={{
+                            borderBottom: '1px solid #e2e8f0',
+                            background: '#ffffff',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#e0f2fe'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+                          title="Haz clic en cualquier parte de la fila para abrir este documento en tu sistema Linux"
+                        >
+                          <td style={{ padding: '14px 18px', color: '#0f172a', fontWeight: '700' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <FileText size={20} color={isPdf ? '#dc2626' : (isWord ? '#2563eb' : '#d97706')} />
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '420px' }}>
+                                {doc.nombre}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 18px', color: '#0f172a', fontSize: '0.82rem', fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
+                            {doc.fecha || '—'}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: '#475569', fontSize: '0.82rem', fontStyle: 'italic', fontWeight: '500' }}>
+                            {doc.origen}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: '#64748b', fontSize: '0.82rem', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                            {doc.tamano}
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              style={{
+                                padding: '7px 14px',
+                                fontSize: '0.78rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: '#059669',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 6px rgba(5,150,105,0.25)'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                abrirArchivoFisico(doc.path);
+                              }}
+                              title="Abrir archivo nativo"
+                            >
+                              <ExternalLink size={14} color="#ffffff" />
+                              <span>Abrir Nivel OS</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -3246,6 +3541,14 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
         </div>
       </div>
     )}
+
+      <ModalRedactarDocumento
+        isOpen={showRedactarModal}
+        onClose={() => setShowRedactarModal(false)}
+        gestion={redactarModalGestion}
+        caso={caso}
+      />
     </div>
   );
 }
+

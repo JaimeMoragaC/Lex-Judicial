@@ -30,6 +30,8 @@ import {
   claveDeCaso,
   ritUtilizable
 } from '../utils/expedientes.js';
+import ModalRedactarDocumento from './ModalRedactarDocumento.jsx';
+
 
 const TIPOS_NUEVO = [
   ['extrajudicial', 'Extrajudicial'],
@@ -42,6 +44,14 @@ export default function BitacoraOmnicanal({ onSelectCaso }) {
   const [error, setError] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [expedientes, setExpedientes] = useState([]);
+  const [showRedactarModal, setShowRedactarModal] = useState(false);
+  const [redactarModalGestion, setRedactarModalGestion] = useState(null);
+
+  const handleOpenRedactar = (g) => {
+    setRedactarModalGestion(g);
+    setShowRedactarModal(true);
+  };
+
 
   // Lo que devolvió la IA, a la espera de que el abogado diga dónde va.
   const [propuesta, setPropuesta] = useState(null);
@@ -602,15 +612,142 @@ export default function BitacoraOmnicanal({ onSelectCaso }) {
           filtroEstado={filtroEstado}
           setFiltroEstado={setFiltroEstado}
           onSelectCaso={onSelectCaso}
+          onOpenRedactar={handleOpenRedactar}
         />
       </div>
+
+      <ModalRedactarDocumento
+        isOpen={showRedactarModal}
+        onClose={() => setShowRedactarModal(false)}
+        gestion={redactarModalGestion}
+        caso={redactarModalGestion ? { rit: redactarModalGestion.expedienteRit, caratula: redactarModalGestion.expedienteAsunto || redactarModalGestion.expedienteCliente } : null}
+      />
     </div>
   );
 }
 
+const RenderKanbanCard = memo(function RenderKanbanCard({ g, onSelectCaso, onOpenRedactar, badgeColor }) {
+  return (
+    <div
+      className="card card-pad stack feed-item-clickable"
+      onClick={() => {
+        if (onSelectCaso && g.expedienteId) {
+          onSelectCaso({ 
+            id: g.expedienteId, 
+            rit: g.expedienteRit, 
+            caratula: g.expedienteAsunto, 
+            cliente: g.expedienteCliente 
+          });
+        }
+      }}
+      style={{
+        gap: '6px',
+        background: 'var(--bg-primary)',
+        borderLeft: `4px solid ${badgeColor}`,
+        cursor: 'pointer',
+        padding: '10px 12px',
+        borderRadius: '8px'
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '4px' }}>
+        <strong style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+          {g.expedienteCliente || 'Cliente General'}
+        </strong>
+        {g.expedienteRit && (
+          <span className="badge" style={{ fontSize: '9px', background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)' }}>
+            {g.expedienteRit}
+          </span>
+        )}
+      </div>
+
+      <p style={{ fontSize: '0.78rem', margin: 0, fontWeight: '500', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+        {g.tramite}
+      </p>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <span className="muted" style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Clock size={10} /> {g.fechaVencimiento || g.fecha || 'Sin plazo'}
+        </span>
+        {onOpenRedactar && (
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ padding: '2px 6px', fontSize: '10px', color: 'var(--accent-color, #4aa3c7)' }}
+            onClick={(e) => { e.stopPropagation(); onOpenRedactar(g); }}
+            title="Redactar escrito con LibreOffice Writer"
+          >
+            ✍️ Redactar
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 const FeedInteracciones = memo(function FeedInteracciones({
-  gestionesFiltradas, totalGestiones, busquedaFeed, setBusquedaFeed, filtroEstado, setFiltroEstado, onSelectCaso
+  gestionesFiltradas, totalGestiones, busquedaFeed, setBusquedaFeed, filtroEstado, setFiltroEstado, onSelectCaso, onOpenRedactar
 }) {
+
+  const kanbanData = useMemo(() => {
+    if (filtroEstado !== 'PENDIENTES') return null;
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    const finSemana = new Date(hoy);
+    const dayOfWeek = hoy.getDay(); // 0 es Domingo
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    finSemana.setDate(finSemana.getDate() + daysUntilSunday);
+    finSemana.setHours(23, 59, 59, 999);
+
+    const parseFechaStr = (str) => {
+      if (!str) return null;
+      const s = String(str).trim();
+      const partes = s.split('/');
+      if (partes.length === 3) {
+        const d = parseInt(partes[0], 10);
+        const m = parseInt(partes[1], 10) - 1;
+        const y = parseInt(partes[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      const partesDash = s.split('-');
+      if (partesDash.length === 3) {
+        const y = parseInt(partesDash[0], 10);
+        const m = parseInt(partesDash[1], 10) - 1;
+        const d = parseInt(partesDash[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+      }
+      return null;
+    };
+
+    const colManana = [];
+    const colRestoSemana = [];
+    const colDemasPendientes = [];
+
+    gestionesFiltradas.forEach((g) => {
+      const targetFechaStr = g.fechaVencimiento || g.vencimiento || g.fecha;
+      const targetDate = parseFechaStr(targetFechaStr);
+
+      if (targetDate) {
+        targetDate.setHours(0, 0, 0, 0);
+        if (targetDate.getTime() === manana.getTime()) {
+          colManana.push(g);
+        } else if (targetDate > manana && targetDate <= finSemana) {
+          colRestoSemana.push(g);
+        } else {
+          colDemasPendientes.push(g);
+        }
+      } else {
+        colDemasPendientes.push(g);
+      }
+    });
+
+    return { colManana, colRestoSemana, colDemasPendientes };
+  }, [gestionesFiltradas, filtroEstado]);
+
   return (
     <div className="card card-static">
       <div className="card-header row" style={{ justifyContent: 'space-between' }}>
@@ -655,8 +792,81 @@ const FeedInteracciones = memo(function FeedInteracciones({
           </div>
         </div>
 
-        {/* Feed Timeline */}
-        <div className="stack" style={{ gap: 'var(--space-3)', maxHeight: '680px', overflowY: 'auto', paddingRight: '4px' }}>
+        {/* MODO TABLERO KANBAN DE 3 COLUMNAS PARA PENDIENTES */}
+        {filtroEstado === 'PENDIENTES' && kanbanData ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', maxHeight: '680px', overflowY: 'auto' }}>
+            {/* COLUMNA 1: GESTIONES DE MAÑANA */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(234, 179, 8, 0.2)', paddingBottom: '8px' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🌅 Mañana ({kanbanData.colManana.length})
+                </strong>
+                <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.2)', color: 'var(--accent-gold)', fontWeight: 'bold' }}>
+                  Urgente
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '580px' }}>
+                {kanbanData.colManana.length === 0 ? (
+                  <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                    Sin gestiones para mañana
+                  </div>
+                ) : (
+                  kanbanData.colManana.map((g, i) => (
+                    <RenderKanbanCard key={g.id || i} g={g} onSelectCaso={onSelectCaso} onOpenRedactar={onOpenRedactar} badgeColor="var(--accent-gold)" />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* COLUMNA 2: GESTIONES EN LO QUE QUEDA DE LA SEMANA */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(168, 85, 247, 0.2)', paddingBottom: '8px' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📅 Resto de la Semana ({kanbanData.colRestoSemana.length})
+                </strong>
+                <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontWeight: 'bold' }}>
+                  Semana
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '580px' }}>
+                {kanbanData.colRestoSemana.length === 0 ? (
+                  <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                    Sin gestiones en lo que queda de semana
+                  </div>
+                ) : (
+                  kanbanData.colRestoSemana.map((g, i) => (
+                    <RenderKanbanCard key={g.id || i} g={g} onSelectCaso={onSelectCaso} onOpenRedactar={onOpenRedactar} badgeColor="#c084fc" />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* COLUMNA 3: RESTO DE PENDIENTES */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid rgba(74, 163, 199, 0.3)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(74, 163, 199, 0.2)', paddingBottom: '8px' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📋 Resto de Pendientes ({kanbanData.colDemasPendientes.length})
+                </strong>
+                <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '8px', background: 'rgba(74, 163, 199, 0.2)', color: 'var(--accent-cyan)', fontWeight: 'bold' }}>
+                  General
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '580px' }}>
+                {kanbanData.colDemasPendientes.length === 0 ? (
+                  <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                    No hay más pendientes registadas
+                  </div>
+                ) : (
+                  kanbanData.colDemasPendientes.map((g, i) => (
+                    <RenderKanbanCard key={g.id || i} g={g} onSelectCaso={onSelectCaso} onOpenRedactar={onOpenRedactar} badgeColor="var(--accent-cyan)" />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Feed Timeline Estándar para el Resto de los Filtros */
+          <div className="stack" style={{ gap: 'var(--space-3)', maxHeight: '680px', overflowY: 'auto', paddingRight: '4px' }}>
           {gestionesFiltradas.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-8)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
               <MessageSquare size={32} className="muted" style={{ margin: '0 auto var(--space-2) auto' }} />
@@ -755,20 +965,38 @@ const FeedInteracciones = memo(function FeedInteracciones({
                     </div>
                   )}
 
-                  {/* Fila Inferior: Expediente ID y Cuaderno */}
-                  <div className="row" style={{ justifyContent: 'space-between', marginTop: 'var(--space-1)' }}>
+                  {/* Fila Inferior: Expediente ID, Botón Redactar y Cuaderno */}
+                  <div className="row" style={{ justifyContent: 'space-between', marginTop: 'var(--space-1)', alignItems: 'center' }}>
                     <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
                       📁 ID: <strong style={{ color: 'var(--text-secondary)' }}>{g.expedienteId}</strong>
                     </span>
-                    <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
-                      {g.cuaderno || 'Bitácora Omnicanal'}
-                    </span>
+                    <div className="row" style={{ gap: 'var(--space-2)' }}>
+                      {onOpenRedactar && (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          style={{ fontSize: '11px', padding: '3px 8px', color: 'var(--accent-color, #4aa3c7)' }}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            onOpenRedactar(g);
+                          }}
+                          title="Redactar escrito en LibreOffice Writer"
+                        >
+                          ✍️ Redactar Documento
+                        </button>
+                      )}
+                      <span className="muted" style={{ fontSize: 'var(--text-xs)' }}>
+                        {g.cuaderno || 'Bitácora Omnicanal'}
+                      </span>
+                    </div>
                   </div>
+
                 </div>
               );
             })
           )}
         </div>
+        )}
       </div>
     </div>
   );

@@ -151,6 +151,22 @@ export default function Sidebar({ activeTab, setActiveTab, theme, toggleTheme })
         </span>
       </button>
 
+      <button
+        className="sidebar-search"
+        style={{ marginTop: 'var(--space-2)', border: '1px solid var(--accent-cyan)', color: 'var(--text-primary)' }}
+        onClick={() => window.dispatchEvent(new CustomEvent('lexcontrol_open_ingreso_gestion'))}
+        title="Abrir ventana de ingreso de gestiones procesales (Ctrl + G)"
+      >
+        <span className="row" style={{ gap: 'var(--space-2)' }}>
+          <FileSignature size={14} color="var(--accent-cyan)" />
+          <span style={{ fontWeight: 600 }}>+ Nueva Gestión</span>
+        </span>
+        <span className="row" style={{ gap: 3 }}>
+          <kbd className="kbd">Ctrl</kbd>
+          <kbd className="kbd">G</kbd>
+        </span>
+      </button>
+
       <a
         href="http://localhost:8888/descargar_backup"
         download

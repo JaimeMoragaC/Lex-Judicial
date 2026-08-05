@@ -25,6 +25,7 @@ import { MOCK_CASOS } from './mockData';
 import { PJUD_CASOS } from './pjudCausesData';
 import { CATALOGOS_CAIDOS } from './dataLoader';
 import { LEXCONTROL_API } from './apiBase';
+import { claveDeCaso, guardarGestionesDeCaso } from './utils/expedientes.js';
 
 // Si el servidor forense local no está levantado, los catálogos llegan vacíos y la
 // app se vería sin causas y sin explicación. Este aviso dice qué falta y cómo arreglarlo.
@@ -66,20 +67,6 @@ export default function App() {
   const [crearExpedienteAbierto, setCrearExpedienteAbierto] = useState(false);
 
   React.useEffect(() => {
-    // Limpieza de datos en localStorage para reinicio completo del sistema
-    try {
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('lexcontrol_gestiones_') || 
-            key.startsWith('lexcontrol_overrides_') || 
-            key.startsWith('lexcontrol_vigencia_') || 
-            key === 'lexcontrol_casos_ia' || 
-            key === 'lexcontrol_extrajudicial_mapping' || 
-            key.startsWith('lexcontrol_plazos_')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch(e) {}
-
     const handleOpenIngreso = (e) => {
       setIngresoGestionCasoRef(e.detail?.casoRef || '');
       setIngresoGestionAbierto(true);
@@ -88,11 +75,23 @@ export default function App() {
       setCrearExpedienteAbierto(true);
     };
 
+    const handleKeyDown = (e) => {
+      const isG = e.key && (e.key.toLowerCase() === 'g' || e.code === 'KeyG');
+      if (isG && (e.ctrlKey || e.metaKey || e.altKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIngresoGestionCasoRef('');
+        setIngresoGestionAbierto(true);
+      }
+    };
+
     window.addEventListener('lexcontrol_open_ingreso_gestion', handleOpenIngreso);
     window.addEventListener('lexcontrol_open_crear_expediente', handleOpenCrearExpediente);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.removeEventListener('lexcontrol_open_ingreso_gestion', handleOpenIngreso);
       window.removeEventListener('lexcontrol_open_crear_expediente', handleOpenCrearExpediente);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, []);
 
@@ -257,10 +256,39 @@ export default function App() {
             throw new Error(`No encontré ningún expediente ni causa con la referencia "${ref}". La gestión no se guardó.`);
           }
 
-          const existingGestionesStr = localStorage.getItem(`lexcontrol_gestiones_${targetCaso.id || targetCaso.rit}`);
+          const clave = claveDeCaso(targetCaso);
+          const existingGestionesStr = clave ? localStorage.getItem(`lexcontrol_gestiones_${clave}`) : null;
           let gestiones = existingGestionesStr ? JSON.parse(existingGestionesStr) : [];
-          gestiones.push(gestion);
-          localStorage.setItem(`lexcontrol_gestiones_${targetCaso.id || targetCaso.rit}`, JSON.stringify(gestiones));
+          
+          // Corregir gestiones creadas anteriormente que hayan quedado guardadas con REALIZADO
+          gestiones = gestiones.map(g => (g.estado === 'REALIZADO' ? { ...g, estado: 'PENDIENTE' } : g));
+
+          gestiones.push({
+            ...gestion,
+            casoRit: targetCaso.rit || ref,
+            casoCaratula: targetCaso.caratula || targetCaso.cliente || '',
+            fechaVencimiento: gestion.fechaVencimiento || gestion.fecha,
+            fechaMostrada: gestion.fechaMostrada || gestion.fecha,
+            titulo: gestion.titulo || gestion.tramite || gestion.descripcion
+          });
+
+          if (clave) localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(gestiones));
+          
+          // Corregir globalmente en localStorage para que cualquier gestión previa aparezca
+          try {
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith('lexcontrol_gestiones_')) {
+                const items = JSON.parse(localStorage.getItem(k) || '[]');
+                if (Array.isArray(items)) {
+                  const corregidos = items.map(g => g.estado === 'REALIZADO' ? { ...g, estado: 'PENDIENTE' } : g);
+                  localStorage.setItem(k, JSON.stringify(corregidos));
+                }
+              }
+            }
+          } catch(e) {}
+
+          guardarGestionesDeCaso(targetCaso, gestiones).catch(() => {});
           window.dispatchEvent(new Event('lexcontrol_plazos_updated'));
         }}
       />

@@ -11,6 +11,7 @@ export default function IngresoGestionModal({ abierto, onClose, onSave, initialC
   const [fecha, setFecha] = useState('');
   const [tipo, setTipo] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [estado, setEstado] = useState('PENDIENTE');
   const [mostrarConfirmacionOtra, setMostrarConfirmacionOtra] = useState(false);
   const [todosLosCasos, setTodosLosCasos] = useState([]);
   const [mostrarResultados, setMostrarResultados] = useState(false);
@@ -24,6 +25,7 @@ export default function IngresoGestionModal({ abierto, onClose, onSave, initialC
       setFecha(new Date().toISOString().split('T')[0]);
       setTipo('');
       setDescripcion('');
+      setEstado('PENDIENTE');
       setMostrarConfirmacionOtra(false);
       setMostrarResultados(false);
 
@@ -99,9 +101,12 @@ export default function IngresoGestionModal({ abierto, onClose, onSave, initialC
       await onSave({
         casoRef,
         fecha,
+        fechaVencimiento: fecha,
+        fechaMostrada: fecha,
         tramite: tipo,
+        titulo: tipo || descripcion,
         descripcion,
-        estado: 'REALIZADO'
+        estado: estado || 'PENDIENTE'
       });
       setMostrarConfirmacionOtra(true);
     } catch (err) {
@@ -114,6 +119,7 @@ export default function IngresoGestionModal({ abierto, onClose, onSave, initialC
       setMostrarConfirmacionOtra(false);
       setTipo('');
       setDescripcion('');
+      setEstado('PENDIENTE');
     } else {
       onClose();
     }
@@ -206,15 +212,28 @@ export default function IngresoGestionModal({ abierto, onClose, onSave, initialC
             )}
           </div>
 
-          {/* Fila: Fecha + Tipo */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+          {/* Fila: Fecha + Tipo + Estado */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Fecha de la gestión</label>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Fecha / Plazo</label>
               <input type="date" className="input" value={fecha} onChange={e => setFecha(e.target.value)} required style={{ width: '100%' }} />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Tipo de gestión</label>
               <input type="text" className="input" value={tipo} onChange={e => setTipo(e.target.value)} placeholder="Ej: Trámite, Presentación..." required style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Estado</label>
+              <select
+                className="input"
+                value={estado}
+                onChange={e => setEstado(e.target.value)}
+                style={{ width: '100%', background: 'var(--bg-raised)' }}
+              >
+                <option value="PENDIENTE">⏳ PENDIENTE (En Kanban / Radar)</option>
+                <option value="EN ESPERA">⚖️ EN ESPERA del tribunal</option>
+                <option value="REALIZADO">✓ REALIZADO / Cumplido</option>
+              </select>
             </div>
           </div>
 

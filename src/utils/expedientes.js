@@ -242,14 +242,21 @@ export async function cargarExpedientes() {
  * id interno de la causa, que sí es único.
  */
 export function ritUtilizable(rit) {
-  return /\d/.test(String(rit || ''));
+  if (!rit) return false;
+  const s = String(rit).trim().toUpperCase();
+  if (s === 'ROL' || s === 'ROL ' || s === 'C-2026' || s === 'C-2025' || s === 'S/R' || s === 'SIN ROL' || s === 'EXTRAJUDICIAL') return false;
+  return /\d{2,}/.test(s) && s.length >= 4;
 }
 
-/** El identificador con el que debe archivarse un caso: su ROL si sirve, si no su id. */
+/** El identificador con el que debe archivarse un caso: su ID único siempre que exista, o su ROL específico. */
 export function claveDeCaso(caso) {
-  const rit = String(caso?.rit || caso?.ritVinculado || '').trim();
+  if (!caso) return null;
+  const id = String(caso?.id || '').trim();
+  if (id && id !== 'undefined' && id !== 'null') return id;
+  const rit = String(caso?.rit || caso?.ritVinculado || caso?.rol || '').trim();
   if (ritUtilizable(rit)) return rit;
-  return String(caso?.id || '').trim() || null;
+  const clienteNorm = normalizar(caso?.cliente || caso?.caratula || 'caso');
+  return `caso_${clienteNorm.replace(/\s+/g, '_')}`;
 }
 
 export function expedienteDeCaso(caso, expedientes) {

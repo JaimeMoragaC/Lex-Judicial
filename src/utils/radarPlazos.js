@@ -316,27 +316,29 @@ export function obtenerAgendaLocalStorage() {
           if (Array.isArray(gestiones)) {
             gestiones.forEach((g, idx) => {
               const fIso = normalizarFechaIso(g.fechaIso || g.fecha);
+              const fVencIso = normalizarFechaIso(g.fechaVencimiento || g.vencimiento);
               const estadoNorm = (g.estado || '').trim().toUpperCase();
-              const esRealizado = estadoNorm.includes('REALIZAD') || estadoNorm.includes('COMPLETAD') || estadoNorm.includes('TERMINAD') || estadoNorm.includes('FALLADO') || estadoNorm.includes('ARCHIVADO');
+              const esRealizado = ['REALIZAD', 'COMPLETAD', 'TERMINAD', 'FALLADO', 'ARCHIVADO'].some((w) => estadoNorm.includes(w));
               
-              if (fIso && !esRealizado) {
+              if ((fIso || fVencIso) && !esRealizado) {
+                const targetFecha = fVencIso || fIso;
+                const tituloStr = g.titulo || g.tramite || g.actuacion || 'Gestión Pendiente';
                 plazosExtraidos.push({
-                  id: `ls-gestion-${casoRit}-${idx}-${fIso}`,
-                  casoRit: casoRit,
-                  rit: casoRit,
-                  caratula: g.caratula || 'Carátula no especificada',
+                  id: g.id || `ls-gestion-${casoRit}-${idx}-${targetFecha}`,
+                  casoRit: g.casoRit || g.rit || casoRit,
+                  rit: g.casoRit || g.rit || casoRit,
+                  caratula: g.casoCaratula || g.caratula || g.cliente || 'Carátula no especificada',
                   cliente: g.cliente || 'Cliente no asignado',
                   tribunal: g.tribunal || 'Tribunal no especificado',
-                  actuacion: g.tramite || g.actuacion || 'Gestión Pendiente',
-                  descripcion: g.tramite || g.actuacion || 'Gestión Pendiente',
-                  asunto: g.tramite || g.actuacion || 'Gestión Pendiente',
-                  naturaleza: naturalezaDeGestion(g),
+                  actuacion: tituloStr,
+                  titulo: tituloStr,
+                  descripcion: tituloStr,
+                  asunto: tituloStr,
+                  naturaleza: NATURALEZA.PENDIENTE,
                   regimen: 'CPC',
-                  // Deliberadamente NO hay fechaVencimiento: esta fecha es la que
-                  // se escribió en la nota. Nombrarla como vencimiento es lo que
-                  // hacía que el semáforo la tratara como plazo fatal.
                   fechaTramite: fIso,
-                  fechaObjetivo: fIso,
+                  fechaVencimiento: fVencIso || fIso,
+                  fechaObjetivo: targetFecha,
                   notas: g.estado || 'Ingresado en expediente'
                 });
               }
@@ -596,8 +598,8 @@ export async function cargarAgenda(causas = [], expedientes = [], tareas = []) {
   // Ahora sí se deduplica, sobre la identidad ya resuelta. El servidor va primero
   // en `crudas`, así que ante una copia doble gana la suya, que es la autoritativa.
   const vistas = new Set();
-  return resueltas.filter((g) => {
-    const clave = `${g.casoRit}|${g.actuacion}|${g.fechaObjetivo}`;
+  return resueltas.filter((g, idx) => {
+    const clave = g.id || `${g.casoRit}|${g.actuacion}|${g.fechaObjetivo}|${g.fechaVencimiento || ''}|${idx}`;
     if (vistas.has(clave)) return false;
     vistas.add(clave);
     return true;
