@@ -247,29 +247,53 @@ export default function Dashboard({ onNavigateToCaso, onNavigateToMatriz, onNavi
     generarBriefing(r.atencion, r.pendientes);
   };
 
-  const handleToggleEstadoPlazo = (e, plazo) => {
+  const handleToggleEstadoPlazo = async (e, plazo) => {
     e.stopPropagation();
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('lexcontrol_gestiones_')) {
-          const items = JSON.parse(localStorage.getItem(k) || '[]');
-          if (Array.isArray(items)) {
-            let modificado = false;
-            const nuevos = items.map(g => {
-              const coincide = (g.id && g.id === plazo.id) || (g.tramite === plazo.titulo || g.actuacion === plazo.titulo);
-              if (coincide) {
-                modificado = true;
-                const yaRealizada = String(g.estado || '').toUpperCase().includes('REALIZAD');
-                return { ...g, estado: yaRealizada ? 'PENDIENTE' : 'REALIZADO' };
-              }
-              return g;
-            });
-            if (modificado) {
-              localStorage.setItem(k, JSON.stringify(nuevos));
-            }
-          }
+      const ref = plazo.casoRit || plazo.rit || plazo.claveOriginal;
+      const targetCaso = (expedientesReales || []).find(e => e.id === ref || e.rit === ref || e.ritVinculado === ref) ||
+        [...MOCK_CASOS, ...PJUD_CASOS].find(c => c.rit === ref || c.id === ref);
+
+      const clave = targetCaso ? claveDeCaso(targetCaso) : ref;
+      const key = clave ? `lexcontrol_gestiones_${clave}` : null;
+      let gestiones = key ? JSON.parse(localStorage.getItem(key) || '[]') : [];
+
+      if (!gestiones.length && targetCaso && targetCaso.gestiones) {
+        gestiones = [...targetCaso.gestiones];
+      }
+
+      let modificado = false;
+      let nuevos = gestiones.map(g => {
+        const coincide = (g.id && g.id === plazo.id) || 
+          (g.tramite === plazo.titulo || g.actuacion === plazo.titulo || g.titulo === plazo.titulo);
+        if (coincide) {
+          modificado = true;
+          const yaRealizada = String(g.estado || '').toUpperCase().includes('REALIZAD');
+          return { ...g, estado: yaRealizada ? 'PENDIENTE' : 'REALIZADO' };
         }
+        return g;
+      });
+
+      if (!modificado) {
+        const yaRealizada = String(plazo.estado || '').toUpperCase().includes('REALIZAD');
+        nuevos.push({
+          id: plazo.id,
+          tramite: plazo.titulo,
+          actuacion: plazo.titulo,
+          titulo: plazo.titulo,
+          fecha: hoyLocal(),
+          fechaIso: hoyLocal(),
+          fechaVencimiento: plazo.fechaVencimiento || hoyLocal(),
+          estado: yaRealizada ? 'PENDIENTE' : 'REALIZADO',
+          casoRit: ref,
+          caratula: plazo.caratulaMostrada
+        });
+      }
+
+      if (key) localStorage.setItem(key, JSON.stringify(nuevos));
+      if (targetCaso) {
+        targetCaso.gestiones = nuevos;
+        guardarGestionesDeCaso(targetCaso, nuevos).catch(() => {});
       }
     } catch(e) {}
     window.dispatchEvent(new Event('lexcontrol_plazos_updated'));

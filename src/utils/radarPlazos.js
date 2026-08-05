@@ -429,23 +429,27 @@ function gestionesDeExpedientes(expedientes) {
       // ACCIONABLES_TRAMITE sólo mira el día exacto de la fecha de trámite.
       const fVencIso = normalizarFechaIso(g.fechaVencimiento);
       const estado = (g.estado || '').trim().toUpperCase();
-      const realizada = ['REALIZAD', 'COMPLETAD', 'TERMINAD', 'FALLADO', 'ARCHIVADO']
-        .some((w) => estado.includes(w));
-      if ((!fIso && !fVencIso) || realizada) continue;
+      const realizada = ['REALIZAD', 'COMPLETAD', 'TERMINAD', 'FALLADO', 'ARCHIVADO'].some((w) => estado.includes(w));
+      const esHoy = (fIso === hoyLocal() || fVencIso === hoyLocal());
+      if ((!fIso && !fVencIso) || (realizada && !esHoy)) continue;
 
       salida.push({
-        id: `exp-${exp.id}-${idx}-${fVencIso || fIso}`,
-        casoRit: exp.ritVinculado || exp.id,
-        rit: exp.ritVinculado || exp.id,
-        caratula: exp.cliente || 'Sin carátula',
+        id: g.id || `exp-${exp.id}-${idx}-${fVencIso || fIso}`,
+        casoRit: exp.ritVinculado || exp.rit || exp.id,
+        rit: exp.ritVinculado || exp.rit || exp.id,
+        caratula: exp.cliente || exp.caratula || 'Sin carátula',
         asunto: exp.asunto || '',
         cliente: exp.cliente || '',
         tribunal: exp.tribunal || '',
         actuacion: g.tramite || g.actuacion || 'Gestión pendiente',
+        titulo: g.tramite || g.actuacion || 'Gestión pendiente',
         descripcion: g.tramite || g.actuacion || 'Gestión pendiente',
-        naturaleza: fVencIso ? NATURALEZA.FATAL : naturalezaDeGestion(g),
+        naturaleza: realizada ? 'REALIZADO_HOY' : (fVencIso ? NATURALEZA.FATAL : naturalezaDeGestion(g)),
+        esRealizado: realizada,
+        estado: g.estado || (realizada ? 'REALIZADO' : 'PENDIENTE'),
         regimen: 'CPC',
         fechaTramite: fIso,
+        fechaVencimiento: fVencIso || fIso,
         fechaObjetivo: fVencIso || fIso,
         notas: g.estado || ''
       });
