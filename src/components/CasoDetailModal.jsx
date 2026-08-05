@@ -728,21 +728,39 @@ RUEGO A US.: Tener por evacuado el traslado en tiempo y forma, rechazando la sol
       return null;
     };
 
-    // Se refresca junto con las gestiones -no antes, no en un efecto aparte-
-    // para que la MISMA re-renderización que ya dispara setCustomGestiones()
-    // muestre también la carpeta física al día: findDiscoFolder() se calcula
-    // en cada render a partir de REAL_DISK_DATA, así que basta con que el
-    // array esté fresco antes de ese setState.
+    const meclarGestiones = (servidor = [], local = []) => {
+      const unificados = [...(servidor || [])];
+      (local || []).forEach(locG => {
+        const titleLoc = (locG.titulo || locG.tramite || locG.actuacion || '').trim().toLowerCase();
+        const fechaLoc = (locG.fecha || locG.fechaIso || '').trim();
+        const yaExiste = unificados.some(servG => {
+          const titleServ = (servG.titulo || servG.tramite || servG.actuacion || '').trim().toLowerCase();
+          const fechaServ = (servG.fecha || servG.fechaIso || '').trim();
+          return (locG.id && servG.id && locG.id === servG.id) || (titleLoc && titleLoc === titleServ && fechaLoc === fechaServ);
+        });
+        if (!yaExiste) {
+          unificados.push(locG);
+        }
+      });
+      return unificados;
+    };
+
     Promise.all([cargarExpedientes(), refrescarDiscoData().catch(() => false)])
       .then(([expedientes]) => {
         if (cancelado) return;
         setExpedientesServidor(expedientes || []);
         const exp = expedienteDeCaso(caso, expedientes);
-        if (exp && Array.isArray(exp.gestiones) && exp.gestiones.length > 0) {
-          setCustomGestiones(exp.gestiones);
-          return;
+        const serverG = (exp && Array.isArray(exp.gestiones)) ? exp.gestiones : (caso.gestiones || []);
+        const localG = legacy() || [];
+        const resultadoFinal = meclarGestiones(serverG, localG);
+        setCustomGestiones(resultadoFinal);
+
+        // Si se encontraron gestiones locales nuevas, asegurar respaldo en localStorage y servidor
+        const clave = claveDeCaso(caso);
+        if (clave && resultadoFinal.length > serverG.length) {
+          try { localStorage.setItem(`lexcontrol_gestiones_${clave}`, JSON.stringify(resultadoFinal)); } catch(e) {}
+          guardarGestionesDeCaso(caso, resultadoFinal).catch(() => {});
         }
-        setCustomGestiones(legacy() || caso.gestiones || []);
       })
       .catch(() => {
         if (!cancelado) setCustomGestiones(legacy() || caso.gestiones || []);
